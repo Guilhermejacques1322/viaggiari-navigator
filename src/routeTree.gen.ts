@@ -10,9 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as MinhaViagemRouteImport } from './routes/minha-viagem'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InteresseRouteImport } from './routes/interesse'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MinhaViagemIndexRouteImport } from './routes/minha-viagem.index'
@@ -36,11 +36,6 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MinhaViagemRoute = MinhaViagemRouteImport.update({
   id: '/minha-viagem',
   path: '/minha-viagem',
@@ -49,6 +44,11 @@ const MinhaViagemRoute = MinhaViagemRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InteresseRoute = InteresseRouteImport.update({
+  id: '/interesse',
+  path: '/interesse',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -140,9 +140,9 @@ const AdminCrmContactIdRoute = AdminCrmContactIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/interesse': typeof InteresseRoute
   '/login': typeof LoginRoute
   '/minha-viagem': typeof MinhaViagemRouteWithChildren
-  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/destinos': typeof AdminDestinosRoute
@@ -162,8 +162,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/interesse': typeof InteresseRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/destinos': typeof AdminDestinosRoute
@@ -185,9 +185,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/interesse': typeof InteresseRoute
   '/login': typeof LoginRoute
   '/minha-viagem': typeof MinhaViagemRouteWithChildren
-  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/destinos': typeof AdminDestinosRoute
@@ -210,9 +210,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/interesse'
     | '/login'
     | '/minha-viagem'
-    | '/signup'
     | '/sitemap.xml'
     | '/admin/crm'
     | '/admin/destinos'
@@ -232,8 +232,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/interesse'
     | '/login'
-    | '/signup'
     | '/sitemap.xml'
     | '/admin/crm'
     | '/admin/destinos'
@@ -254,9 +254,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/interesse'
     | '/login'
     | '/minha-viagem'
-    | '/signup'
     | '/sitemap.xml'
     | '/admin/crm'
     | '/admin/destinos'
@@ -278,9 +278,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  InteresseRoute: typeof InteresseRoute
   LoginRoute: typeof LoginRoute
   MinhaViagemRoute: typeof MinhaViagemRouteWithChildren
-  SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   OrcamentoTokenRoute: typeof OrcamentoTokenRoute
 }
@@ -292,13 +292,6 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/minha-viagem': {
@@ -313,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interesse': {
+      id: '/interesse'
+      path: '/interesse'
+      fullPath: '/interesse'
+      preLoaderRoute: typeof InteresseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -506,9 +506,9 @@ const MinhaViagemRouteWithChildren = MinhaViagemRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  InteresseRoute: InteresseRoute,
   LoginRoute: LoginRoute,
   MinhaViagemRoute: MinhaViagemRouteWithChildren,
-  SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   OrcamentoTokenRoute: OrcamentoTokenRoute,
 }

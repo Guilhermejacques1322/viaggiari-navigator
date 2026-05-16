@@ -24,7 +24,7 @@ export const Route = createFileRoute("/interesse")({
 
 const SERVICE_MAP = {
   assessoria: { label: "Quero que cuidem de tudo por mim", db: "assessoria" as const },
-  pacote: { label: "Preciso só de passagem e hotel", db: "pacote" as const },
+  pacote: { label: "Preciso só de passagem e hotel", db: "package" as const },
   consultoria: { label: "Já sei viajar, quero só uma orientação", db: "consultoria" as const },
   indefinido: { label: "Ainda não sei, quero entender as opções", db: null as null },
 };
