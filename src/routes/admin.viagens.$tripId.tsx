@@ -599,12 +599,16 @@ function UploadDocumentDialog({ open, onOpenChange, tripId, dayId, activityId, a
 /* ============================== DOCS TAB ============================== */
 function DocsTab({ tripId }: { tripId: string }) {
   const qc = useQueryClient();
-  const { data: docs, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["trip-docs", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("documents").select("*").eq("trip_id", tripId).order("created_at");
+      const { data: docs, error } = await supabase.from("documents").select("*").eq("trip_id", tripId).order("created_at");
       if (error) throw error;
-      return data as Document[];
+      const { data: acts } = await supabase.from("itinerary_activities").select("id, name, day_id");
+      const { data: days } = await supabase.from("itinerary_days").select("id, day_number, title").eq("trip_id", tripId);
+      const actMap = new Map((acts ?? []).map((a) => [a.id, a]));
+      const dayMap = new Map((days ?? []).map((d) => [d.id, d]));
+      return { docs: (docs ?? []) as Document[], actMap, dayMap };
     },
   });
 
@@ -626,6 +630,7 @@ function DocsTab({ tripId }: { tripId: string }) {
     if (insErr) return toast.error(insErr.message);
     toast.success("Documento enviado");
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
+    qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
   }
 
   async function remove(doc: Document) {
@@ -633,51 +638,84 @@ function DocsTab({ tripId }: { tripId: string }) {
     await supabase.storage.from("trip-documents").remove([doc.storage_path]);
     await supabase.from("documents").delete().eq("id", doc.id);
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
+    qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+  }
+
+  const general = (data?.docs ?? []).filter((d) => !d.activity_id);
+  const byActivity = (data?.docs ?? []).filter((d) => d.activity_id);
+
+  function DocItem({ d }: { d: Document }) {
+    const act = d.activity_id ? data?.actMap.get(d.activity_id) : null;
+    const day = act?.day_id ? data?.dayMap.get(act.day_id) : (d.day_id ? data?.dayMap.get(d.day_id) : null);
+    return (
+      <li className="py-3 flex items-center gap-3">
+        <FileText className="size-4 text-primary" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{d.name}</p>
+          <p className="text-xs text-muted-foreground">
+            <span className="capitalize">{d.category}</span>
+            {day && <> · Dia {day.day_number}{day.title ? ` — ${day.title}` : ""}</>}
+            {act && <> · {act.name}</>}
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => remove(d)} className="text-destructive">
+          <Trash2 className="size-4" />
+        </Button>
+      </li>
+    );
   }
 
   return (
-    <Card className="p-5 space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label>Categoria</Label>
-          <Select value={category} onValueChange={(v) => setCategory(v as DocCategory)}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="flight">Voo</SelectItem>
-              <SelectItem value="train">Trem</SelectItem>
-              <SelectItem value="hotel">Hotel</SelectItem>
-              <SelectItem value="ticket">Ingresso</SelectItem>
-              <SelectItem value="other">Outro</SelectItem>
-            </SelectContent>
-          </Select>
+    <Card className="p-5 space-y-6">
+      <div>
+        <p className="text-sm font-medium mb-2">Documento geral da viagem</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label>Categoria</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as DocCategory)}>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="flight">Voo</SelectItem>
+                <SelectItem value="train">Trem</SelectItem>
+                <SelectItem value="hotel">Hotel</SelectItem>
+                <SelectItem value="ticket">Ingresso</SelectItem>
+                <SelectItem value="other">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Label className="cursor-pointer">
+            <input type="file" className="hidden" onChange={handleFile} disabled={uploading} />
+            <span className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
+              <Upload className="size-4" />{uploading ? "Enviando…" : "Enviar arquivo"}
+            </span>
+          </Label>
         </div>
-        <Label className="cursor-pointer">
-          <input type="file" className="hidden" onChange={handleFile} disabled={uploading} />
-          <span className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
-            <Upload className="size-4" />{uploading ? "Enviando…" : "Enviar arquivo"}
-          </span>
-        </Label>
+        <p className="text-xs text-muted-foreground mt-2">
+          Para anexar a uma atividade específica, use o ícone <Paperclip className="inline size-3" /> na aba Roteiro.
+        </p>
       </div>
 
-      {isLoading ? <Skeleton className="h-32" /> :
-        !docs?.length ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Nenhum documento enviado.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {docs.map((d) => (
-              <li key={d.id} className="py-3 flex items-center gap-3">
-                <FileText className="size-4 text-primary" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{d.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{d.category}</p>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => remove(d)} className="text-destructive">
-                  <Trash2 className="size-4" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+      {isLoading ? <Skeleton className="h-32" /> : (
+        <>
+          <div>
+            <p className="text-sm font-medium mb-2">Documentos gerais</p>
+            {general.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded">Nenhum documento geral.</p>
+            ) : (
+              <ul className="divide-y divide-border">{general.map((d) => <DocItem key={d.id} d={d} />)}</ul>
+            )}
+          </div>
+
+          <div>
+            <p className="text-sm font-medium mb-2">Documentos por atividade</p>
+            {byActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded">Nenhum documento vinculado a atividade.</p>
+            ) : (
+              <ul className="divide-y divide-border">{byActivity.map((d) => <DocItem key={d.id} d={d} />)}</ul>
+            )}
+          </div>
+        </>
+      )}
     </Card>
   );
 }
