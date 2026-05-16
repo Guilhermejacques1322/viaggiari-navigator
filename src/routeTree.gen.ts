@@ -17,12 +17,16 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MinhaViagemIndexRouteImport } from './routes/minha-viagem.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as OrcamentoTokenRouteImport } from './routes/orcamento.$token'
 import { Route as MinhaViagemRoteiroRouteImport } from './routes/minha-viagem.roteiro'
 import { Route as MinhaViagemPreroteiroRouteImport } from './routes/minha-viagem.preroteiro'
 import { Route as MinhaViagemParceirosRouteImport } from './routes/minha-viagem.parceiros'
 import { Route as MinhaViagemDocumentosRouteImport } from './routes/minha-viagem.documentos'
 import { Route as AdminViagensRouteImport } from './routes/admin.viagens'
+import { Route as AdminOrcamentosRouteImport } from './routes/admin.orcamentos'
+import { Route as AdminNotificacoesRouteImport } from './routes/admin.notificacoes'
 import { Route as AdminLeadsRouteImport } from './routes/admin.leads'
+import { Route as AdminDestinosRouteImport } from './routes/admin.destinos'
 import { Route as AdminCrmRouteImport } from './routes/admin.crm'
 import { Route as AdminViagensTripIdRouteImport } from './routes/admin.viagens.$tripId'
 import { Route as AdminCrmContactIdRouteImport } from './routes/admin.crm.$contactId'
@@ -67,6 +71,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const OrcamentoTokenRoute = OrcamentoTokenRouteImport.update({
+  id: '/orcamento/$token',
+  path: '/orcamento/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MinhaViagemRoteiroRoute = MinhaViagemRoteiroRouteImport.update({
   id: '/roteiro',
   path: '/roteiro',
@@ -92,9 +101,24 @@ const AdminViagensRoute = AdminViagensRouteImport.update({
   path: '/viagens',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminOrcamentosRoute = AdminOrcamentosRouteImport.update({
+  id: '/orcamentos',
+  path: '/orcamentos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNotificacoesRoute = AdminNotificacoesRouteImport.update({
+  id: '/notificacoes',
+  path: '/notificacoes',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLeadsRoute = AdminLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDestinosRoute = AdminDestinosRouteImport.update({
+  id: '/destinos',
+  path: '/destinos',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCrmRoute = AdminCrmRouteImport.update({
@@ -121,12 +145,16 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
+  '/admin/destinos': typeof AdminDestinosRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/notificacoes': typeof AdminNotificacoesRoute
+  '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/orcamento/$token': typeof OrcamentoTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
@@ -138,12 +166,16 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
+  '/admin/destinos': typeof AdminDestinosRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/notificacoes': typeof AdminNotificacoesRoute
+  '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/orcamento/$token': typeof OrcamentoTokenRoute
   '/admin': typeof AdminIndexRoute
   '/minha-viagem': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
@@ -158,12 +190,16 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
+  '/admin/destinos': typeof AdminDestinosRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/notificacoes': typeof AdminNotificacoesRoute
+  '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/orcamento/$token': typeof OrcamentoTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
@@ -179,12 +215,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/admin/crm'
+    | '/admin/destinos'
     | '/admin/leads'
+    | '/admin/notificacoes'
+    | '/admin/orcamentos'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
+    | '/orcamento/$token'
     | '/admin/'
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
@@ -196,12 +236,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/admin/crm'
+    | '/admin/destinos'
     | '/admin/leads'
+    | '/admin/notificacoes'
+    | '/admin/orcamentos'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
+    | '/orcamento/$token'
     | '/admin'
     | '/minha-viagem'
     | '/admin/crm/$contactId'
@@ -215,12 +259,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/admin/crm'
+    | '/admin/destinos'
     | '/admin/leads'
+    | '/admin/notificacoes'
+    | '/admin/orcamentos'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
+    | '/orcamento/$token'
     | '/admin/'
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
@@ -234,6 +282,7 @@ export interface RootRouteChildren {
   MinhaViagemRoute: typeof MinhaViagemRouteWithChildren
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  OrcamentoTokenRoute: typeof OrcamentoTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -294,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/orcamento/$token': {
+      id: '/orcamento/$token'
+      path: '/orcamento/$token'
+      fullPath: '/orcamento/$token'
+      preLoaderRoute: typeof OrcamentoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/minha-viagem/roteiro': {
       id: '/minha-viagem/roteiro'
       path: '/roteiro'
@@ -329,11 +385,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminViagensRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/orcamentos': {
+      id: '/admin/orcamentos'
+      path: '/orcamentos'
+      fullPath: '/admin/orcamentos'
+      preLoaderRoute: typeof AdminOrcamentosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/notificacoes': {
+      id: '/admin/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/admin/notificacoes'
+      preLoaderRoute: typeof AdminNotificacoesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/leads': {
       id: '/admin/leads'
       path: '/leads'
       fullPath: '/admin/leads'
       preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/destinos': {
+      id: '/admin/destinos'
+      path: '/destinos'
+      fullPath: '/admin/destinos'
+      preLoaderRoute: typeof AdminDestinosRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/crm': {
@@ -386,14 +463,20 @@ const AdminViagensRouteWithChildren = AdminViagensRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminCrmRoute: typeof AdminCrmRouteWithChildren
+  AdminDestinosRoute: typeof AdminDestinosRoute
   AdminLeadsRoute: typeof AdminLeadsRoute
+  AdminNotificacoesRoute: typeof AdminNotificacoesRoute
+  AdminOrcamentosRoute: typeof AdminOrcamentosRoute
   AdminViagensRoute: typeof AdminViagensRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCrmRoute: AdminCrmRouteWithChildren,
+  AdminDestinosRoute: AdminDestinosRoute,
   AdminLeadsRoute: AdminLeadsRoute,
+  AdminNotificacoesRoute: AdminNotificacoesRoute,
+  AdminOrcamentosRoute: AdminOrcamentosRoute,
   AdminViagensRoute: AdminViagensRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -427,6 +510,7 @@ const rootRouteChildren: RootRouteChildren = {
   MinhaViagemRoute: MinhaViagemRouteWithChildren,
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  OrcamentoTokenRoute: OrcamentoTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
