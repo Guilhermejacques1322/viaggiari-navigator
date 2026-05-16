@@ -1,0 +1,91 @@
+import { createContext, useContext, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import type { Database } from "@/integrations/supabase/types";
+
+export type Trip = Database["public"]["Tables"]["trips"]["Row"];
+export type Day = Database["public"]["Tables"]["itinerary_days"]["Row"];
+export type Activity = Database["public"]["Tables"]["itinerary_activities"]["Row"];
+export type Document = Database["public"]["Tables"]["documents"]["Row"];
+export type Payment = Database["public"]["Tables"]["payments"]["Row"];
+
+export interface MyTripData {
+  trip: Trip | null;
+  days: (Day & { activities: Activity[] })[];
+  documents: Document[];
+  payments: Payment[];
+}
+
+async function fetchMyTrip(userId: string): Promise<MyTripData> {
+  // Find contact linked to this user
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!contact) return { trip: null, days: [], documents: [], payments: [] };
+
+  // Most recent visible trip
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("*")
+    .eq("contact_id", contact.id)
+    .eq("visible_to_client", true)
+    .order("start_date", { ascending: true, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!trip) return { trip: null, days: [], documents: [], payments: [] };
+
+  const [{ data: days }, { data: documents }, { data: payments }] = await Promise.all([
+    supabase.from("itinerary_days").select("*").eq("trip_id", trip.id).order("day_number"),
+    supabase.from("documents").select("*").eq("trip_id", trip.id).order("event_date", { nullsFirst: false }),
+    supabase.from("payments").select("*").eq("trip_id", trip.id).order("installment"),
+  ]);
+
+  const dayIds = (days ?? []).map((d) => d.id);
+  const { data: activities } = dayIds.length
+    ? await supabase
+        .from("itinerary_activities")
+        .select("*")
+        .in("day_id", dayIds)
+        .order("position")
+    : { data: [] as Activity[] };
+
+  const grouped = (days ?? []).map((d) => ({
+    ...d,
+    activities: (activities ?? []).filter((a) => a.day_id === d.id),
+  }));
+
+  return { trip, days: grouped, documents: documents ?? [], payments: payments ?? [] };
+}
+
+const TripCtx = createContext<{
+  data: MyTripData | undefined;
+  loading: boolean;
+  refetch: () => void;
+} | null>(null);
+
+export function MyTripProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const query = useQuery({
+    queryKey: ["my-trip", user?.id],
+    queryFn: () => fetchMyTrip(user!.id),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+
+  return (
+    <TripCtx.Provider value={{ data: query.data, loading: query.isLoading, refetch: query.refetch }}>
+      {children}
+    </TripCtx.Provider>
+  );
+}
+
+export function useMyTrip() {
+  const ctx = useContext(TripCtx);
+  if (!ctx) throw new Error("useMyTrip must be used inside MyTripProvider");
+  return ctx;
+}

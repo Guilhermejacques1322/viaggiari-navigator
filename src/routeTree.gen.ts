@@ -15,6 +15,11 @@ import { Route as MinhaViagemRouteImport } from './routes/minha-viagem'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MinhaViagemIndexRouteImport } from './routes/minha-viagem.index'
+import { Route as MinhaViagemRoteiroRouteImport } from './routes/minha-viagem.roteiro'
+import { Route as MinhaViagemPreroteiroRouteImport } from './routes/minha-viagem.preroteiro'
+import { Route as MinhaViagemParceirosRouteImport } from './routes/minha-viagem.parceiros'
+import { Route as MinhaViagemDocumentosRouteImport } from './routes/minha-viagem.documentos'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -46,31 +51,70 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MinhaViagemIndexRoute = MinhaViagemIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemRoteiroRoute = MinhaViagemRoteiroRouteImport.update({
+  id: '/roteiro',
+  path: '/roteiro',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemPreroteiroRoute = MinhaViagemPreroteiroRouteImport.update({
+  id: '/preroteiro',
+  path: '/preroteiro',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemParceirosRoute = MinhaViagemParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemDocumentosRoute = MinhaViagemDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
-  '/minha-viagem': typeof MinhaViagemRoute
+  '/minha-viagem': typeof MinhaViagemRouteWithChildren
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
+  '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
+  '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
+  '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/minha-viagem/': typeof MinhaViagemIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
-  '/minha-viagem': typeof MinhaViagemRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
+  '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
+  '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
+  '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/minha-viagem': typeof MinhaViagemIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
-  '/minha-viagem': typeof MinhaViagemRoute
+  '/minha-viagem': typeof MinhaViagemRouteWithChildren
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
+  '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
+  '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
+  '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/minha-viagem/': typeof MinhaViagemIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,8 +125,23 @@ export interface FileRouteTypes {
     | '/minha-viagem'
     | '/signup'
     | '/sitemap.xml'
+    | '/minha-viagem/documentos'
+    | '/minha-viagem/parceiros'
+    | '/minha-viagem/preroteiro'
+    | '/minha-viagem/roteiro'
+    | '/minha-viagem/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/login' | '/minha-viagem' | '/signup' | '/sitemap.xml'
+  to:
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/signup'
+    | '/sitemap.xml'
+    | '/minha-viagem/documentos'
+    | '/minha-viagem/parceiros'
+    | '/minha-viagem/preroteiro'
+    | '/minha-viagem/roteiro'
+    | '/minha-viagem'
   id:
     | '__root__'
     | '/'
@@ -91,13 +150,18 @@ export interface FileRouteTypes {
     | '/minha-viagem'
     | '/signup'
     | '/sitemap.xml'
+    | '/minha-viagem/documentos'
+    | '/minha-viagem/parceiros'
+    | '/minha-viagem/preroteiro'
+    | '/minha-viagem/roteiro'
+    | '/minha-viagem/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   LoginRoute: typeof LoginRoute
-  MinhaViagemRoute: typeof MinhaViagemRoute
+  MinhaViagemRoute: typeof MinhaViagemRouteWithChildren
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
@@ -146,14 +210,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/minha-viagem/': {
+      id: '/minha-viagem/'
+      path: '/'
+      fullPath: '/minha-viagem/'
+      preLoaderRoute: typeof MinhaViagemIndexRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/roteiro': {
+      id: '/minha-viagem/roteiro'
+      path: '/roteiro'
+      fullPath: '/minha-viagem/roteiro'
+      preLoaderRoute: typeof MinhaViagemRoteiroRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/preroteiro': {
+      id: '/minha-viagem/preroteiro'
+      path: '/preroteiro'
+      fullPath: '/minha-viagem/preroteiro'
+      preLoaderRoute: typeof MinhaViagemPreroteiroRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/parceiros': {
+      id: '/minha-viagem/parceiros'
+      path: '/parceiros'
+      fullPath: '/minha-viagem/parceiros'
+      preLoaderRoute: typeof MinhaViagemParceirosRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/documentos': {
+      id: '/minha-viagem/documentos'
+      path: '/documentos'
+      fullPath: '/minha-viagem/documentos'
+      preLoaderRoute: typeof MinhaViagemDocumentosRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
   }
 }
+
+interface MinhaViagemRouteChildren {
+  MinhaViagemDocumentosRoute: typeof MinhaViagemDocumentosRoute
+  MinhaViagemParceirosRoute: typeof MinhaViagemParceirosRoute
+  MinhaViagemPreroteiroRoute: typeof MinhaViagemPreroteiroRoute
+  MinhaViagemRoteiroRoute: typeof MinhaViagemRoteiroRoute
+  MinhaViagemIndexRoute: typeof MinhaViagemIndexRoute
+}
+
+const MinhaViagemRouteChildren: MinhaViagemRouteChildren = {
+  MinhaViagemDocumentosRoute: MinhaViagemDocumentosRoute,
+  MinhaViagemParceirosRoute: MinhaViagemParceirosRoute,
+  MinhaViagemPreroteiroRoute: MinhaViagemPreroteiroRoute,
+  MinhaViagemRoteiroRoute: MinhaViagemRoteiroRoute,
+  MinhaViagemIndexRoute: MinhaViagemIndexRoute,
+}
+
+const MinhaViagemRouteWithChildren = MinhaViagemRoute._addFileChildren(
+  MinhaViagemRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   LoginRoute: LoginRoute,
-  MinhaViagemRoute: MinhaViagemRoute,
+  MinhaViagemRoute: MinhaViagemRouteWithChildren,
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
