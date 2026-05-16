@@ -61,15 +61,13 @@ function InteressePage() {
     }
     setSubmitting(true);
     const svc = SERVICE_MAP[parsed.data.service_key];
-    const { error } = await supabase.from("contacts").insert({
+    const { error } = await supabase.from("leads").insert({
       full_name: parsed.data.full_name,
       email: parsed.data.email,
       phone: parsed.data.phone,
-      destinations_of_interest: [parsed.data.destination],
+      destination: parsed.data.destination,
       travel_period: parsed.data.travel_period,
       service_interest: svc.db ? [svc.db] : [],
-      status: "lead",
-      source: "site_interesse",
     });
     setSubmitting(false);
     if (error) {
