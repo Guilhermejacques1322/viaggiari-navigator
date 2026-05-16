@@ -126,6 +126,11 @@ function ActivityCard({ a, docCount, onReview }: { a: Activity; docCount: number
                 <Ticket className="size-3" /> Ingresso
               </span>
             )}
+            {docCount > 0 && (
+              <span className="text-xs text-primary inline-flex items-center gap-1">
+                <Paperclip className="size-3" /> {docCount} doc{docCount > 1 ? "s" : ""}
+              </span>
+            )}
             <button onClick={onReview} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 ml-auto">
               <Star className="size-3" /> Avaliar
             </button>
