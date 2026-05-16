@@ -125,7 +125,7 @@ function DestinationCard({ dest, activities, onDelete, onReload }: { dest: Desti
     const { error } = await supabase.from("destination_activities").insert({
       destination_id: dest.id,
       ...newAct,
-      activity_type: newAct.activity_type as "passeio" | "restaurante" | "hospedagem" | "transporte",
+      activity_type: newAct.activity_type as "passeio" | "refeicao" | "hospedagem" | "transporte" | "livre",
     });
     if (error) return toast.error(error.message);
     toast.success("Adicionada");
@@ -167,9 +167,10 @@ function DestinationCard({ dest, activities, onDelete, onReload }: { dest: Desti
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="passeio">Passeio</SelectItem>
-                        <SelectItem value="restaurante">Restaurante</SelectItem>
+                        <SelectItem value="refeicao">Refeição</SelectItem>
                         <SelectItem value="hospedagem">Hospedagem</SelectItem>
                         <SelectItem value="transporte">Transporte</SelectItem>
+                        <SelectItem value="livre">Tempo livre</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

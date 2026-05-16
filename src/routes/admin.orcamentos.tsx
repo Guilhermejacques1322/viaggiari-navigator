@@ -68,7 +68,7 @@ function OrcamentosPage() {
     const destinations = form.destinations.split(",").map((s) => s.trim()).filter(Boolean);
     const { data, error } = await supabase.from("quotes").insert({
       contact_id: form.contact_id,
-      service_type: form.service_type as "roteiro_personalizado" | "aluguel_carro" | "hospedagem" | "pacote_completo" | "consultoria",
+      service_type: form.service_type as "assessoria" | "consultoria" | "package",
       destinations,
       days: form.days,
       daily_rate: form.daily_rate,
