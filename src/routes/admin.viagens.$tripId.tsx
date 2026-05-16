@@ -300,14 +300,14 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
         </Card>
       ) : (
         <div className="space-y-3">
-          {days.map((d) => <DayEditor key={d.id} day={d} onChanged={invalidate} />)}
+          {days.map((d) => <DayEditor key={d.id} day={d} tripId={tripId} onChanged={invalidate} />)}
         </div>
       )}
     </div>
   );
 }
 
-function DayEditor({ day, onChanged }: { day: Day & { activities: Activity[] }; onChanged: () => void }) {
+function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activity & { doc_count?: number })[] }; tripId: string; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
   const [addingAct, setAddingAct] = useState(false);
