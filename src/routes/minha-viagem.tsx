@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Home, Map, FileText, Heart, ListChecks, LogOut } from "lucide-react";
+import { Home, Map as MapIcon, FileText, Heart, ListChecks, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { MyTripProvider, useMyTrip } from "@/hooks/use-my-trip";
 import { Logo } from "@/components/brand/logo";
@@ -52,7 +52,7 @@ function ClientShell() {
 type NavItem = { to: string; label: string; icon: typeof Home; exact?: boolean };
 const NAV: NavItem[] = [
   { to: "/minha-viagem", label: "Início", icon: Home, exact: true },
-  { to: "/minha-viagem/roteiro", label: "Roteiro", icon: Map },
+  { to: "/minha-viagem/roteiro", label: "Roteiro", icon: MapIcon },
   { to: "/minha-viagem/documentos", label: "Docs", icon: FileText },
   { to: "/minha-viagem/preroteiro", label: "Pré-roteiro", icon: ListChecks },
   { to: "/minha-viagem/parceiros", label: "Parceiros", icon: Heart },
