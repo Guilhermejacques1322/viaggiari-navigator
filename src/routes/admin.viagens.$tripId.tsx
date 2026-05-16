@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
-  CalendarDays, GripVertical, ExternalLink, UserCheck, DollarSign,
+  CalendarDays, GripVertical, ExternalLink, UserCheck, DollarSign, Paperclip,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
