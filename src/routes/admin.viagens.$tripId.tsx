@@ -258,8 +258,17 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
       const { data: acts } = ids.length
         ? await supabase.from("itinerary_activities").select("*").in("day_id", ids).order("position")
         : { data: [] as Activity[] };
-      return (ds ?? []).map((d) => ({ ...d, activities: (acts ?? []).filter((a) => a.day_id === d.id) }));
+      const { data: docs } = await supabase.from("documents").select("id, activity_id").eq("trip_id", tripId);
+      return (ds ?? []).map((d) => ({
+        ...d,
+        activities: (acts ?? []).filter((a) => a.day_id === d.id).map((a) => ({
+          ...a,
+          doc_count: (docs ?? []).filter((doc) => doc.activity_id === a.id).length,
+        })),
+      }));
     },
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
