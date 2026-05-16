@@ -75,9 +75,10 @@ function Roteiro() {
                       Sem atividades programadas
                     </p>
                   ) : (
-                    visible.map((a) => (
-                      <ActivityCard key={a.id} a={a} onReview={() => setReviewing(a)} />
-                    ))
+                    visible.map((a) => {
+                      const docCount = (data.documents ?? []).filter((d) => d.activity_id === a.id).length;
+                      return <ActivityCard key={a.id} a={a} docCount={docCount} onReview={() => setReviewing(a)} />;
+                    })
                   )}
                 </div>
               )}
