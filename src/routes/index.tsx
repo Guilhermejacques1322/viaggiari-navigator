@@ -64,7 +64,7 @@ function Navbar() {
         </nav>
         <div className="flex items-center gap-2">
           <Link to="/login"><Button variant="ghost" size="sm">Entrar</Button></Link>
-          <LeadDialog trigger={<Button size="sm">Planejar viagem</Button>} />
+          <Link to="/interesse"><Button size="sm">Planejar minha viagem</Button></Link>
         </div>
       </div>
     </header>
@@ -89,7 +89,7 @@ function Hero() {
             cada roteiro é desenhado para o seu jeito de viajar.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-3">
-            <LeadDialog trigger={<Button size="lg" className="font-display tracking-wide">Quero planejar minha viagem</Button>} />
+            <Link to="/interesse"><Button size="lg" className="font-display tracking-wide">Quero planejar minha viagem</Button></Link>
             <a href="#roteiros"><Button size="lg" variant="outline" className="bg-transparent border-ink-foreground/30 text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground">Ver roteiros prontos</Button></a>
           </div>
         </div>
@@ -136,7 +136,7 @@ function HowItWorks() {
               <h3 className="font-display text-xl mb-2">{it.title}</h3>
               <p className="text-sm text-primary mb-4">{it.subtitle}</p>
               <p className="text-sm text-muted-foreground leading-relaxed flex-1">{it.body}</p>
-              <LeadDialog trigger={<Button variant="outline" className="mt-8 w-full">{it.cta}</Button>} />
+              <Link to="/interesse" className="mt-8"><Button variant="outline" className="w-full">{it.cta}</Button></Link>
             </article>
           ))}
         </div>
@@ -220,7 +220,7 @@ function LeadSection() {
         <h2 className="font-display text-3xl md:text-5xl font-light leading-tight">Conta pra gente o que você tem em mente.</h2>
         <p className="mt-6 text-ink-foreground/70">Respondemos em até 24 horas, geralmente no mesmo dia.</p>
         <div className="mt-10 inline-block">
-          <LeadDialog trigger={<Button size="lg" className="font-display tracking-wide">Entrar em contato</Button>} />
+          <Link to="/interesse"><Button size="lg" className="font-display tracking-wide">Entrar em contato</Button></Link>
         </div>
       </div>
     </section>
