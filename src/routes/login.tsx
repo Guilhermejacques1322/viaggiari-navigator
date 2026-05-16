@@ -70,7 +70,7 @@ function LoginPage() {
             </Button>
           </form>
           <p className="text-sm text-muted-foreground mt-6 text-center">
-            Não tem conta? <Link to="/signup" className="text-primary hover:underline">Criar conta</Link>
+            Ainda não é cliente? <Link to="/interesse" className="text-primary hover:underline">Solicite contato</Link>
           </p>
         </div>
       </main>

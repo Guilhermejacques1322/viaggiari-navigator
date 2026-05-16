@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Mail, Phone, Plane, Plus } from "lucide-react";
+import { ArrowLeft, Save, Mail, Phone, Plane, Plus, KeyRound, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { STATUS_LABEL, STATUS_COLOR } from "./admin.crm";
+import { createClientAccess } from "@/lib/admin-users.functions";
 import type { Database } from "@/integrations/supabase/types";
 
 type Contact = Database["public"]["Tables"]["contacts"]["Row"];
@@ -104,9 +109,17 @@ function ContactProfile() {
             </span>
           </div>
         </div>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          <Save className="size-4" /> Salvar
-        </Button>
+        <div className="flex gap-2">
+          {!contact.user_id && <CreateAccessButton contactId={contactId} email={contact.email} />}
+          {contact.user_id && (
+            <span className="inline-flex items-center gap-1 text-xs text-primary px-3 py-1.5 rounded-md bg-primary/10">
+              <Check className="size-3" /> Acesso criado
+            </span>
+          )}
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="size-4" /> Salvar
+          </Button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -186,5 +199,77 @@ function Field({ label, icon, children }: { label: string; icon?: React.ReactNod
       <Label className="flex items-center gap-1 mb-1">{icon}{label}</Label>
       {children}
     </div>
+  );
+}
+
+function CreateAccessButton({ contactId, email: defaultEmail }: { contactId: string; email: string }) {
+  const qc = useQueryClient();
+  const fn = useServerFn(createClientAccess);
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState(defaultEmail);
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 8) {
+      toast.error("A senha deve ter no mínimo 8 caracteres");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await fn({ data: { contactId, email: email.trim(), password } });
+      toast.success("Acesso criado. Envie o e-mail e senha para o cliente manualmente.");
+      qc.invalidateQueries({ queryKey: ["contact", contactId] });
+      setOpen(false);
+      setPassword("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar acesso");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function generatePassword() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    let out = "";
+    for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    setPassword(out);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+        <KeyRound className="size-4" /> Criar acesso do cliente
+      </Button>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Criar acesso do cliente</DialogTitle>
+          <DialogDescription>
+            Será criada uma conta com perfil de cliente. Envie as credenciais manualmente ao cliente.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="ca-email">E-mail</Label>
+            <Input id="ca-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="ca-pass">Senha temporária</Label>
+            <div className="flex gap-2">
+              <Input id="ca-pass" type="text" required minLength={8} maxLength={72}
+                value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Button type="button" variant="outline" size="sm" onClick={generatePassword}>Gerar</Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Mínimo 8 caracteres.</p>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Criando..." : "Criar acesso"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
