@@ -1,0 +1,656 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
+  CalendarDays, GripVertical, ExternalLink, UserCheck, DollarSign,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TRIP_STATUS_LABEL } from "./admin.viagens";
+import type { Database } from "@/integrations/supabase/types";
+
+type Trip = Database["public"]["Tables"]["trips"]["Row"];
+type Day = Database["public"]["Tables"]["itinerary_days"]["Row"];
+type Activity = Database["public"]["Tables"]["itinerary_activities"]["Row"];
+type Document = Database["public"]["Tables"]["documents"]["Row"];
+type Payment = Database["public"]["Tables"]["payments"]["Row"];
+type DocCategory = Database["public"]["Enums"]["document_category"];
+
+export const Route = createFileRoute("/admin/viagens/$tripId")({
+  component: TripDetail,
+});
+
+function TripDetail() {
+  const { tripId } = Route.useParams();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  const { data: trip, isLoading } = useQuery({
+    queryKey: ["trip", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trips").select("*, contacts(full_name, email, user_id)")
+        .eq("id", tripId).single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading || !trip) return <Skeleton className="h-96" />;
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["trip", tripId] });
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <Link to="/admin/viagens" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+        <ArrowLeft className="size-4" /> Voltar
+      </Link>
+
+      <TripHeader trip={trip} onSaved={invalidate} onDeleted={() => navigate({ to: "/admin/viagens" })} />
+
+      {!trip.contacts?.user_id && (
+        <Card className="p-4 border-amber-500/40 bg-amber-500/5 flex items-start gap-3">
+          <UserCheck className="size-5 text-amber-600 shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-700 dark:text-amber-300">Cliente ainda sem login vinculado</p>
+            <p className="text-muted-foreground mt-1">
+              Para que <strong>{trip.contacts?.full_name}</strong> veja a viagem na área dele,
+              ele precisa se cadastrar em <code>/signup</code> com o e-mail{" "}
+              <strong>{trip.contacts?.email}</strong> e você vincular o ID dele a este contato.
+            </p>
+            <LinkUserDialog contactId={trip.contact_id} email={trip.contacts?.email ?? ""} onLinked={invalidate} />
+          </div>
+        </Card>
+      )}
+
+      <Tabs defaultValue="info">
+        <TabsList>
+          <TabsTrigger value="info">Info</TabsTrigger>
+          <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos</TabsTrigger>
+          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+        </TabsList>
+        <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
+        <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
+        <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
+        <TabsContent value="financeiro" className="mt-4"><PaymentsTab tripId={tripId} totalValue={Number(trip.total_value ?? 0)} /></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+/* ============================== HEADER ============================== */
+function TripHeader({ trip, onSaved, onDeleted }: { trip: any; onSaved: () => void; onDeleted: () => void }) {
+  const toggleVisible = async () => {
+    const { error } = await supabase.from("trips").update({ visible_to_client: !trip.visible_to_client }).eq("id", trip.id);
+    if (error) return toast.error(error.message);
+    toast.success(trip.visible_to_client ? "Viagem oculta do cliente" : "Cliente já pode acessar!");
+    onSaved();
+  };
+  const togglePreroteiro = async () => {
+    const { error } = await supabase.from("trips").update({ preroteiro_mode: !trip.preroteiro_mode }).eq("id", trip.id);
+    if (error) return toast.error(error.message);
+    onSaved();
+  };
+  const remove = async () => {
+    if (!confirm(`Excluir a viagem "${trip.title}"? Isso apaga roteiro, documentos e pagamentos.`)) return;
+    const { error } = await supabase.from("trips").delete().eq("id", trip.id);
+    if (error) return toast.error(error.message);
+    toast.success("Viagem excluída");
+    onDeleted();
+  };
+
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="brand-title text-xs text-primary mb-2">Viagem</p>
+        <h1 className="font-display text-2xl md:text-3xl">{trip.title}</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Cliente: <Link to="/admin/crm/$contactId" params={{ contactId: trip.contact_id }} className="text-primary hover:underline">
+            {trip.contacts?.full_name}
+          </Link>
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={togglePreroteiro}>
+          <ListChecks className="size-4" />
+          {trip.preroteiro_mode ? "Pré-roteiro ON" : "Pré-roteiro OFF"}
+        </Button>
+        <Button variant={trip.visible_to_client ? "default" : "outline"} size="sm" onClick={toggleVisible}>
+          {trip.visible_to_client ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+          {trip.visible_to_client ? "Visível" : "Oculta"}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={remove} className="text-destructive hover:text-destructive">
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function LinkUserDialog({ contactId, email, onLinked }: { contactId: string; email: string; onLinked: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [userId, setUserId] = useState("");
+  const save = async () => {
+    if (!userId.trim()) return;
+    const { error } = await supabase.from("contacts").update({ user_id: userId.trim() }).eq("id", contactId);
+    if (error) return toast.error(error.message);
+    toast.success("Cliente vinculado!");
+    setOpen(false); onLinked();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="mt-3">Vincular usuário</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Vincular conta do cliente</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Peça para o cliente fazer cadastro com o e-mail <strong>{email}</strong> e cole o ID do usuário aqui.
+          (Você encontra em <em>Auth → Users</em> no Lovable Cloud.)
+        </p>
+        <Input placeholder="UUID do usuário" value={userId} onChange={(e) => setUserId(e.target.value)} />
+        <DialogFooter><Button onClick={save}>Vincular</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ============================== INFO TAB ============================== */
+function InfoTab({ trip, onSaved }: { trip: any; onSaved: () => void }) {
+  const [form, setForm] = useState<Partial<Trip>>({});
+  useEffect(() => { setForm(trip); }, [trip]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("trips").update({
+        title: form.title,
+        service_type: form.service_type,
+        status: form.status,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        destinations: form.destinations,
+        total_value: form.total_value,
+        is_international: form.is_international,
+        notes: form.notes,
+      }).eq("id", trip.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Salvo"); onSaved(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
+        <div><Label>Título</Label>
+          <Input value={form.title ?? ""} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        </div>
+        <div><Label>Status</Label>
+          <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(TRIP_STATUS_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div><Label>Tipo de serviço</Label>
+          <Select value={form.service_type} onValueChange={(v) => setForm({ ...form, service_type: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="package">Pacote</SelectItem>
+              <SelectItem value="assessoria">Assessoria</SelectItem>
+              <SelectItem value="consultoria">Consultoria</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div><Label>Valor total (R$)</Label>
+          <Input type="number" step="0.01" value={form.total_value ?? ""}
+            onChange={(e) => setForm({ ...form, total_value: e.target.value ? Number(e.target.value) : null })} />
+        </div>
+        <div><Label>Início</Label>
+          <Input type="date" value={form.start_date ?? ""} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+        </div>
+        <div><Label>Fim</Label>
+          <Input type="date" value={form.end_date ?? ""} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+        </div>
+        <div className="md:col-span-2"><Label>Destinos (separados por vírgula)</Label>
+          <Input value={form.destinations?.join(", ") ?? ""}
+            onChange={(e) => setForm({ ...form, destinations: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} />
+        </div>
+        <div className="md:col-span-2"><Label>Notas internas</Label>
+          <Textarea rows={4} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch checked={!!form.is_international}
+            onCheckedChange={(v) => setForm({ ...form, is_international: v })} />
+          <Label>Viagem internacional</Label>
+        </div>
+      </div>
+      <Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="size-4" />Salvar</Button>
+    </Card>
+  );
+}
+
+/* ============================== ROTEIRO TAB ============================== */
+function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode: boolean }) {
+  const qc = useQueryClient();
+  const { data: days, isLoading } = useQuery({
+    queryKey: ["trip-days", tripId],
+    queryFn: async () => {
+      const { data: ds, error } = await supabase.from("itinerary_days").select("*").eq("trip_id", tripId).order("day_number");
+      if (error) throw error;
+      const ids = (ds ?? []).map((d) => d.id);
+      const { data: acts } = ids.length
+        ? await supabase.from("itinerary_activities").select("*").in("day_id", ids).order("position")
+        : { data: [] as Activity[] };
+      return (ds ?? []).map((d) => ({ ...d, activities: (acts ?? []).filter((a) => a.day_id === d.id) }));
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+
+  const addDay = async () => {
+    const nextNum = (days?.length ?? 0) + 1;
+    const { error } = await supabase.from("itinerary_days").insert({
+      trip_id: tripId, day_number: nextNum, title: `Dia ${nextNum}`,
+    });
+    if (error) return toast.error(error.message);
+    invalidate();
+  };
+
+  if (isLoading) return <Skeleton className="h-64" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {preroteiroMode
+            ? "Pré-roteiro ativo — cliente pode marcar Quero/Pulo nas atividades."
+            : "Pré-roteiro desativado — cliente verá apenas o que estiver fechado."}
+        </p>
+        <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
+      </div>
+      {!days?.length ? (
+        <Card className="p-12 text-center text-muted-foreground border-dashed">
+          Comece adicionando o primeiro dia do roteiro.
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {days.map((d) => <DayEditor key={d.id} day={d} onChanged={invalidate} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DayEditor({ day, onChanged }: { day: Day & { activities: Activity[] }; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
+  const [addingAct, setAddingAct] = useState(false);
+
+  const save = async () => {
+    const { error } = await supabase.from("itinerary_days").update(form).eq("id", day.id);
+    if (error) return toast.error(error.message);
+    setEditing(false); onChanged();
+  };
+  const remove = async () => {
+    if (!confirm(`Excluir Dia ${day.day_number}?`)) return;
+    const { error } = await supabase.from("itinerary_days").delete().eq("id", day.id);
+    if (error) return toast.error(error.message);
+    onChanged();
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-3">
+        <div className="size-9 rounded-full bg-primary/10 grid place-items-center text-primary font-display font-medium text-sm shrink-0">
+          {day.day_number}
+        </div>
+        {editing ? (
+          <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="flex-1" />
+        ) : (
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{day.title ?? `Dia ${day.day_number}`}</p>
+            <p className="text-xs text-muted-foreground">
+              {day.date ? new Date(day.date).toLocaleDateString("pt-BR") : "sem data"} · {day.activities.length} atividades
+            </p>
+          </div>
+        )}
+        {editing ? (
+          <>
+            <Button size="sm" onClick={save}><Save className="size-4" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>X</Button>
+          </>
+        ) : (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
+            <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
+          </>
+        )}
+      </div>
+
+      {editing && (
+        <div className="mt-3 grid md:grid-cols-2 gap-3">
+          <div><Label className="flex items-center gap-1"><CalendarDays className="size-3" />Data</Label>
+            <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </div>
+          <div className="md:col-span-2"><Label>Descrição do dia</Label>
+            <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 space-y-2">
+        {day.activities.map((a) => (
+          <ActivityRow key={a.id} a={a} onChanged={onChanged} />
+        ))}
+        {addingAct ? (
+          <NewActivityForm dayId={day.id} position={day.activities.length}
+            onDone={() => { setAddingAct(false); onChanged(); }} onCancel={() => setAddingAct(false)} />
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setAddingAct(true)} className="w-full">
+            <Plus className="size-4" />Atividade
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ActivityRow({ a, onChanged }: { a: Activity; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<Partial<Activity>>(a);
+  const save = async () => {
+    const { error } = await supabase.from("itinerary_activities").update({
+      name: form.name, time: form.time, description: form.description,
+      address: form.address, maps_url: form.maps_url, in_preroteiro: form.in_preroteiro,
+    }).eq("id", a.id);
+    if (error) return toast.error(error.message);
+    setEditing(false); onChanged();
+  };
+  const remove = async () => {
+    if (!confirm("Excluir atividade?")) return;
+    const { error } = await supabase.from("itinerary_activities").delete().eq("id", a.id);
+    if (error) return toast.error(error.message);
+    onChanged();
+  };
+
+  if (editing) {
+    return (
+      <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-2">
+        <Input placeholder="Nome" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <div className="grid grid-cols-2 gap-2">
+          <Input type="time" value={form.time ?? ""} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+          <Input placeholder="Maps URL" value={form.maps_url ?? ""} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
+        </div>
+        <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+        <Textarea rows={2} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <div className="flex items-center gap-2">
+          <Switch checked={!!form.in_preroteiro}
+            onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
+          <Label className="text-xs">Sugestão (pré-roteiro)</Label>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={save}><Save className="size-4" />Salvar</Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border border-border p-3 flex items-start gap-2">
+      <GripVertical className="size-4 text-muted-foreground/40 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          {a.time && <span className="text-xs text-primary font-medium">{a.time.slice(0, 5)}</span>}
+          <p className="font-medium text-sm truncate">{a.name}</p>
+          {a.in_preroteiro && (
+            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+              sugestão
+            </span>
+          )}
+          {a.client_response && (
+            <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${
+              a.client_response === "want" ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"
+            }`}>
+              {a.client_response === "want" ? "quer" : "pulou"}
+            </span>
+          )}
+        </div>
+        {a.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.description}</p>}
+        {a.maps_url && (
+          <a href={a.maps_url} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 mt-1">
+            <ExternalLink className="size-3" />Maps
+          </a>
+        )}
+      </div>
+      <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
+      <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
+    </div>
+  );
+}
+
+function NewActivityForm({ dayId, position, onDone, onCancel }: {
+  dayId: string; position: number; onDone: () => void; onCancel: () => void;
+}) {
+  const [form, setForm] = useState({ name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false });
+  const save = async () => {
+    if (!form.name) return;
+    const { error } = await supabase.from("itinerary_activities").insert({
+      day_id: dayId, position, name: form.name,
+      time: form.time || null, description: form.description || null,
+      address: form.address || null, maps_url: form.maps_url || null,
+      in_preroteiro: form.in_preroteiro,
+    });
+    if (error) return toast.error(error.message);
+    onDone();
+  };
+  return (
+    <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-2">
+      <Input placeholder="Nome da atividade" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
+      <div className="grid grid-cols-2 gap-2">
+        <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+        <Input placeholder="Maps URL" value={form.maps_url} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
+      </div>
+      <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+      <Textarea rows={2} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+      <div className="flex items-center gap-2">
+        <Switch checked={form.in_preroteiro} onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
+        <Label className="text-xs">É uma sugestão (pré-roteiro)</Label>
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" onClick={save}>Adicionar</Button>
+        <Button size="sm" variant="ghost" onClick={onCancel}>Cancelar</Button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== DOCS TAB ============================== */
+function DocsTab({ tripId }: { tripId: string }) {
+  const qc = useQueryClient();
+  const { data: docs, isLoading } = useQuery({
+    queryKey: ["trip-docs", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("documents").select("*").eq("trip_id", tripId).order("created_at");
+      if (error) throw error;
+      return data as Document[];
+    },
+  });
+
+  const [uploading, setUploading] = useState(false);
+  const [category, setCategory] = useState<DocCategory>("other");
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const path = `${tripId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const { error: upErr } = await supabase.storage.from("trip-documents").upload(path, file);
+    if (upErr) { setUploading(false); return toast.error(upErr.message); }
+    const { error: insErr } = await supabase.from("documents").insert({
+      trip_id: tripId, name: file.name, category, storage_path: path,
+    });
+    setUploading(false);
+    e.target.value = "";
+    if (insErr) return toast.error(insErr.message);
+    toast.success("Documento enviado");
+    qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
+  }
+
+  async function remove(doc: Document) {
+    if (!confirm(`Excluir "${doc.name}"?`)) return;
+    await supabase.storage.from("trip-documents").remove([doc.storage_path]);
+    await supabase.from("documents").delete().eq("id", doc.id);
+    qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
+  }
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <Label>Categoria</Label>
+          <Select value={category} onValueChange={(v) => setCategory(v as DocCategory)}>
+            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="flight">Voo</SelectItem>
+              <SelectItem value="train">Trem</SelectItem>
+              <SelectItem value="hotel">Hotel</SelectItem>
+              <SelectItem value="ticket">Ingresso</SelectItem>
+              <SelectItem value="other">Outro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Label className="cursor-pointer">
+          <input type="file" className="hidden" onChange={handleFile} disabled={uploading} />
+          <span className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
+            <Upload className="size-4" />{uploading ? "Enviando…" : "Enviar arquivo"}
+          </span>
+        </Label>
+      </div>
+
+      {isLoading ? <Skeleton className="h-32" /> :
+        !docs?.length ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">Nenhum documento enviado.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {docs.map((d) => (
+              <li key={d.id} className="py-3 flex items-center gap-3">
+                <FileText className="size-4 text-primary" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{d.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{d.category}</p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => remove(d)} className="text-destructive">
+                  <Trash2 className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+    </Card>
+  );
+}
+
+/* ============================== PAYMENTS TAB ============================== */
+function PaymentsTab({ tripId, totalValue }: { tripId: string; totalValue: number }) {
+  const qc = useQueryClient();
+  const { data: payments, isLoading } = useQuery({
+    queryKey: ["trip-payments", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("payments").select("*").eq("trip_id", tripId).order("installment");
+      if (error) throw error;
+      return data as Payment[];
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["trip-payments", tripId] });
+
+  async function createFiftyFifty() {
+    if (!totalValue) return toast.error("Defina o valor total da viagem primeiro (aba Info).");
+    if (payments?.length) return toast.error("Já existem pagamentos cadastrados.");
+    const half = Math.round(totalValue * 50) / 100;
+    const { error } = await supabase.from("payments").insert([
+      { trip_id: tripId, installment: 1, amount: half, due_date: new Date().toISOString().slice(0, 10) },
+      { trip_id: tripId, installment: 2, amount: totalValue - half },
+    ]);
+    if (error) return toast.error(error.message);
+    invalidate();
+  }
+
+  async function togglePaid(p: Payment) {
+    const { error } = await supabase.from("payments").update({
+      status: p.status === "paid" ? "pending" : "paid",
+      paid_date: p.status === "paid" ? null : new Date().toISOString().slice(0, 10),
+    }).eq("id", p.id);
+    if (error) return toast.error(error.message);
+    invalidate();
+  }
+
+  async function remove(id: string) {
+    await supabase.from("payments").delete().eq("id", id);
+    invalidate();
+  }
+
+  const paid = (payments ?? []).filter((p) => p.status === "paid").reduce((s, p) => s + Number(p.amount), 0);
+  const total = (payments ?? []).reduce((s, p) => s + Number(p.amount), 0);
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm">
+          <p className="text-muted-foreground">Pago / Total</p>
+          <p className="font-display text-xl">
+            {paid.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            <span className="text-muted-foreground"> / {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+          </p>
+        </div>
+        {!payments?.length && (
+          <Button size="sm" onClick={createFiftyFifty}><DollarSign className="size-4" />Gerar 50/50</Button>
+        )}
+      </div>
+
+      {isLoading ? <Skeleton className="h-32" /> :
+        !payments?.length ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">Sem parcelas cadastradas.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {payments.map((p) => (
+              <li key={p.id} className="py-3 flex items-center gap-3">
+                <span className="text-sm font-display font-medium w-12">#{p.installment}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{Number(p.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {p.due_date && `Vence ${new Date(p.due_date).toLocaleDateString("pt-BR")}`}
+                    {p.paid_date && ` · Pago em ${new Date(p.paid_date).toLocaleDateString("pt-BR")}`}
+                  </p>
+                </div>
+                <Button size="sm" variant={p.status === "paid" ? "default" : "outline"} onClick={() => togglePaid(p)}>
+                  {p.status === "paid" ? "Pago" : "Marcar pago"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => remove(p.id)} className="text-destructive">
+                  <Trash2 className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+    </Card>
+  );
+}
