@@ -97,7 +97,7 @@ function Roteiro() {
   );
 }
 
-function ActivityCard({ a, onReview }: { a: Activity; onReview: () => void }) {
+function ActivityCard({ a, docCount, onReview }: { a: Activity; docCount: number; onReview: () => void }) {
   return (
     <div className="rounded-lg border border-border p-3 bg-surface">
       <div className="flex items-start gap-3">
