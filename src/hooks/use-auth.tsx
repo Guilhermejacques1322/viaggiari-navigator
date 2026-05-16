@@ -26,9 +26,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
-        setTimeout(() => loadRoles(newSession.user.id), 0);
+        setLoading(true);
+        setTimeout(() => {
+          loadRoles(newSession.user.id).finally(() => setLoading(false));
+        }, 0);
       } else {
         setRoles([]);
+        setLoading(false);
       }
     });
 
@@ -46,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function loadRoles(userId: string) {
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+    const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+    if (error) console.error("loadRoles error:", error);
     setRoles((data ?? []).map((r) => r.role as Role));
   }
 
