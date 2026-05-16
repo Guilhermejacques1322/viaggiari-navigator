@@ -52,7 +52,7 @@ function ClientShell() {
 type NavItem = { to: string; label: string; icon: typeof Home; exact?: boolean };
 const NAV: NavItem[] = [
   { to: "/minha-viagem", label: "Início", icon: Home, exact: true },
-  { to: "/minha-viagem/roteiro", label: "Roteiro", icon: Map },
+  { to: "/minha-viagem/roteiro", label: "Roteiro", icon: MapIcon },
   { to: "/minha-viagem/documentos", label: "Docs", icon: FileText },
   { to: "/minha-viagem/preroteiro", label: "Pré-roteiro", icon: ListChecks },
   { to: "/minha-viagem/parceiros", label: "Parceiros", icon: Heart },
