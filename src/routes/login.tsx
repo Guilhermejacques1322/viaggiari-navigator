@@ -20,14 +20,14 @@ const schema = z.object({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, roles, loading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate({ to: isAdmin ? "/admin" : "/minha-viagem" });
-    }
-  }, [user, isAdmin, loading, navigate]);
+    if (loading || !user) return;
+    if (roles.length === 0) return;
+    navigate({ to: isAdmin ? "/admin" : "/minha-viagem" });
+  }, [user, isAdmin, roles, loading, navigate]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
