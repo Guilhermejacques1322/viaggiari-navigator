@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
-  CalendarDays, GripVertical, ExternalLink, UserCheck, DollarSign,
+  CalendarDays, GripVertical, ExternalLink, UserCheck, DollarSign, Paperclip,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -258,8 +258,17 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
       const { data: acts } = ids.length
         ? await supabase.from("itinerary_activities").select("*").in("day_id", ids).order("position")
         : { data: [] as Activity[] };
-      return (ds ?? []).map((d) => ({ ...d, activities: (acts ?? []).filter((a) => a.day_id === d.id) }));
+      const { data: docs } = await supabase.from("documents").select("id, activity_id").eq("trip_id", tripId);
+      return (ds ?? []).map((d) => ({
+        ...d,
+        activities: (acts ?? []).filter((a) => a.day_id === d.id).map((a) => ({
+          ...a,
+          doc_count: (docs ?? []).filter((doc) => doc.activity_id === a.id).length,
+        })),
+      }));
     },
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
@@ -291,14 +300,14 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
         </Card>
       ) : (
         <div className="space-y-3">
-          {days.map((d) => <DayEditor key={d.id} day={d} onChanged={invalidate} />)}
+          {days.map((d) => <DayEditor key={d.id} day={d} tripId={tripId} onChanged={invalidate} />)}
         </div>
       )}
     </div>
   );
 }
 
-function DayEditor({ day, onChanged }: { day: Day & { activities: Activity[] }; onChanged: () => void }) {
+function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activity & { doc_count?: number })[] }; tripId: string; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
   const [addingAct, setAddingAct] = useState(false);
@@ -357,31 +366,29 @@ function DayEditor({ day, onChanged }: { day: Day & { activities: Activity[] }; 
 
       <div className="mt-4 space-y-2">
         {day.activities.map((a) => (
-          <ActivityRow key={a.id} a={a} onChanged={onChanged} />
+          <ActivityRow key={a.id} a={a} tripId={tripId} dayId={day.id} onChanged={onChanged} />
         ))}
-        {addingAct ? (
-          <NewActivityForm dayId={day.id} position={day.activities.length}
-            onDone={() => { setAddingAct(false); onChanged(); }} onCancel={() => setAddingAct(false)} />
-        ) : (
-          <Button size="sm" variant="outline" onClick={() => setAddingAct(true)} className="w-full">
-            <Plus className="size-4" />Atividade
-          </Button>
-        )}
+        <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
       </div>
     </Card>
   );
 }
 
-function ActivityRow({ a, onChanged }: { a: Activity; onChanged: () => void }) {
-  const [editing, setEditing] = useState(false);
+function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<Partial<Activity>>(a);
+
+  // Reset form when opening
+  const openEdit = () => { setForm(a); setEditOpen(true); };
+
   const save = async () => {
     const { error } = await supabase.from("itinerary_activities").update({
       name: form.name, time: form.time, description: form.description,
       address: form.address, maps_url: form.maps_url, in_preroteiro: form.in_preroteiro,
     }).eq("id", a.id);
     if (error) return toast.error(error.message);
-    setEditing(false); onChanged();
+    setEditOpen(false); onChanged();
   };
   const remove = async () => {
     if (!confirm("Excluir atividade?")) return;
@@ -390,107 +397,218 @@ function ActivityRow({ a, onChanged }: { a: Activity; onChanged: () => void }) {
     onChanged();
   };
 
-  if (editing) {
-    return (
-      <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-2">
-        <Input placeholder="Nome" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <div className="grid grid-cols-2 gap-2">
-          <Input type="time" value={form.time ?? ""} onChange={(e) => setForm({ ...form, time: e.target.value })} />
-          <Input placeholder="Maps URL" value={form.maps_url ?? ""} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
-        </div>
-        <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-        <Textarea rows={2} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <div className="flex items-center gap-2">
-          <Switch checked={!!form.in_preroteiro}
-            onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
-          <Label className="text-xs">Sugestão (pré-roteiro)</Label>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={save}><Save className="size-4" />Salvar</Button>
-          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-md border border-border p-3 flex items-start gap-2">
-      <GripVertical className="size-4 text-muted-foreground/40 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          {a.time && <span className="text-xs text-primary font-medium">{a.time.slice(0, 5)}</span>}
-          <p className="font-medium text-sm truncate">{a.name}</p>
-          {a.in_preroteiro && (
-            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
-              sugestão
-            </span>
-          )}
-          {a.client_response && (
-            <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${
-              a.client_response === "want" ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"
-            }`}>
-              {a.client_response === "want" ? "quer" : "pulou"}
-            </span>
+    <>
+      <div className="rounded-md border border-border p-3 flex items-start gap-2">
+        <GripVertical className="size-4 text-muted-foreground/40 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {a.time && <span className="text-xs text-primary font-medium">{a.time.slice(0, 5)}</span>}
+            <p className="font-medium text-sm truncate">{a.name}</p>
+            {a.in_preroteiro && (
+              <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                sugestão
+              </span>
+            )}
+            {a.client_response && (
+              <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${
+                a.client_response === "want" ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"
+              }`}>
+                {a.client_response === "want" ? "quer" : "pulou"}
+              </span>
+            )}
+            {!!a.doc_count && (
+              <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary inline-flex items-center gap-1">
+                <Paperclip className="size-3" />{a.doc_count} doc{a.doc_count > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          {a.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.description}</p>}
+          {a.maps_url && (
+            <a href={a.maps_url} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 mt-1">
+              <ExternalLink className="size-3" />Maps
+            </a>
           )}
         </div>
-        {a.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.description}</p>}
-        {a.maps_url && (
-          <a href={a.maps_url} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 mt-1">
-            <ExternalLink className="size-3" />Maps
-          </a>
-        )}
+        <Button size="sm" variant="ghost" onClick={() => setUploadOpen(true)} title="Anexar documento">
+          <Paperclip className="size-4" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={openEdit}>Editar</Button>
+        <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
       </div>
-      <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
-      <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
-    </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Editar atividade</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Input placeholder="Nome" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="time" value={form.time ?? ""} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+              <Input placeholder="Maps URL" value={form.maps_url ?? ""} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
+            </div>
+            <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <div className="flex items-center gap-2">
+              <Switch checked={!!form.in_preroteiro}
+                onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
+              <Label className="text-xs">Sugestão (pré-roteiro)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button onClick={save}><Save className="size-4" />Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <UploadDocumentDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        tripId={tripId}
+        dayId={dayId}
+        activityId={a.id}
+        activityName={a.name}
+        onUploaded={onChanged}
+      />
+    </>
   );
 }
 
-function NewActivityForm({ dayId, position, onDone, onCancel }: {
-  dayId: string; position: number; onDone: () => void; onCancel: () => void;
+function NewActivityDialog({ dayId, position, onDone }: {
+  dayId: string; position: number; onDone: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false });
+  const [saving, setSaving] = useState(false);
+
+  const reset = () => setForm({ name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false });
+
   const save = async () => {
-    if (!form.name) return;
+    if (!form.name) return toast.error("Informe o nome");
+    setSaving(true);
     const { error } = await supabase.from("itinerary_activities").insert({
       day_id: dayId, position, name: form.name,
       time: form.time || null, description: form.description || null,
       address: form.address || null, maps_url: form.maps_url || null,
       in_preroteiro: form.in_preroteiro,
     });
+    setSaving(false);
     if (error) return toast.error(error.message);
+    reset();
+    setOpen(false);
     onDone();
   };
+
   return (
-    <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-2">
-      <Input placeholder="Nome da atividade" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
-      <div className="grid grid-cols-2 gap-2">
-        <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
-        <Input placeholder="Maps URL" value={form.maps_url} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
-      </div>
-      <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-      <Textarea rows={2} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-      <div className="flex items-center gap-2">
-        <Switch checked={form.in_preroteiro} onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
-        <Label className="text-xs">É uma sugestão (pré-roteiro)</Label>
-      </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save}>Adicionar</Button>
-        <Button size="sm" variant="ghost" onClick={onCancel}>Cancelar</Button>
-      </div>
-    </div>
+    <>
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="w-full">
+        <Plus className="size-4" />Atividade
+      </Button>
+      <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); setOpen(o); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Nova atividade</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Input placeholder="Nome da atividade" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+              <Input placeholder="Maps URL" value={form.maps_url} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
+            </div>
+            <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <Textarea rows={3} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <div className="flex items-center gap-2">
+              <Switch checked={form.in_preroteiro} onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
+              <Label className="text-xs">É uma sugestão (pré-roteiro)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { reset(); setOpen(false); }}>Cancelar</Button>
+            <Button onClick={save} disabled={saving}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function UploadDocumentDialog({ open, onOpenChange, tripId, dayId, activityId, activityName, onUploaded }: {
+  open: boolean; onOpenChange: (o: boolean) => void;
+  tripId: string; dayId?: string | null; activityId?: string | null;
+  activityName?: string; onUploaded: () => void;
+}) {
+  const qc = useQueryClient();
+  const [file, setFile] = useState<File | null>(null);
+  const [category, setCategory] = useState<DocCategory>("ticket");
+  const [uploading, setUploading] = useState(false);
+
+  const upload = async () => {
+    if (!file) return toast.error("Escolha um arquivo");
+    setUploading(true);
+    const path = `${tripId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const { error: upErr } = await supabase.storage.from("trip-documents").upload(path, file);
+    if (upErr) { setUploading(false); return toast.error(upErr.message); }
+    const { error: insErr } = await supabase.from("documents").insert({
+      trip_id: tripId, day_id: dayId ?? null, activity_id: activityId ?? null,
+      name: file.name, category, storage_path: path,
+    });
+    setUploading(false);
+    if (insErr) return toast.error(insErr.message);
+    toast.success("Documento anexado");
+    setFile(null);
+    onOpenChange(false);
+    qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
+    qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+    onUploaded();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Anexar documento{activityName ? ` — ${activityName}` : ""}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Categoria</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as DocCategory)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="flight">Voo</SelectItem>
+                <SelectItem value="train">Trem</SelectItem>
+                <SelectItem value="hotel">Hotel</SelectItem>
+                <SelectItem value="ticket">Ingresso</SelectItem>
+                <SelectItem value="other">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Arquivo</Label>
+            <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={upload} disabled={uploading || !file}>
+            <Upload className="size-4" />{uploading ? "Enviando…" : "Enviar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 /* ============================== DOCS TAB ============================== */
 function DocsTab({ tripId }: { tripId: string }) {
   const qc = useQueryClient();
-  const { data: docs, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["trip-docs", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("documents").select("*").eq("trip_id", tripId).order("created_at");
+      const { data: docs, error } = await supabase.from("documents").select("*").eq("trip_id", tripId).order("created_at");
       if (error) throw error;
-      return data as Document[];
+      const { data: acts } = await supabase.from("itinerary_activities").select("id, name, day_id");
+      const { data: days } = await supabase.from("itinerary_days").select("id, day_number, title").eq("trip_id", tripId);
+      const actMap = new Map((acts ?? []).map((a) => [a.id, a]));
+      const dayMap = new Map((days ?? []).map((d) => [d.id, d]));
+      return { docs: (docs ?? []) as Document[], actMap, dayMap };
     },
   });
 
@@ -512,6 +630,7 @@ function DocsTab({ tripId }: { tripId: string }) {
     if (insErr) return toast.error(insErr.message);
     toast.success("Documento enviado");
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
+    qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
   }
 
   async function remove(doc: Document) {
@@ -519,51 +638,84 @@ function DocsTab({ tripId }: { tripId: string }) {
     await supabase.storage.from("trip-documents").remove([doc.storage_path]);
     await supabase.from("documents").delete().eq("id", doc.id);
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
+    qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+  }
+
+  const general = (data?.docs ?? []).filter((d) => !d.activity_id);
+  const byActivity = (data?.docs ?? []).filter((d) => d.activity_id);
+
+  function DocItem({ d }: { d: Document }) {
+    const act = d.activity_id ? data?.actMap.get(d.activity_id) : null;
+    const day = act?.day_id ? data?.dayMap.get(act.day_id) : (d.day_id ? data?.dayMap.get(d.day_id) : null);
+    return (
+      <li className="py-3 flex items-center gap-3">
+        <FileText className="size-4 text-primary" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{d.name}</p>
+          <p className="text-xs text-muted-foreground">
+            <span className="capitalize">{d.category}</span>
+            {day && <> · Dia {day.day_number}{day.title ? ` — ${day.title}` : ""}</>}
+            {act && <> · {act.name}</>}
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => remove(d)} className="text-destructive">
+          <Trash2 className="size-4" />
+        </Button>
+      </li>
+    );
   }
 
   return (
-    <Card className="p-5 space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label>Categoria</Label>
-          <Select value={category} onValueChange={(v) => setCategory(v as DocCategory)}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="flight">Voo</SelectItem>
-              <SelectItem value="train">Trem</SelectItem>
-              <SelectItem value="hotel">Hotel</SelectItem>
-              <SelectItem value="ticket">Ingresso</SelectItem>
-              <SelectItem value="other">Outro</SelectItem>
-            </SelectContent>
-          </Select>
+    <Card className="p-5 space-y-6">
+      <div>
+        <p className="text-sm font-medium mb-2">Documento geral da viagem</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label>Categoria</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as DocCategory)}>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="flight">Voo</SelectItem>
+                <SelectItem value="train">Trem</SelectItem>
+                <SelectItem value="hotel">Hotel</SelectItem>
+                <SelectItem value="ticket">Ingresso</SelectItem>
+                <SelectItem value="other">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Label className="cursor-pointer">
+            <input type="file" className="hidden" onChange={handleFile} disabled={uploading} />
+            <span className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
+              <Upload className="size-4" />{uploading ? "Enviando…" : "Enviar arquivo"}
+            </span>
+          </Label>
         </div>
-        <Label className="cursor-pointer">
-          <input type="file" className="hidden" onChange={handleFile} disabled={uploading} />
-          <span className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
-            <Upload className="size-4" />{uploading ? "Enviando…" : "Enviar arquivo"}
-          </span>
-        </Label>
+        <p className="text-xs text-muted-foreground mt-2">
+          Para anexar a uma atividade específica, use o ícone <Paperclip className="inline size-3" /> na aba Roteiro.
+        </p>
       </div>
 
-      {isLoading ? <Skeleton className="h-32" /> :
-        !docs?.length ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Nenhum documento enviado.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {docs.map((d) => (
-              <li key={d.id} className="py-3 flex items-center gap-3">
-                <FileText className="size-4 text-primary" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{d.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{d.category}</p>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => remove(d)} className="text-destructive">
-                  <Trash2 className="size-4" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+      {isLoading ? <Skeleton className="h-32" /> : (
+        <>
+          <div>
+            <p className="text-sm font-medium mb-2">Documentos gerais</p>
+            {general.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded">Nenhum documento geral.</p>
+            ) : (
+              <ul className="divide-y divide-border">{general.map((d) => <DocItem key={d.id} d={d} />)}</ul>
+            )}
+          </div>
+
+          <div>
+            <p className="text-sm font-medium mb-2">Documentos por atividade</p>
+            {byActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded">Nenhum documento vinculado a atividade.</p>
+            ) : (
+              <ul className="divide-y divide-border">{byActivity.map((d) => <DocItem key={d.id} d={d} />)}</ul>
+            )}
+          </div>
+        </>
+      )}
     </Card>
   );
 }

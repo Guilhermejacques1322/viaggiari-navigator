@@ -142,8 +142,10 @@ export type Database = {
       }
       documents: {
         Row: {
+          activity_id: string | null
           category: Database["public"]["Enums"]["document_category"]
           created_at: string
+          day_id: string | null
           event_date: string | null
           id: string
           name: string
@@ -152,8 +154,10 @@ export type Database = {
           trip_id: string
         }
         Insert: {
+          activity_id?: string | null
           category?: Database["public"]["Enums"]["document_category"]
           created_at?: string
+          day_id?: string | null
           event_date?: string | null
           id?: string
           name: string
@@ -162,8 +166,10 @@ export type Database = {
           trip_id: string
         }
         Update: {
+          activity_id?: string | null
           category?: Database["public"]["Enums"]["document_category"]
           created_at?: string
+          day_id?: string | null
           event_date?: string | null
           id?: string
           name?: string
@@ -172,6 +178,20 @@ export type Database = {
           trip_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_days"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documents_trip_id_fkey"
             columns: ["trip_id"]

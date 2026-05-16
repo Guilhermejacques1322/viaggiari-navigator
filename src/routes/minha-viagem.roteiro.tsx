@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star } from "lucide-react";
+import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { useMyTrip, type Activity } from "@/hooks/use-my-trip";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,9 +75,10 @@ function Roteiro() {
                       Sem atividades programadas
                     </p>
                   ) : (
-                    visible.map((a) => (
-                      <ActivityCard key={a.id} a={a} onReview={() => setReviewing(a)} />
-                    ))
+                    visible.map((a) => {
+                      const docCount = (data.documents ?? []).filter((d) => d.activity_id === a.id).length;
+                      return <ActivityCard key={a.id} a={a} docCount={docCount} onReview={() => setReviewing(a)} />;
+                    })
                   )}
                 </div>
               )}
@@ -96,7 +97,7 @@ function Roteiro() {
   );
 }
 
-function ActivityCard({ a, onReview }: { a: Activity; onReview: () => void }) {
+function ActivityCard({ a, docCount, onReview }: { a: Activity; docCount: number; onReview: () => void }) {
   return (
     <div className="rounded-lg border border-border p-3 bg-surface">
       <div className="flex items-start gap-3">
@@ -123,6 +124,11 @@ function ActivityCard({ a, onReview }: { a: Activity; onReview: () => void }) {
             {a.has_ticket && (
               <span className="text-xs text-primary inline-flex items-center gap-1">
                 <Ticket className="size-3" /> Ingresso
+              </span>
+            )}
+            {docCount > 0 && (
+              <span className="text-xs text-primary inline-flex items-center gap-1">
+                <Paperclip className="size-3" /> {docCount} doc{docCount > 1 ? "s" : ""}
               </span>
             )}
             <button onClick={onReview} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 ml-auto">
