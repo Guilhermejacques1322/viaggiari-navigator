@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star } from "lucide-react";
+import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { useMyTrip, type Activity } from "@/hooks/use-my-trip";
 import { supabase } from "@/integrations/supabase/client";
