@@ -38,7 +38,7 @@ function OrcamentosPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     contact_id: "",
-    service_type: "roteiro_personalizado",
+    service_type: "assessoria",
     destinations: "",
     days: 7,
     daily_rate: 500,
@@ -79,7 +79,7 @@ function OrcamentosPage() {
     if (error || !data) return toast.error(error?.message || "Erro");
     toast.success("Orçamento criado");
     setOpen(false);
-    setForm({ contact_id: "", service_type: "roteiro_personalizado", destinations: "", days: 7, daily_rate: 500, discount: 0, notes: "" });
+    setForm({ contact_id: "", service_type: "assessoria", destinations: "", days: 7, daily_rate: 500, discount: 0, notes: "" });
     load();
     // immediate PDF
     const q = data as Quote;
@@ -147,10 +147,8 @@ function OrcamentosPage() {
                 <Select value={form.service_type} onValueChange={(v) => setForm({ ...form, service_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="roteiro_personalizado">Roteiro personalizado</SelectItem>
-                    <SelectItem value="aluguel_carro">Aluguel de carro</SelectItem>
-                    <SelectItem value="hospedagem">Hospedagem</SelectItem>
-                    <SelectItem value="pacote_completo">Pacote completo</SelectItem>
+                    <SelectItem value="assessoria">Assessoria de roteiro</SelectItem>
+                    <SelectItem value="package">Pacote completo</SelectItem>
                     <SelectItem value="consultoria">Consultoria</SelectItem>
                   </SelectContent>
                 </Select>

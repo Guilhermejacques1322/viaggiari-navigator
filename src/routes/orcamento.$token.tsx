@@ -25,10 +25,8 @@ type Quote = {
 };
 
 const SERVICE_LABELS: Record<string, string> = {
-  roteiro_personalizado: "Roteiro Personalizado",
-  aluguel_carro: "Aluguel de Carro",
-  hospedagem: "Hospedagem",
-  pacote_completo: "Pacote Completo",
+  assessoria: "Assessoria de Roteiro",
+  package: "Pacote Completo",
   consultoria: "Consultoria",
 };
 
