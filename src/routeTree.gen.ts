@@ -24,6 +24,7 @@ import { Route as MinhaViagemDocumentosRouteImport } from './routes/minha-viagem
 import { Route as AdminViagensRouteImport } from './routes/admin.viagens'
 import { Route as AdminLeadsRouteImport } from './routes/admin.leads'
 import { Route as AdminCrmRouteImport } from './routes/admin.crm'
+import { Route as AdminViagensTripIdRouteImport } from './routes/admin.viagens.$tripId'
 import { Route as AdminCrmContactIdRouteImport } from './routes/admin.crm.$contactId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -101,6 +102,11 @@ const AdminCrmRoute = AdminCrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminViagensTripIdRoute = AdminViagensTripIdRouteImport.update({
+  id: '/$tripId',
+  path: '/$tripId',
+  getParentRoute: () => AdminViagensRoute,
+} as any)
 const AdminCrmContactIdRoute = AdminCrmContactIdRouteImport.update({
   id: '/$contactId',
   path: '/$contactId',
@@ -116,7 +122,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/leads': typeof AdminLeadsRoute
-  '/admin/viagens': typeof AdminViagensRoute
+  '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
+  '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -132,7 +139,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/leads': typeof AdminLeadsRoute
-  '/admin/viagens': typeof AdminViagensRoute
+  '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/minha-viagem': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
+  '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,7 +159,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/leads': typeof AdminLeadsRoute
-  '/admin/viagens': typeof AdminViagensRoute
+  '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
+  '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
+    | '/admin/viagens/$tripId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/minha-viagem'
     | '/admin/crm/$contactId'
+    | '/admin/viagens/$tripId'
   id:
     | '__root__'
     | '/'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
+    | '/admin/viagens/$tripId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -331,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCrmRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/viagens/$tripId': {
+      id: '/admin/viagens/$tripId'
+      path: '/$tripId'
+      fullPath: '/admin/viagens/$tripId'
+      preLoaderRoute: typeof AdminViagensTripIdRouteImport
+      parentRoute: typeof AdminViagensRoute
+    }
     '/admin/crm/$contactId': {
       id: '/admin/crm/$contactId'
       path: '/$contactId'
@@ -353,17 +372,29 @@ const AdminCrmRouteWithChildren = AdminCrmRoute._addFileChildren(
   AdminCrmRouteChildren,
 )
 
+interface AdminViagensRouteChildren {
+  AdminViagensTripIdRoute: typeof AdminViagensTripIdRoute
+}
+
+const AdminViagensRouteChildren: AdminViagensRouteChildren = {
+  AdminViagensTripIdRoute: AdminViagensTripIdRoute,
+}
+
+const AdminViagensRouteWithChildren = AdminViagensRoute._addFileChildren(
+  AdminViagensRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminCrmRoute: typeof AdminCrmRouteWithChildren
   AdminLeadsRoute: typeof AdminLeadsRoute
-  AdminViagensRoute: typeof AdminViagensRoute
+  AdminViagensRoute: typeof AdminViagensRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCrmRoute: AdminCrmRouteWithChildren,
   AdminLeadsRoute: AdminLeadsRoute,
-  AdminViagensRoute: AdminViagensRoute,
+  AdminViagensRoute: AdminViagensRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
 
