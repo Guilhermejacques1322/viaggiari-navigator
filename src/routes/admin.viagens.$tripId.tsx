@@ -48,6 +48,8 @@ function TripDetail() {
       if (error) throw error;
       return data;
     },
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
   if (isLoading || !trip) return <Skeleton className="h-96" />;
