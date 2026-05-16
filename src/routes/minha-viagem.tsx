@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Home, Map, FileText, Heart, ListChecks, LogOut } from "lucide-react";
+import { Home, Map as MapIcon, FileText, Heart, ListChecks, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { MyTripProvider, useMyTrip } from "@/hooks/use-my-trip";
 import { Logo } from "@/components/brand/logo";
