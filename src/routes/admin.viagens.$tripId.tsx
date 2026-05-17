@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
-  CalendarDays, GripVertical, ExternalLink, UserCheck, DollarSign, Paperclip,
+  CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -28,7 +28,6 @@ type Trip = Database["public"]["Tables"]["trips"]["Row"];
 type Day = Database["public"]["Tables"]["itinerary_days"]["Row"];
 type Activity = Database["public"]["Tables"]["itinerary_activities"]["Row"];
 type Document = Database["public"]["Tables"]["documents"]["Row"];
-type Payment = Database["public"]["Tables"]["payments"]["Row"];
 type DocCategory = Database["public"]["Enums"]["document_category"];
 
 export const Route = createFileRoute("/admin/viagens/$tripId")({
@@ -84,12 +83,10 @@ function TripDetail() {
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
-          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
         <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
-        <TabsContent value="financeiro" className="mt-4"><PaymentsTab tripId={tripId} totalValue={Number(trip.total_value ?? 0)} /></TabsContent>
       </Tabs>
     </div>
   );
@@ -339,6 +336,10 @@ function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activ
             <p className="font-medium text-sm truncate">{day.title ?? `Dia ${day.day_number}`}</p>
             <p className="text-xs text-muted-foreground">
               {day.date ? new Date(day.date).toLocaleDateString("pt-BR") : "sem data"} · {day.activities.length} atividades
+              {(() => {
+                const tot = day.activities.reduce((s, a) => s + Number(a.estimated_cost ?? 0), 0);
+                return tot > 0 ? <> · <span className="text-emerald-700 font-medium">{tot.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></> : null;
+              })()}
             </p>
           </div>
         )}
@@ -380,14 +381,18 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<Partial<Activity>>(a);
+  const [savingLib, setSavingLib] = useState(false);
+  const [libCountry, setLibCountry] = useState("");
+  const [libCity, setLibCity] = useState("");
 
-  // Reset form when opening
   const openEdit = () => { setForm(a); setEditOpen(true); };
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_activities").update({
       name: form.name, time: form.time, description: form.description,
       address: form.address, maps_url: form.maps_url, in_preroteiro: form.in_preroteiro,
+      estimated_cost: form.estimated_cost ?? 0,
+      currency: form.currency ?? "BRL",
     }).eq("id", a.id);
     if (error) return toast.error(error.message);
     setEditOpen(false); onChanged();
@@ -398,6 +403,38 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
     if (error) return toast.error(error.message);
     onChanged();
   };
+
+  async function saveToLibrary() {
+    if (!libCountry.trim() || !libCity.trim()) {
+      return toast.error("Informe país e cidade para salvar na biblioteca");
+    }
+    setSavingLib(true);
+    // find or create destination matching city/country
+    const { data: existing } = await supabase
+      .from("destinations").select("id")
+      .eq("name", libCity.trim()).eq("country", libCountry.trim()).maybeSingle();
+    let destId = existing?.id;
+    if (!destId) {
+      const { data: created, error: e1 } = await supabase
+        .from("destinations").insert({ name: libCity.trim(), country: libCountry.trim() })
+        .select("id").single();
+      if (e1) { setSavingLib(false); return toast.error(e1.message); }
+      destId = created.id;
+    }
+    const { error } = await supabase.from("destination_activities").insert({
+      destination_id: destId!,
+      name: form.name ?? a.name,
+      description: form.description ?? a.description ?? null,
+      address: form.address ?? a.address ?? null,
+      maps_url: form.maps_url ?? a.maps_url ?? null,
+      activity_type: (form.activity_type ?? a.activity_type) as any,
+      country: libCountry.trim(),
+      city: libCity.trim(),
+    });
+    setSavingLib(false);
+    if (error) return toast.error(error.message);
+    toast.success("Atividade salva na biblioteca");
+  }
 
   return (
     <>
@@ -410,6 +447,11 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
             {a.in_preroteiro && (
               <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
                 sugestão
+              </span>
+            )}
+            {!!Number(a.estimated_cost) && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700">
+                {Number(a.estimated_cost).toLocaleString("pt-BR", { style: "currency", currency: a.currency ?? "BRL" })}
               </span>
             )}
             {a.client_response && (
@@ -440,7 +482,7 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar atividade</DialogTitle></DialogHeader>
           <div className="space-y-2">
             <Input placeholder="Nome" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -450,10 +492,39 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
             </div>
             <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <Label className="text-xs">Custo estimado (cliente)</Label>
+                <Input type="number" step="0.01" value={form.estimated_cost ?? ""}
+                  onChange={(e) => setForm({ ...form, estimated_cost: e.target.value ? Number(e.target.value) : 0 })} />
+              </div>
+              <div>
+                <Label className="text-xs">Moeda</Label>
+                <Select value={form.currency ?? "BRL"} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">BRL</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={!!form.in_preroteiro}
                 onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
               <Label className="text-xs">Sugestão (pré-roteiro)</Label>
+            </div>
+
+            <div className="border-t border-border pt-3 mt-3 space-y-2">
+              <Label className="text-xs font-medium">Salvar na biblioteca de atividades</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="País" value={libCountry} onChange={(e) => setLibCountry(e.target.value)} />
+                <Input placeholder="Cidade" value={libCity} onChange={(e) => setLibCity(e.target.value)} />
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={saveToLibrary} disabled={savingLib} className="w-full">
+                <BookmarkPlus className="size-4" />{savingLib ? "Salvando…" : "Salvar atividade na biblioteca"}
+              </Button>
             </div>
           </div>
           <DialogFooter>
@@ -480,10 +551,11 @@ function NewActivityDialog({ dayId, position, onDone }: {
   dayId: string; position: number; onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false });
+  const initialForm = { name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false, estimated_cost: 0, currency: "BRL" };
+  const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 
-  const reset = () => setForm({ name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false });
+  const reset = () => setForm(initialForm);
 
   const save = async () => {
     if (!form.name) return toast.error("Informe o nome");
@@ -493,6 +565,8 @@ function NewActivityDialog({ dayId, position, onDone }: {
       time: form.time || null, description: form.description || null,
       address: form.address || null, maps_url: form.maps_url || null,
       in_preroteiro: form.in_preroteiro,
+      estimated_cost: form.estimated_cost || 0,
+      currency: form.currency,
     });
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -507,7 +581,7 @@ function NewActivityDialog({ dayId, position, onDone }: {
         <Plus className="size-4" />Atividade
       </Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); setOpen(o); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nova atividade</DialogTitle></DialogHeader>
           <div className="space-y-2">
             <Input placeholder="Nome da atividade" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
@@ -517,6 +591,24 @@ function NewActivityDialog({ dayId, position, onDone }: {
             </div>
             <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Textarea rows={3} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <Label className="text-xs">Custo estimado (cliente)</Label>
+                <Input type="number" step="0.01" value={form.estimated_cost || ""}
+                  onChange={(e) => setForm({ ...form, estimated_cost: e.target.value ? Number(e.target.value) : 0 })} />
+              </div>
+              <div>
+                <Label className="text-xs">Moeda</Label>
+                <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">BRL</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.in_preroteiro} onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
               <Label className="text-xs">É uma sugestão (pré-roteiro)</Label>
@@ -612,6 +704,8 @@ function DocsTab({ tripId }: { tripId: string }) {
       const dayMap = new Map((days ?? []).map((d) => [d.id, d]));
       return { docs: (docs ?? []) as Document[], actMap, dayMap };
     },
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
   const [uploading, setUploading] = useState(false);
@@ -718,93 +812,6 @@ function DocsTab({ tripId }: { tripId: string }) {
           </div>
         </>
       )}
-    </Card>
-  );
-}
-
-/* ============================== PAYMENTS TAB ============================== */
-function PaymentsTab({ tripId, totalValue }: { tripId: string; totalValue: number }) {
-  const qc = useQueryClient();
-  const { data: payments, isLoading } = useQuery({
-    queryKey: ["trip-payments", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("payments").select("*").eq("trip_id", tripId).order("installment");
-      if (error) throw error;
-      return data as Payment[];
-    },
-  });
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["trip-payments", tripId] });
-
-  async function createFiftyFifty() {
-    if (!totalValue) return toast.error("Defina o valor total da viagem primeiro (aba Info).");
-    if (payments?.length) return toast.error("Já existem pagamentos cadastrados.");
-    const half = Math.round(totalValue * 50) / 100;
-    const { error } = await supabase.from("payments").insert([
-      { trip_id: tripId, installment: 1, amount: half, due_date: new Date().toISOString().slice(0, 10) },
-      { trip_id: tripId, installment: 2, amount: totalValue - half },
-    ]);
-    if (error) return toast.error(error.message);
-    invalidate();
-  }
-
-  async function togglePaid(p: Payment) {
-    const { error } = await supabase.from("payments").update({
-      status: p.status === "paid" ? "pending" : "paid",
-      paid_date: p.status === "paid" ? null : new Date().toISOString().slice(0, 10),
-    }).eq("id", p.id);
-    if (error) return toast.error(error.message);
-    invalidate();
-  }
-
-  async function remove(id: string) {
-    await supabase.from("payments").delete().eq("id", id);
-    invalidate();
-  }
-
-  const paid = (payments ?? []).filter((p) => p.status === "paid").reduce((s, p) => s + Number(p.amount), 0);
-  const total = (payments ?? []).reduce((s, p) => s + Number(p.amount), 0);
-
-  return (
-    <Card className="p-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm">
-          <p className="text-muted-foreground">Pago / Total</p>
-          <p className="font-display text-xl">
-            {paid.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            <span className="text-muted-foreground"> / {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-          </p>
-        </div>
-        {!payments?.length && (
-          <Button size="sm" onClick={createFiftyFifty}><DollarSign className="size-4" />Gerar 50/50</Button>
-        )}
-      </div>
-
-      {isLoading ? <Skeleton className="h-32" /> :
-        !payments?.length ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Sem parcelas cadastradas.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {payments.map((p) => (
-              <li key={p.id} className="py-3 flex items-center gap-3">
-                <span className="text-sm font-display font-medium w-12">#{p.installment}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{Number(p.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.due_date && `Vence ${new Date(p.due_date).toLocaleDateString("pt-BR")}`}
-                    {p.paid_date && ` · Pago em ${new Date(p.paid_date).toLocaleDateString("pt-BR")}`}
-                  </p>
-                </div>
-                <Button size="sm" variant={p.status === "paid" ? "default" : "outline"} onClick={() => togglePaid(p)}>
-                  {p.status === "paid" ? "Pago" : "Marcar pago"}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => remove(p.id)} className="text-destructive">
-                  <Trash2 className="size-4" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
     </Card>
   );
 }

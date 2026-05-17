@@ -31,6 +31,8 @@ type Activity = {
   address: string | null;
   maps_url: string | null;
   activity_type: string | null;
+  country: string | null;
+  city: string | null;
 };
 
 function DestinosPage() {
@@ -39,6 +41,8 @@ function DestinosPage() {
   const [loading, setLoading] = useState(true);
   const [newDest, setNewDest] = useState({ name: "", country: "", cover_image_url: "", tips: "", tags: "" });
   const [open, setOpen] = useState(false);
+  const [filterCountry, setFilterCountry] = useState("");
+  const [filterCity, setFilterCity] = useState("");
 
   async function load() {
     setLoading(true);
@@ -103,13 +107,27 @@ function DestinosPage() {
         </Dialog>
       </div>
 
+      <div className="flex gap-2 flex-wrap">
+        <Input placeholder="Filtrar por país" value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)} className="max-w-[200px]" />
+        <Input placeholder="Filtrar por cidade" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="max-w-[200px]" />
+        {(filterCountry || filterCity) && (
+          <Button variant="ghost" size="sm" onClick={() => { setFilterCountry(""); setFilterCity(""); }}>Limpar</Button>
+        )}
+      </div>
+
       {loading ? <p className="text-muted-foreground">Carregando…</p> : destinations.length === 0 ? (
         <Card className="p-10 text-center text-muted-foreground">Nenhum destino cadastrado ainda.</Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {destinations.map((d) => (
-            <DestinationCard key={d.id} dest={d} activities={activities[d.id] || []} onDelete={() => deleteDestination(d.id)} onReload={load} />
-          ))}
+          {destinations
+            .filter((d) => {
+              if (filterCountry && !(d.country ?? "").toLowerCase().includes(filterCountry.toLowerCase())) return false;
+              if (filterCity && !(d.name ?? "").toLowerCase().includes(filterCity.toLowerCase())) return false;
+              return true;
+            })
+            .map((d) => (
+              <DestinationCard key={d.id} dest={d} activities={activities[d.id] || []} onDelete={() => deleteDestination(d.id)} onReload={load} />
+            ))}
         </div>
       )}
     </div>
@@ -118,18 +136,23 @@ function DestinosPage() {
 
 function DestinationCard({ dest, activities, onDelete, onReload }: { dest: Destination; activities: Activity[]; onDelete: () => void; onReload: () => void; }) {
   const [actOpen, setActOpen] = useState(false);
-  const [newAct, setNewAct] = useState({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio" });
+  const [newAct, setNewAct] = useState({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio", country: dest.country ?? "", city: dest.name });
 
   async function addActivity() {
     if (!newAct.name) return toast.error("Nome obrigatório");
     const { error } = await supabase.from("destination_activities").insert({
       destination_id: dest.id,
-      ...newAct,
+      name: newAct.name,
+      description: newAct.description,
+      address: newAct.address,
+      maps_url: newAct.maps_url,
+      country: newAct.country || null,
+      city: newAct.city || null,
       activity_type: newAct.activity_type as "passeio" | "refeicao" | "hospedagem" | "transporte" | "livre",
     });
     if (error) return toast.error(error.message);
     toast.success("Adicionada");
-    setNewAct({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio" });
+    setNewAct({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio", country: dest.country ?? "", city: dest.name });
     setActOpen(false);
     onReload();
   }
@@ -176,6 +199,10 @@ function DestinationCard({ dest, activities, onDelete, onReload }: { dest: Desti
                   </div>
                   <div><Label>Endereço</Label><Input value={newAct.address} onChange={(e) => setNewAct({ ...newAct, address: e.target.value })} /></div>
                   <div><Label>URL no Maps</Label><Input value={newAct.maps_url} onChange={(e) => setNewAct({ ...newAct, maps_url: e.target.value })} /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label>País</Label><Input value={newAct.country} onChange={(e) => setNewAct({ ...newAct, country: e.target.value })} /></div>
+                    <div><Label>Cidade</Label><Input value={newAct.city} onChange={(e) => setNewAct({ ...newAct, city: e.target.value })} /></div>
+                  </div>
                   <div><Label>Descrição</Label><Textarea rows={3} value={newAct.description} onChange={(e) => setNewAct({ ...newAct, description: e.target.value })} /></div>
                   <Button onClick={addActivity} className="w-full">Adicionar</Button>
                 </div>

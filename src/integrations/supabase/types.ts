@@ -71,6 +71,8 @@ export type Database = {
           activity_type: Database["public"]["Enums"]["activity_type"] | null
           address: string | null
           avg_rating: number | null
+          city: string | null
+          country: string | null
           created_at: string
           description: string | null
           destination_id: string
@@ -82,6 +84,8 @@ export type Database = {
           activity_type?: Database["public"]["Enums"]["activity_type"] | null
           address?: string | null
           avg_rating?: number | null
+          city?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           destination_id: string
@@ -93,6 +97,8 @@ export type Database = {
           activity_type?: Database["public"]["Enums"]["activity_type"] | null
           address?: string | null
           avg_rating?: number | null
+          city?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           destination_id?: string
@@ -210,9 +216,11 @@ export type Database = {
             | Database["public"]["Enums"]["preroteiro_response"]
             | null
           created_at: string
+          currency: string | null
           day_id: string
           description: string | null
           document_id: string | null
+          estimated_cost: number | null
           has_ticket: boolean | null
           id: string
           in_preroteiro: boolean | null
@@ -230,9 +238,11 @@ export type Database = {
             | Database["public"]["Enums"]["preroteiro_response"]
             | null
           created_at?: string
+          currency?: string | null
           day_id: string
           description?: string | null
           document_id?: string | null
+          estimated_cost?: number | null
           has_ticket?: boolean | null
           id?: string
           in_preroteiro?: boolean | null
@@ -250,9 +260,11 @@ export type Database = {
             | Database["public"]["Enums"]["preroteiro_response"]
             | null
           created_at?: string
+          currency?: string | null
           day_id?: string
           description?: string | null
           document_id?: string | null
+          estimated_cost?: number | null
           has_ticket?: boolean | null
           id?: string
           in_preroteiro?: boolean | null
@@ -417,8 +429,10 @@ export type Database = {
           installment: number
           notes: string | null
           paid_date: string | null
+          payment_method: string | null
+          quote_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
-          trip_id: string
+          trip_id: string | null
         }
         Insert: {
           amount: number
@@ -428,8 +442,10 @@ export type Database = {
           installment: number
           notes?: string | null
           paid_date?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
-          trip_id: string
+          trip_id?: string | null
         }
         Update: {
           amount?: number
@@ -439,10 +455,19 @@ export type Database = {
           installment?: number
           notes?: string | null
           paid_date?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
-          trip_id?: string
+          trip_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_trip_id_fkey"
             columns: ["trip_id"]
@@ -481,42 +506,54 @@ export type Database = {
       }
       quotes: {
         Row: {
+          closed_at: string | null
           contact_id: string | null
           created_at: string
           daily_rate: number
           days: number
           destinations: string[] | null
           discount: number | null
+          follow_up_at: string | null
           id: string
+          lost_reason: string | null
           notes: string | null
           service_type: Database["public"]["Enums"]["service_type"]
           share_token: string | null
+          status: Database["public"]["Enums"]["quote_status"]
           total: number
         }
         Insert: {
+          closed_at?: string | null
           contact_id?: string | null
           created_at?: string
           daily_rate: number
           days: number
           destinations?: string[] | null
           discount?: number | null
+          follow_up_at?: string | null
           id?: string
+          lost_reason?: string | null
           notes?: string | null
           service_type: Database["public"]["Enums"]["service_type"]
           share_token?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
           total: number
         }
         Update: {
+          closed_at?: string | null
           contact_id?: string | null
           created_at?: string
           daily_rate?: number
           days?: number
           destinations?: string[] | null
           discount?: number | null
+          follow_up_at?: string | null
           id?: string
+          lost_reason?: string | null
           notes?: string | null
           service_type?: Database["public"]["Enums"]["service_type"]
           share_token?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
           total?: number
         }
         Relationships: [
@@ -690,6 +727,7 @@ export type Database = {
       document_category: "flight" | "train" | "hotel" | "ticket" | "other"
       payment_status: "pending" | "paid"
       preroteiro_response: "want" | "skip"
+      quote_status: "sent" | "follow_up" | "lost" | "closed"
       service_type: "package" | "assessoria" | "consultoria"
       trip_status:
         | "quote_sent"
@@ -843,6 +881,7 @@ export const Constants = {
       document_category: ["flight", "train", "hotel", "ticket", "other"],
       payment_status: ["pending", "paid"],
       preroteiro_response: ["want", "skip"],
+      quote_status: ["sent", "follow_up", "lost", "closed"],
       service_type: ["package", "assessoria", "consultoria"],
       trip_status: [
         "quote_sent",

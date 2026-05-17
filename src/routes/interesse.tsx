@@ -139,6 +139,14 @@ function InteressePage() {
                 <Button type="submit" className="w-full" disabled={submitting || !serviceKey}>
                   {submitting ? "Enviando..." : "Quero ser contactado"}
                 </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => navigate({ to: "/" })}
+                >
+                  <ArrowLeft className="size-4" /> Voltar ao início
+                </Button>
               </form>
             </>
           )}
