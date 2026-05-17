@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
+import type * as MapboxNS from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -60,41 +60,59 @@ export function TripMap({ days, className }: Props) {
     return first?.id ?? "all";
   });
 
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<MapboxNS.Map | null>(null);
+  const mapboxRef = useRef<typeof MapboxNS | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const markersRef = useRef<MapboxNS.Marker[]>([]);
+  const [mapReady, setMapReady] = useState(false);
 
-  // Init map
+  // Init map (lazy import to avoid SSR window errors)
   useEffect(() => {
     if (!tokenData?.token || !containerRef.current || mapRef.current) return;
-    mapboxgl.accessToken = tokenData.token;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [-46.6333, -23.5505],
-      zoom: 10,
-    });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
-    mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    let disposed = false;
+    (async () => {
+      const mod = await import("mapbox-gl");
+      if (disposed || !containerRef.current) return;
+      const mapboxgl = mod.default;
+      mapboxRef.current = mapboxgl as unknown as typeof MapboxNS;
+      mapboxgl.accessToken = tokenData.token;
+      const map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [-46.6333, -23.5505],
+        zoom: 10,
+      });
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+      mapRef.current = map;
+      setMapReady(true);
+    })();
+    return () => {
+      disposed = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      setMapReady(false);
+    };
   }, [tokenData?.token]);
 
   // Render markers + route line for selected day(s)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const mapboxgl = mapboxRef.current;
+    if (!map || !mapboxgl || !mapReady) return;
 
-    // Wait for style to load
     const apply = () => {
-      // Clear markers
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
-      // Clear existing route layers/sources
-      for (const id of map.getStyle().layers?.map((l) => l.id) ?? []) {
-        if (id.startsWith("route-")) map.removeLayer(id);
+      const style = map.getStyle();
+      for (const layer of style?.layers ?? []) {
+        if (layer.id.startsWith("route-line-")) {
+          try { map.removeLayer(layer.id); } catch {}
+        }
       }
-      for (const id of Object.keys(map.getStyle().sources ?? {})) {
-        if (id.startsWith("route-")) map.removeSource(id);
+      for (const id of Object.keys(style?.sources ?? {})) {
+        if (id.startsWith("route-")) {
+          try { map.removeSource(id); } catch {}
+        }
       }
 
       const daysToShow =
@@ -103,7 +121,7 @@ export function TripMap({ days, className }: Props) {
       const bounds = new mapboxgl.LngLatBounds();
       let hasPoints = false;
 
-      daysToShow.forEach((day, dayIdx) => {
+      daysToShow.forEach((day) => {
         const colorIdx = daysWithCoords.findIndex((d) => d.id === day.id);
         const color = DAY_COLORS[colorIdx % DAY_COLORS.length];
         const coords: [number, number][] = [];
@@ -116,21 +134,12 @@ export function TripMap({ days, className }: Props) {
           hasPoints = true;
 
           const el = document.createElement("div");
-          el.style.cssText = `
-            width:28px;height:28px;border-radius:50%;
-            background:${color};color:white;
-            display:flex;align-items:center;justify-content:center;
-            font-weight:600;font-size:13px;
-            border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3);
-            cursor:pointer;
-          `;
+          el.style.cssText = `width:28px;height:28px;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
           el.innerText = String(idx + 1);
 
           const popup = new mapboxgl.Popup({ offset: 18, closeButton: false }).setHTML(`
             <div style="font-family:system-ui;min-width:200px">
-              <div style="font-size:11px;color:#666;margin-bottom:4px">
-                Dia ${day.day_number}${a.time ? " · " + a.time.slice(0, 5) : ""}
-              </div>
+              <div style="font-size:11px;color:#666;margin-bottom:4px">Dia ${day.day_number}${a.time ? " · " + a.time.slice(0, 5) : ""}</div>
               <div style="font-weight:600;font-size:14px;margin-bottom:4px">${escapeHtml(a.name)}</div>
               ${a.address ? `<div style="font-size:12px;color:#555;margin-bottom:6px">${escapeHtml(a.address)}</div>` : ""}
               ${a.maps_url ? `<a href="${a.maps_url}" target="_blank" rel="noreferrer" style="font-size:12px;color:${color};text-decoration:none">Abrir no Maps →</a>` : ""}
@@ -144,7 +153,6 @@ export function TripMap({ days, className }: Props) {
           markersRef.current.push(marker);
         });
 
-        // Draw connecting line for the day
         if (coords.length >= 2) {
           const srcId = `route-${day.id}`;
           map.addSource(srcId, {
@@ -159,7 +167,6 @@ export function TripMap({ days, className }: Props) {
             paint: { "line-color": color, "line-width": 3, "line-dasharray": [2, 2], "line-opacity": 0.7 },
           });
         }
-        void dayIdx;
       });
 
       if (hasPoints && !bounds.isEmpty()) {
@@ -169,7 +176,7 @@ export function TripMap({ days, className }: Props) {
 
     if (map.isStyleLoaded()) apply();
     else map.once("load", apply);
-  }, [selectedDay, daysWithCoords]);
+  }, [selectedDay, daysWithCoords, mapReady]);
 
   if (tokenLoading) return <Skeleton className="h-96 w-full" />;
 
@@ -179,7 +186,7 @@ export function TripMap({ days, className }: Props) {
       <Card className="p-8 text-center text-muted-foreground border-dashed">
         <MapPin className="size-8 mx-auto mb-3 opacity-40" />
         <p className="font-medium text-foreground mb-1">Sem locais no mapa ainda</p>
-        <p className="text-sm">As atividades precisam ter coordenadas. No admin, edite a atividade e use "Buscar no mapa" a partir do endereço.</p>
+        <p className="text-sm">As atividades precisam ter coordenadas. No admin, edite a atividade e clique em "Buscar" ao lado do endereço.</p>
       </Card>
     );
   }
@@ -207,10 +214,7 @@ export function TripMap({ days, className }: Props) {
               className="gap-1.5"
               style={active ? { backgroundColor: color, borderColor: color, color: "white" } : undefined}
             >
-              <span
-                className="inline-block size-2 rounded-full"
-                style={{ backgroundColor: active ? "white" : color }}
-              />
+              <span className="inline-block size-2 rounded-full" style={{ backgroundColor: active ? "white" : color }} />
               Dia {d.day_number}
               <span className="text-[10px] opacity-70">({d.activities.length})</span>
             </Button>
@@ -218,10 +222,7 @@ export function TripMap({ days, className }: Props) {
         })}
       </div>
 
-      <div
-        ref={containerRef}
-        className="w-full h-[60vh] min-h-[400px] rounded-lg overflow-hidden border border-border"
-      />
+      <div ref={containerRef} className="w-full h-[60vh] min-h-[400px] rounded-lg overflow-hidden border border-border" />
 
       {selectedDay !== "all" && (
         <ActivityList day={daysWithCoords.find((d) => d.id === selectedDay)!} />
