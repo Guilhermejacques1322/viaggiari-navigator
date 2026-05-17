@@ -136,18 +136,23 @@ function DestinosPage() {
 
 function DestinationCard({ dest, activities, onDelete, onReload }: { dest: Destination; activities: Activity[]; onDelete: () => void; onReload: () => void; }) {
   const [actOpen, setActOpen] = useState(false);
-  const [newAct, setNewAct] = useState({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio" });
+  const [newAct, setNewAct] = useState({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio", country: dest.country ?? "", city: dest.name });
 
   async function addActivity() {
     if (!newAct.name) return toast.error("Nome obrigatório");
     const { error } = await supabase.from("destination_activities").insert({
       destination_id: dest.id,
-      ...newAct,
+      name: newAct.name,
+      description: newAct.description,
+      address: newAct.address,
+      maps_url: newAct.maps_url,
+      country: newAct.country || null,
+      city: newAct.city || null,
       activity_type: newAct.activity_type as "passeio" | "refeicao" | "hospedagem" | "transporte" | "livre",
     });
     if (error) return toast.error(error.message);
     toast.success("Adicionada");
-    setNewAct({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio" });
+    setNewAct({ name: "", description: "", address: "", maps_url: "", activity_type: "passeio", country: dest.country ?? "", city: dest.name });
     setActOpen(false);
     onReload();
   }
