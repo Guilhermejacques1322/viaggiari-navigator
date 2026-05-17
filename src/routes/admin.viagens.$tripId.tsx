@@ -84,12 +84,10 @@ function TripDetail() {
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
-          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
         <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
-        <TabsContent value="financeiro" className="mt-4"><PaymentsTab tripId={tripId} totalValue={Number(trip.total_value ?? 0)} /></TabsContent>
       </Tabs>
     </div>
   );
