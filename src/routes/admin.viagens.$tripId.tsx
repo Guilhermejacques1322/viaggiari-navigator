@@ -367,8 +367,25 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
   const [savingLib, setSavingLib] = useState(false);
   const [libCountry, setLibCountry] = useState("");
   const [libCity, setLibCity] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const geocodeFn = useServerFn(geocodeAddress);
 
   const openEdit = () => { setForm(a); setEditOpen(true); };
+
+  const handleGeocode = async () => {
+    if (!form.address) return toast.error("Informe o endereço primeiro");
+    setGeocoding(true);
+    try {
+      const res = await geocodeFn({ data: { address: form.address } });
+      if (res.latitude == null) return toast.error("Endereço não encontrado");
+      setForm((f) => ({ ...f, latitude: res.latitude, longitude: res.longitude }));
+      toast.success("Coordenadas encontradas");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao buscar coordenadas");
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_activities").update({
@@ -376,6 +393,8 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
       address: form.address, maps_url: form.maps_url, in_preroteiro: form.in_preroteiro,
       estimated_cost: form.estimated_cost ?? 0,
       currency: form.currency ?? "BRL",
+      latitude: form.latitude ?? null,
+      longitude: form.longitude ?? null,
     }).eq("id", a.id);
     if (error) return toast.error(error.message);
     setEditOpen(false); onChanged();
