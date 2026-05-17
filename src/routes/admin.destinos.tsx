@@ -31,6 +31,8 @@ type Activity = {
   address: string | null;
   maps_url: string | null;
   activity_type: string | null;
+  country: string | null;
+  city: string | null;
 };
 
 function DestinosPage() {
@@ -39,6 +41,8 @@ function DestinosPage() {
   const [loading, setLoading] = useState(true);
   const [newDest, setNewDest] = useState({ name: "", country: "", cover_image_url: "", tips: "", tags: "" });
   const [open, setOpen] = useState(false);
+  const [filterCountry, setFilterCountry] = useState("");
+  const [filterCity, setFilterCity] = useState("");
 
   async function load() {
     setLoading(true);
