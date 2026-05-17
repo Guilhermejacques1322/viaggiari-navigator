@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
-  CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus,
+  CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus, MapPin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
+import { TripMap } from "@/components/map/trip-map";
+import { geocodeAddress } from "@/lib/mapbox.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -795,3 +798,26 @@ function DocsTab({ tripId }: { tripId: string }) {
     </Card>
   );
 }
+
+/* ============================== MAPA TAB ============================== */
+function MapaTab({ tripId }: { tripId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["trip-map", tripId],
+    queryFn: async () => {
+      const { data: ds } = await supabase.from("itinerary_days").select("*").eq("trip_id", tripId).order("day_number");
+      const ids = (ds ?? []).map((d) => d.id);
+      const { data: acts } = ids.length
+        ? await supabase.from("itinerary_activities").select("*").in("day_id", ids).order("position")
+        : { data: [] as Activity[] };
+      return (ds ?? []).map((d) => ({
+        ...d,
+        activities: (acts ?? []).filter((a) => a.day_id === d.id),
+      }));
+    },
+    staleTime: 30_000,
+  });
+
+  if (isLoading || !data) return <Skeleton className="h-96" />;
+  return <TripMap days={data} />;
+}
+
