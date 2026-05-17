@@ -53,6 +53,7 @@ type NavItem = { to: string; label: string; icon: typeof Home; exact?: boolean }
 const NAV: NavItem[] = [
   { to: "/minha-viagem", label: "Início", icon: Home, exact: true },
   { to: "/minha-viagem/roteiro", label: "Roteiro", icon: MapIcon },
+  { to: "/minha-viagem/mapa", label: "Mapa", icon: MapIcon },
   { to: "/minha-viagem/documentos", label: "Docs", icon: FileText },
   { to: "/minha-viagem/preroteiro", label: "Pré-roteiro", icon: ListChecks },
   { to: "/minha-viagem/parceiros", label: "Parceiros", icon: Heart },
@@ -62,7 +63,7 @@ function MobileBottomNav() {
   const { pathname } = useLocation();
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur">
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-6">
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
           const Icon = item.icon;

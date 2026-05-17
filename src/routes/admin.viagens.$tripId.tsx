@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
-  CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus,
+  CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus, MapPin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
+import { TripMap } from "@/components/map/trip-map";
+import { geocodeAddress } from "@/lib/mapbox.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,10 +90,12 @@ function TripDetail() {
         <TabsList>
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
+          <TabsTrigger value="mapa">Mapa</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
         <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
+        <TabsContent value="mapa" className="mt-4"><MapaTab tripId={tripId} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
       </Tabs>
     </div>
@@ -362,8 +367,25 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
   const [savingLib, setSavingLib] = useState(false);
   const [libCountry, setLibCountry] = useState("");
   const [libCity, setLibCity] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const geocodeFn = useServerFn(geocodeAddress);
 
   const openEdit = () => { setForm(a); setEditOpen(true); };
+
+  const handleGeocode = async () => {
+    if (!form.address) return toast.error("Informe o endereço primeiro");
+    setGeocoding(true);
+    try {
+      const res = await geocodeFn({ data: { address: form.address } });
+      if (res.latitude == null) return toast.error("Endereço não encontrado");
+      setForm((f) => ({ ...f, latitude: res.latitude, longitude: res.longitude }));
+      toast.success("Coordenadas encontradas");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao buscar coordenadas");
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_activities").update({
@@ -371,6 +393,8 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
       address: form.address, maps_url: form.maps_url, in_preroteiro: form.in_preroteiro,
       estimated_cost: form.estimated_cost ?? 0,
       currency: form.currency ?? "BRL",
+      latitude: form.latitude ?? null,
+      longitude: form.longitude ?? null,
     }).eq("id", a.id);
     if (error) return toast.error(error.message);
     setEditOpen(false); onChanged();
@@ -468,7 +492,15 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
               <Input type="time" value={form.time ?? ""} onChange={(e) => setForm({ ...form, time: e.target.value })} />
               <Input placeholder="Maps URL" value={form.maps_url ?? ""} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
             </div>
-            <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <div className="flex gap-2">
+              <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <Button type="button" variant="outline" size="sm" onClick={handleGeocode} disabled={geocoding || !form.address} className="shrink-0">
+                <MapPin className="size-4" />{geocoding ? "..." : "Buscar"}
+              </Button>
+            </div>
+            {form.latitude != null && form.longitude != null && (
+              <p className="text-[11px] text-emerald-600">📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} — pronto para o mapa</p>
+            )}
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
@@ -793,3 +825,26 @@ function DocsTab({ tripId }: { tripId: string }) {
     </Card>
   );
 }
+
+/* ============================== MAPA TAB ============================== */
+function MapaTab({ tripId }: { tripId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["trip-map", tripId],
+    queryFn: async () => {
+      const { data: ds } = await supabase.from("itinerary_days").select("*").eq("trip_id", tripId).order("day_number");
+      const ids = (ds ?? []).map((d) => d.id);
+      const { data: acts } = ids.length
+        ? await supabase.from("itinerary_activities").select("*").in("day_id", ids).order("position")
+        : { data: [] as Activity[] };
+      return (ds ?? []).map((d) => ({
+        ...d,
+        activities: (acts ?? []).filter((a) => a.day_id === d.id),
+      }));
+    },
+    staleTime: 30_000,
+  });
+
+  if (isLoading || !data) return <Skeleton className="h-96" />;
+  return <TripMap days={data} />;
+}
+

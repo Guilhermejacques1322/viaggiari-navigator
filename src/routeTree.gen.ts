@@ -21,6 +21,7 @@ import { Route as OrcamentoTokenRouteImport } from './routes/orcamento.$token'
 import { Route as MinhaViagemRoteiroRouteImport } from './routes/minha-viagem.roteiro'
 import { Route as MinhaViagemPreroteiroRouteImport } from './routes/minha-viagem.preroteiro'
 import { Route as MinhaViagemParceirosRouteImport } from './routes/minha-viagem.parceiros'
+import { Route as MinhaViagemMapaRouteImport } from './routes/minha-viagem.mapa'
 import { Route as MinhaViagemDocumentosRouteImport } from './routes/minha-viagem.documentos'
 import { Route as AdminViagensRouteImport } from './routes/admin.viagens'
 import { Route as AdminOrcamentosRouteImport } from './routes/admin.orcamentos'
@@ -91,6 +92,11 @@ const MinhaViagemParceirosRoute = MinhaViagemParceirosRouteImport.update({
   path: '/parceiros',
   getParentRoute: () => MinhaViagemRoute,
 } as any)
+const MinhaViagemMapaRoute = MinhaViagemMapaRouteImport.update({
+  id: '/mapa',
+  path: '/mapa',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
 const MinhaViagemDocumentosRoute = MinhaViagemDocumentosRouteImport.update({
   id: '/documentos',
   path: '/documentos',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
+  '/minha-viagem/mapa': typeof MinhaViagemMapaRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
+  '/minha-viagem/mapa': typeof MinhaViagemMapaRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
+  '/minha-viagem/mapa': typeof MinhaViagemMapaRoute
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/admin/orcamentos'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
+    | '/minha-viagem/mapa'
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/admin/orcamentos'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
+    | '/minha-viagem/mapa'
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/admin/orcamentos'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
+    | '/minha-viagem/mapa'
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
@@ -369,6 +381,13 @@ declare module '@tanstack/react-router' {
       path: '/parceiros'
       fullPath: '/minha-viagem/parceiros'
       preLoaderRoute: typeof MinhaViagemParceirosRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/mapa': {
+      id: '/minha-viagem/mapa'
+      path: '/mapa'
+      fullPath: '/minha-viagem/mapa'
+      preLoaderRoute: typeof MinhaViagemMapaRouteImport
       parentRoute: typeof MinhaViagemRoute
     }
     '/minha-viagem/documentos': {
@@ -485,6 +504,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface MinhaViagemRouteChildren {
   MinhaViagemDocumentosRoute: typeof MinhaViagemDocumentosRoute
+  MinhaViagemMapaRoute: typeof MinhaViagemMapaRoute
   MinhaViagemParceirosRoute: typeof MinhaViagemParceirosRoute
   MinhaViagemPreroteiroRoute: typeof MinhaViagemPreroteiroRoute
   MinhaViagemRoteiroRoute: typeof MinhaViagemRoteiroRoute
@@ -493,6 +513,7 @@ interface MinhaViagemRouteChildren {
 
 const MinhaViagemRouteChildren: MinhaViagemRouteChildren = {
   MinhaViagemDocumentosRoute: MinhaViagemDocumentosRoute,
+  MinhaViagemMapaRoute: MinhaViagemMapaRoute,
   MinhaViagemParceirosRoute: MinhaViagemParceirosRoute,
   MinhaViagemPreroteiroRoute: MinhaViagemPreroteiroRoute,
   MinhaViagemRoteiroRoute: MinhaViagemRoteiroRoute,
