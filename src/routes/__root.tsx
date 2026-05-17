@@ -59,13 +59,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Viaggiari Travel — Sua viagem dos sonhos, planejada com quem vive para viajar" },
+      { title: "Viaggiari Travel" },
       { name: "description", content: "Assessoria de viagens personalizada. Roteiros, passagens, passeios e suporte durante toda a viagem." },
       { name: "author", content: "Viaggiari Travel" },
       { property: "og:title", content: "Viaggiari Travel" },
-      { property: "og:description", content: "Assessoria especializada em viagens. Roteiros personalizados e suporte durante a viagem." },
+      { property: "og:description", content: "Assessoria de viagens personalizada. Roteiros, passagens, passeios e suporte durante toda a viagem." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Viaggiari Travel" },
+      { name: "twitter:description", content: "Assessoria de viagens personalizada. Roteiros, passagens, passeios e suporte durante toda a viagem." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9dde3c6b-4a43-40cf-91a3-7d4b0a9b0e26/id-preview-23c0a988--2ea6a8ce-aeb4-4797-af6b-cd4cdd791146.lovable.app-1778963575393.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9dde3c6b-4a43-40cf-91a3-7d4b0a9b0e26/id-preview-23c0a988--2ea6a8ce-aeb4-4797-af6b-cd4cdd791146.lovable.app-1778963575393.png" },
     ],
     links: [
       {
