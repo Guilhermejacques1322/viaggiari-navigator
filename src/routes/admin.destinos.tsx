@@ -199,6 +199,10 @@ function DestinationCard({ dest, activities, onDelete, onReload }: { dest: Desti
                   </div>
                   <div><Label>Endereço</Label><Input value={newAct.address} onChange={(e) => setNewAct({ ...newAct, address: e.target.value })} /></div>
                   <div><Label>URL no Maps</Label><Input value={newAct.maps_url} onChange={(e) => setNewAct({ ...newAct, maps_url: e.target.value })} /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label>País</Label><Input value={newAct.country} onChange={(e) => setNewAct({ ...newAct, country: e.target.value })} /></div>
+                    <div><Label>Cidade</Label><Input value={newAct.city} onChange={(e) => setNewAct({ ...newAct, city: e.target.value })} /></div>
+                  </div>
                   <div><Label>Descrição</Label><Textarea rows={3} value={newAct.description} onChange={(e) => setNewAct({ ...newAct, description: e.target.value })} /></div>
                   <Button onClick={addActivity} className="w-full">Adicionar</Button>
                 </div>
