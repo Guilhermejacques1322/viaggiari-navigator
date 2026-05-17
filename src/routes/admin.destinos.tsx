@@ -107,13 +107,27 @@ function DestinosPage() {
         </Dialog>
       </div>
 
+      <div className="flex gap-2 flex-wrap">
+        <Input placeholder="Filtrar por país" value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)} className="max-w-[200px]" />
+        <Input placeholder="Filtrar por cidade" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="max-w-[200px]" />
+        {(filterCountry || filterCity) && (
+          <Button variant="ghost" size="sm" onClick={() => { setFilterCountry(""); setFilterCity(""); }}>Limpar</Button>
+        )}
+      </div>
+
       {loading ? <p className="text-muted-foreground">Carregando…</p> : destinations.length === 0 ? (
         <Card className="p-10 text-center text-muted-foreground">Nenhum destino cadastrado ainda.</Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {destinations.map((d) => (
-            <DestinationCard key={d.id} dest={d} activities={activities[d.id] || []} onDelete={() => deleteDestination(d.id)} onReload={load} />
-          ))}
+          {destinations
+            .filter((d) => {
+              if (filterCountry && !(d.country ?? "").toLowerCase().includes(filterCountry.toLowerCase())) return false;
+              if (filterCity && !(d.name ?? "").toLowerCase().includes(filterCity.toLowerCase())) return false;
+              return true;
+            })
+            .map((d) => (
+              <DestinationCard key={d.id} dest={d} activities={activities[d.id] || []} onDelete={() => deleteDestination(d.id)} onReload={load} />
+            ))}
         </div>
       )}
     </div>
