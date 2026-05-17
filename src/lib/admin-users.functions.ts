@@ -18,7 +18,14 @@ const schema = z.object({
  */
 export const createClientAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => schema.parse(input))
+  .inputValidator((input) => {
+    const r = schema.safeParse(input);
+    if (!r.success) {
+      const msg = r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+      throw new Error(msg);
+    }
+    return r.data;
+  })
   .handler(async ({ data, context }) => {
     // Verify caller is admin
     const { data: roleRow, error: roleErr } = await supabaseAdmin
