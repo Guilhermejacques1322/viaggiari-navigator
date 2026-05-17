@@ -547,10 +547,11 @@ function NewActivityDialog({ dayId, position, onDone }: {
   dayId: string; position: number; onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false });
+  const initialForm = { name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false, estimated_cost: 0, currency: "BRL" };
+  const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 
-  const reset = () => setForm({ name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false });
+  const reset = () => setForm(initialForm);
 
   const save = async () => {
     if (!form.name) return toast.error("Informe o nome");
@@ -560,6 +561,8 @@ function NewActivityDialog({ dayId, position, onDone }: {
       time: form.time || null, description: form.description || null,
       address: form.address || null, maps_url: form.maps_url || null,
       in_preroteiro: form.in_preroteiro,
+      estimated_cost: form.estimated_cost || 0,
+      currency: form.currency,
     });
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -574,7 +577,7 @@ function NewActivityDialog({ dayId, position, onDone }: {
         <Plus className="size-4" />Atividade
       </Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); setOpen(o); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nova atividade</DialogTitle></DialogHeader>
           <div className="space-y-2">
             <Input placeholder="Nome da atividade" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
@@ -584,6 +587,24 @@ function NewActivityDialog({ dayId, position, onDone }: {
             </div>
             <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Textarea rows={3} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <Label className="text-xs">Custo estimado (cliente)</Label>
+                <Input type="number" step="0.01" value={form.estimated_cost || ""}
+                  onChange={(e) => setForm({ ...form, estimated_cost: e.target.value ? Number(e.target.value) : 0 })} />
+              </div>
+              <div>
+                <Label className="text-xs">Moeda</Label>
+                <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">BRL</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.in_preroteiro} onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
               <Label className="text-xs">É uma sugestão (pré-roteiro)</Label>
