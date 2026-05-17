@@ -80,6 +80,8 @@ export type Database = {
           description: string | null
           destination_id: string
           id: string
+          latitude: number | null
+          longitude: number | null
           maps_url: string | null
           name: string
         }
@@ -93,6 +95,8 @@ export type Database = {
           description?: string | null
           destination_id: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           maps_url?: string | null
           name: string
         }
@@ -106,6 +110,8 @@ export type Database = {
           description?: string | null
           destination_id?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           maps_url?: string | null
           name?: string
         }
@@ -228,6 +234,8 @@ export type Database = {
           id: string
           in_preroteiro: boolean | null
           is_paid: boolean | null
+          latitude: number | null
+          longitude: number | null
           maps_url: string | null
           name: string
           position: number
@@ -250,6 +258,8 @@ export type Database = {
           id?: string
           in_preroteiro?: boolean | null
           is_paid?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           maps_url?: string | null
           name: string
           position?: number
@@ -272,6 +282,8 @@ export type Database = {
           id?: string
           in_preroteiro?: boolean | null
           is_paid?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           maps_url?: string | null
           name?: string
           position?: number
