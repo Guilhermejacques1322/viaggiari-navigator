@@ -207,22 +207,17 @@ function CreateAccessButton({ contactId, email: defaultEmail }: { contactId: str
   const fn = useServerFn(createClientAccess);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(defaultEmail);
-  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [link, setLink] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      toast.error("A senha deve ter no mínimo 8 caracteres");
-      return;
-    }
     setSubmitting(true);
     try {
-      await fn({ data: { contactId, email: email.trim(), password } });
-      toast.success("Acesso criado. Envie o e-mail e senha para o cliente manualmente.");
+      const res = await fn({ data: { contactId, email: email.trim() } });
+      setLink(res.magicLink);
+      toast.success("Acesso criado. Copie o link e envie ao cliente.");
       qc.invalidateQueries({ queryKey: ["contact", contactId] });
-      setOpen(false);
-      setPassword("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao criar acesso");
     } finally {
@@ -230,45 +225,57 @@ function CreateAccessButton({ contactId, email: defaultEmail }: { contactId: str
     }
   }
 
-  function generatePassword() {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-    let out = "";
-    for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
-    setPassword(out);
+  function copyLink() {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    toast.success("Link copiado");
+  }
+
+  function close() {
+    setOpen(false);
+    setLink(null);
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : close())}>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
         <KeyRound className="size-4" /> Criar acesso do cliente
       </Button>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Criar acesso do cliente</DialogTitle>
           <DialogDescription>
-            Será criada uma conta com perfil de cliente. Envie as credenciais manualmente ao cliente.
+            O cliente recebe um link de acesso único. Sem senha — basta clicar para entrar na área dele.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="ca-email">E-mail</Label>
-            <Input id="ca-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="ca-pass">Senha temporária</Label>
-            <div className="flex gap-2">
-              <Input id="ca-pass" type="text" required minLength={8} maxLength={72}
-                value={password} onChange={(e) => setPassword(e.target.value)} />
-              <Button type="button" variant="outline" size="sm" onClick={generatePassword}>Gerar</Button>
+
+        {!link ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="ca-email">E-mail do cliente</Label>
+              <Input id="ca-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Mínimo 8 caracteres.</p>
+            <DialogFooter>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Gerando..." : "Gerar link de acesso"}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <Label>Link de acesso (válido por tempo limitado)</Label>
+              <Textarea readOnly value={link} rows={4} className="font-mono text-xs mt-1" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Envie este link ao cliente por WhatsApp ou e-mail. Ele entra direto na área de viagem dele — sem precisar de senha.
+            </p>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={close}>Fechar</Button>
+              <Button type="button" onClick={copyLink}>Copiar link</Button>
+            </DialogFooter>
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Criando..." : "Criar acesso"}
-            </Button>
-          </DialogFooter>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );
