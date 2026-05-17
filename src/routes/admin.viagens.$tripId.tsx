@@ -377,14 +377,18 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<Partial<Activity>>(a);
+  const [savingLib, setSavingLib] = useState(false);
+  const [libCountry, setLibCountry] = useState("");
+  const [libCity, setLibCity] = useState("");
 
-  // Reset form when opening
   const openEdit = () => { setForm(a); setEditOpen(true); };
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_activities").update({
       name: form.name, time: form.time, description: form.description,
       address: form.address, maps_url: form.maps_url, in_preroteiro: form.in_preroteiro,
+      estimated_cost: form.estimated_cost ?? 0,
+      currency: form.currency ?? "BRL",
     }).eq("id", a.id);
     if (error) return toast.error(error.message);
     setEditOpen(false); onChanged();
@@ -395,6 +399,38 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
     if (error) return toast.error(error.message);
     onChanged();
   };
+
+  async function saveToLibrary() {
+    if (!libCountry.trim() || !libCity.trim()) {
+      return toast.error("Informe país e cidade para salvar na biblioteca");
+    }
+    setSavingLib(true);
+    // find or create destination matching city/country
+    const { data: existing } = await supabase
+      .from("destinations").select("id")
+      .eq("name", libCity.trim()).eq("country", libCountry.trim()).maybeSingle();
+    let destId = existing?.id;
+    if (!destId) {
+      const { data: created, error: e1 } = await supabase
+        .from("destinations").insert({ name: libCity.trim(), country: libCountry.trim() })
+        .select("id").single();
+      if (e1) { setSavingLib(false); return toast.error(e1.message); }
+      destId = created.id;
+    }
+    const { error } = await supabase.from("destination_activities").insert({
+      destination_id: destId!,
+      name: form.name ?? a.name,
+      description: form.description ?? a.description ?? null,
+      address: form.address ?? a.address ?? null,
+      maps_url: form.maps_url ?? a.maps_url ?? null,
+      activity_type: (form.activity_type ?? a.activity_type) as any,
+      country: libCountry.trim(),
+      city: libCity.trim(),
+    });
+    setSavingLib(false);
+    if (error) return toast.error(error.message);
+    toast.success("Atividade salva na biblioteca");
+  }
 
   return (
     <>
@@ -407,6 +443,11 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
             {a.in_preroteiro && (
               <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
                 sugestão
+              </span>
+            )}
+            {!!Number(a.estimated_cost) && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700">
+                {Number(a.estimated_cost).toLocaleString("pt-BR", { style: "currency", currency: a.currency ?? "BRL" })}
               </span>
             )}
             {a.client_response && (
@@ -437,7 +478,7 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar atividade</DialogTitle></DialogHeader>
           <div className="space-y-2">
             <Input placeholder="Nome" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -447,10 +488,39 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
             </div>
             <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <Label className="text-xs">Custo estimado (cliente)</Label>
+                <Input type="number" step="0.01" value={form.estimated_cost ?? ""}
+                  onChange={(e) => setForm({ ...form, estimated_cost: e.target.value ? Number(e.target.value) : 0 })} />
+              </div>
+              <div>
+                <Label className="text-xs">Moeda</Label>
+                <Select value={form.currency ?? "BRL"} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">BRL</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={!!form.in_preroteiro}
                 onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
               <Label className="text-xs">Sugestão (pré-roteiro)</Label>
+            </div>
+
+            <div className="border-t border-border pt-3 mt-3 space-y-2">
+              <Label className="text-xs font-medium">Salvar na biblioteca de atividades</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="País" value={libCountry} onChange={(e) => setLibCountry(e.target.value)} />
+                <Input placeholder="Cidade" value={libCity} onChange={(e) => setLibCity(e.target.value)} />
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={saveToLibrary} disabled={savingLib} className="w-full">
+                <BookmarkPlus className="size-4" />{savingLib ? "Salvando…" : "Salvar atividade na biblioteca"}
+              </Button>
             </div>
           </div>
           <DialogFooter>
