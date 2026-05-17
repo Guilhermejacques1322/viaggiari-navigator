@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       contacts: {
         Row: {
+          access_password: string | null
           created_at: string
           destinations_of_interest: string[] | null
           email: string
@@ -31,6 +32,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          access_password?: string | null
           created_at?: string
           destinations_of_interest?: string[] | null
           email: string
@@ -48,6 +50,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          access_password?: string | null
           created_at?: string
           destinations_of_interest?: string[] | null
           email?: string
