@@ -28,7 +28,6 @@ type Trip = Database["public"]["Tables"]["trips"]["Row"];
 type Day = Database["public"]["Tables"]["itinerary_days"]["Row"];
 type Activity = Database["public"]["Tables"]["itinerary_activities"]["Row"];
 type Document = Database["public"]["Tables"]["documents"]["Row"];
-type Payment = Database["public"]["Tables"]["payments"]["Row"];
 type DocCategory = Database["public"]["Enums"]["document_category"];
 
 export const Route = createFileRoute("/admin/viagens/$tripId")({
