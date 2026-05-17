@@ -115,6 +115,9 @@ function ContactProfile() {
             email={contact.email}
             hasAccess={!!contact.user_id}
           />
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="size-4" /> Salvar
+          </Button>
         </div>
       </div>
 
@@ -135,13 +138,6 @@ function ContactProfile() {
           </div>
         </Card>
       )}
-
-      <div className="hidden">
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            <Save className="size-4" /> Salvar
-          </Button>
-        </div>
-      </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="p-5 space-y-3">
