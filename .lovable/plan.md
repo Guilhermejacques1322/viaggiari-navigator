@@ -1,65 +1,105 @@
-# Viaggiari Travel — Plano de Construção
+# Plano de melhorias
 
-Projeto grande com 3 sistemas integrados (landing, área do cliente, painel admin). Vou entregar em **fases incrementais**, validando com você ao final de cada uma antes de seguir. Tentar entregar tudo de uma vez resultaria em código superficial e bugs.
+## 1. Botão "Voltar ao início" no planejamento
 
-## Stack
-- TanStack Start (React 19 + Vite) — já configurado no template
-- Tailwind CSS v4 + design system com tokens (azul aço #6B9DC2, Montserrat + DM Sans)
-- **Lovable Cloud** (Supabase gerenciado) — auth, banco, storage
-- Logo da Viaggiari como asset oficial em todo o sistema
+Em `src/routes/interesse.tsx` (formulário de cadastro/planejamento inicial), adicionar um botão secundário no topo e/ou rodapé: "← Voltar ao início" que navega para `/`. Útil caso o usuário desista do cadastro.
 
-## Fase 1 — Fundação (esta entrega)
-1. Ativar Lovable Cloud
-2. Design system completo em `src/styles.css` (cores oklch, tipografia, tokens)
-3. Logo importada como asset
-4. Landing page pública completa (`/`):
-   - Hero, "Como funciona" (3 serviços), "Roteiros prontos", "Por que a Viaggiari", formulário de lead, footer
-   - Totalmente responsiva
-5. Esquema do banco no Cloud — todas as tabelas listadas com RLS
-6. Tabela `user_roles` com enum (`admin`, `client`) + função `has_role` (padrão seguro)
-7. Auth: páginas `/login`, `/signup` (cliente), redirecionamento por role
-8. Estrutura de rotas: `/`, `/login`, `/_authenticated/minha-viagem`, `/_admin/admin`
+## 2. Reorganização: Viagens × Orçamentos
 
-## Fase 2 — Área do cliente (mobile-first)
-- Dashboard com contagem regressiva
-- Timeline do roteiro (dia a dia, expansível, link Maps, notas, avaliações)
-- Documentos e ingressos (visualizador, filtros, alertas)
-- Parceiros (cards com links afiliados)
-- Pré-roteiro: cliente aprova/recusa atividades propostas
-- Bottom nav mobile / sidebar desktop
+### 2.1 Viagens (foco no cliente)
 
-## Fase 3 — Painel admin (desktop-first) — núcleo
-- Dashboard com métricas e feed
-- CRM: lista de contatos, perfil, filtros, notas
-- Módulo de Viagens: lista + tela de viagem
-- **Editor de roteiro** (drag-drop dias/atividades) — peça central
-- Upload de documentos (Supabase Storage)
-- Toggle visibilidade / modo pré-roteiro
-- Botão "Visualizar como cliente"
+- `src/routes/admin.viagens.$tripId.tsx`: remover a aba "Financeiro" (50/50 nosso recebimento) dessa seção.
+- Manter na aba financeira da viagem **apenas custos do roteiro do cliente** — por atividade/dia (quanto o cliente vai gastar em cada item). Será exibido no roteiro entregue para que ele veja o valor total estimado.
+- Nova tabela `activity_costs` ou colunas `estimated_cost` + `currency` em `itinerary_activities` para registrar quanto cada atividade custa para o cliente. Agregado por dia e total da viagem.
 
-## Fase 4 — Admin avançado
-- Módulo financeiro (parcelas 50/50, visão mensal)
-- Gerador de orçamento com PDF
-- Biblioteca de destinos reutilizável
-- Avaliações agregadas
-- Notificações programadas (geração automática + edição)
-- Envio de e-mails segmentados
+### 2.2 Orçamentos com fases
 
-## Detalhes técnicos relevantes
-- Roles em tabela separada (`user_roles`) — nunca em `profiles`. Função `has_role()` security definer para evitar recursão de RLS.
-- Server functions (`createServerFn`) para lógica protegida, não Edge Functions.
-- Storage: bucket `trip-documents` privado, acesso via RLS por viagem.
-- E-mails: usaremos Resend via server function (precisará da API key na Fase 4).
-- PDFs de orçamento: gerados client-side com `jspdf` ou via server function.
-- Push notifications reais ficam fora do escopo inicial — usaremos notificações in-app (banner/lista) que cobrem o caso de uso.
+Adicionar coluna `status` em `quotes` com enum:
 
-## Algumas decisões que preciso confirmar antes de avançar das fases:
+- `sent` (Orçamento enviado)
+- `follow_up` (Fazer follow-up — destacado em amarelo na lista)
+- `lost` (Cliente desistiu — abre modal pedindo `lost_reason` e marca para futuro CRM)
+- `closed` (Orçamento fechado)
 
-1. **Imagens da landing** — gero hero/destinos com IA (estilo fotográfico premium) ou você prefere placeholders neutros que você troca depois? *(Sugestão: gerar com IA)*
-2. **E-mails transacionais** (boas-vindas do cliente, notificações) — ok integrar Resend na Fase 2/4? Vai precisar de uma API key gratuita do resend.com.
-3. **Idioma da UI** — tudo em português brasileiro, certo?
-4. **Pagamentos** — o financeiro é apenas registro manual (Nani marca pago/pendente), sem integração com Stripe/Mercado Pago, correto?
+Em `src/routes/admin.orcamentos.tsx`:
+
+- Listagem com sub-abas: **Em aberto** (sent + follow_up), **Perdidos**, **Fechados**.
+- Cards de follow-up com destaque visual (badge âmbar, borda).
+- Botão de mudar fase em cada orçamento; ao escolher "Cliente desistiu" abre dialog com motivo.
+
+### 2.3 Financeiro por orçamento fechado
+
+- Mover o módulo de pagamentos 50/50 da viagem para **dentro de cada orçamento fechado**.
+- Tabela `payments` já existe e tem `trip_id` — adicionar `quote_id` (nullable) para vincular ao orçamento. Quando o orçamento é fechado, criar automaticamente 2 parcelas (50% sinal / 50% pré-viagem).
+- Nova aba "Financeiro" dentro da página de detalhe do orçamento fechado: parcelas, status, forma de pagamento, comprovante.
+
+### 2.4 Aba "Fechados" com relatório
+
+- Painel agregado: clientes fechados no período, total faturado, total recebido, ticket médio, forma de pagamento mais usada.
+
+## 3. Biblioteca de atividades com país/cidade
+
+- `destination_activities` já existe. Adicionar colunas `country` e `city` (text).
+- Em `admin.viagens.$tripId.tsx` (Roteiro), no dialog de criar/editar atividade, adicionar botão "Salvar atividade na biblioteca" — insere em `destination_activities` com país/cidade preenchidos.
+- Em `admin.destinos.tsx` (biblioteca), adicionar filtros por país e cidade.
+- Ao criar nova atividade no roteiro, oferecer também "Buscar da biblioteca" com filtro país/cidade.
+
+## 4. UX — perda de estado ao trocar de aba do navegador
+
+Já mitigado para o admin (Dialog + `refetchOnWindowFocus: false`). Auditar:
+
+- `admin.viagens.$tripId.tsx`: garantir que **todas** as queries (`trip-days`, `documents`, `payments`) tenham `refetchOnWindowFocus: false` e `staleTime: Infinity`.
+- Verificar formulários inline restantes (NewActivityForm, edição de dia) e converter qualquer um que ainda perca estado em Dialog.
+- No PWA/mobile, verificar se há `visibilitychange` listener causando reload — remover.
 
 ---
 
-Posso começar pela **Fase 1** assim que você aprovar. Ao final dela você terá: landing page navegável, login funcional, banco pronto e as rotas estruturadas. Aí seguimos para a área do cliente.
+## Detalhes técnicos (migrações)
+
+```sql
+-- 1. Fases de orçamento
+CREATE TYPE quote_status AS ENUM ('sent','follow_up','lost','closed');
+ALTER TABLE quotes
+  ADD COLUMN status quote_status NOT NULL DEFAULT 'sent',
+  ADD COLUMN lost_reason text,
+  ADD COLUMN follow_up_at timestamptz,
+  ADD COLUMN closed_at timestamptz;
+
+-- 2. Vincular pagamentos a orçamento
+ALTER TABLE payments
+  ADD COLUMN quote_id uuid REFERENCES quotes(id) ON DELETE CASCADE,
+  ADD COLUMN payment_method text;
+ALTER TABLE payments ALTER COLUMN trip_id DROP NOT NULL;
+
+-- 3. Custo por atividade do cliente
+ALTER TABLE itinerary_activities
+  ADD COLUMN estimated_cost numeric DEFAULT 0,
+  ADD COLUMN currency text DEFAULT 'BRL';
+
+-- 4. País/cidade na biblioteca de atividades
+ALTER TABLE destination_activities
+  ADD COLUMN country text,
+  ADD COLUMN city text;
+```
+
+Arquivos a tocar:
+
+- `src/routes/interesse.tsx` — botão voltar
+- `src/routes/admin.orcamentos.tsx` — sub-abas, fases, dialog "perdeu", financeiro embutido
+- `src/routes/admin.viagens.$tripId.tsx` — remover financeiro 50/50, adicionar custos por atividade, botão "Salvar na biblioteca", queries com staleTime
+- `src/routes/admin.destinos.tsx` — filtros país/cidade
+- Nova migração SQL
+
+## Confirmação antes de começar
+
+Antes de executar, quero confirmar 2 pontos:
+
+1. **Custo por atividade**: registrar em `itinerary_activities.estimated_cost` (simples) ou criar tabela separada `activity_costs` com itens (transporte, ingresso, alimentação)? Sugiro o simples agora.  
+  
+iremos para o simples agora. 
+
+&nbsp;
+
+1. **Parcelas automáticas ao fechar orçamento**: criar duas de 50% (sinal + final) automaticamente, ou deixar manual? Sugiro automático com opção de editar.  
+  
+deixar manual, caso o cliente quero pagar a vista.
