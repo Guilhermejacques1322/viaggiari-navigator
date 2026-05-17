@@ -66,14 +66,18 @@ function TripDetail() {
       {!trip.contacts?.user_id && (
         <Card className="p-4 border-amber-500/40 bg-amber-500/5 flex items-start gap-3">
           <UserCheck className="size-5 text-amber-600 shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-700 dark:text-amber-300">Cliente ainda sem login vinculado</p>
+          <div className="text-sm flex-1">
+            <p className="font-medium text-amber-700 dark:text-amber-300">Cliente ainda sem login</p>
             <p className="text-muted-foreground mt-1">
-              Para que <strong>{trip.contacts?.full_name}</strong> veja a viagem na área dele,
-              ele precisa se cadastrar em <code>/signup</code> com o e-mail{" "}
-              <strong>{trip.contacts?.email}</strong> e você vincular o ID dele a este contato.
+              Crie um acesso para <strong>{trip.contacts?.full_name}</strong> usando o e-mail{" "}
+              <strong>{trip.contacts?.email}</strong>. Login e senha ficam salvos no CRM dele.
             </p>
-            <LinkUserDialog contactId={trip.contact_id} email={trip.contacts?.email ?? ""} onLinked={invalidate} />
+            <div className="mt-3">
+              <CreateAccessButton
+                contactId={trip.contact_id}
+                email={trip.contacts?.email ?? ""}
+              />
+            </div>
           </div>
         </Card>
       )}
