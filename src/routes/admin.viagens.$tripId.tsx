@@ -492,7 +492,15 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
               <Input type="time" value={form.time ?? ""} onChange={(e) => setForm({ ...form, time: e.target.value })} />
               <Input placeholder="Maps URL" value={form.maps_url ?? ""} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
             </div>
-            <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <div className="flex gap-2">
+              <Input placeholder="Endereço" value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <Button type="button" variant="outline" size="sm" onClick={handleGeocode} disabled={geocoding || !form.address} className="shrink-0">
+                <MapPin className="size-4" />{geocoding ? "..." : "Buscar"}
+              </Button>
+            </div>
+            {form.latitude != null && form.longitude != null && (
+              <p className="text-[11px] text-emerald-600">📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} — pronto para o mapa</p>
+            )}
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
