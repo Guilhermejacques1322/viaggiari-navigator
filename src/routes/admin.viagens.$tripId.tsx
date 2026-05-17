@@ -609,6 +609,8 @@ function DocsTab({ tripId }: { tripId: string }) {
       const dayMap = new Map((days ?? []).map((d) => [d.id, d]));
       return { docs: (docs ?? []) as Document[], actMap, dayMap };
     },
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
   const [uploading, setUploading] = useState(false);
