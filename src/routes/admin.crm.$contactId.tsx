@@ -110,12 +110,33 @@ function ContactProfile() {
           </div>
         </div>
         <div className="flex gap-2">
-          {!contact.user_id && <CreateAccessButton contactId={contactId} email={contact.email} />}
-          {contact.user_id && (
-            <span className="inline-flex items-center gap-1 text-xs text-primary px-3 py-1.5 rounded-md bg-primary/10">
-              <Check className="size-3" /> Acesso criado
-            </span>
-          )}
+          <CreateAccessButton
+            contactId={contactId}
+            email={contact.email}
+            hasAccess={!!contact.user_id}
+          />
+        </div>
+      </div>
+
+      {contact.user_id && (contact as any).access_password && (
+        <Card className="p-4 bg-primary/5 border-primary/30">
+          <p className="text-xs uppercase tracking-wide text-primary font-medium mb-2">
+            <Check className="size-3 inline mr-1" /> Acesso do cliente
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 text-sm">
+            <div>
+              <Label className="text-xs text-muted-foreground">Login (e-mail)</Label>
+              <p className="font-mono">{contact.email}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Senha</Label>
+              <p className="font-mono">{(contact as any).access_password}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <div className="hidden">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             <Save className="size-4" /> Salvar
           </Button>
