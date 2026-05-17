@@ -146,33 +146,6 @@ function TripHeader({ trip, onSaved, onDeleted }: { trip: any; onSaved: () => vo
   );
 }
 
-function LinkUserDialog({ contactId, email, onLinked }: { contactId: string; email: string; onLinked: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState("");
-  const save = async () => {
-    if (!userId.trim()) return;
-    const { error } = await supabase.from("contacts").update({ user_id: userId.trim() }).eq("id", contactId);
-    if (error) return toast.error(error.message);
-    toast.success("Cliente vinculado!");
-    setOpen(false); onLinked();
-  };
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="mt-3">Vincular usuário</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Vincular conta do cliente</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Peça para o cliente fazer cadastro com o e-mail <strong>{email}</strong> e cole o ID do usuário aqui.
-          (Você encontra em <em>Auth → Users</em> no Lovable Cloud.)
-        </p>
-        <Input placeholder="UUID do usuário" value={userId} onChange={(e) => setUserId(e.target.value)} />
-        <DialogFooter><Button onClick={save}>Vincular</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 /* ============================== INFO TAB ============================== */
 function InfoTab({ trip, onSaved }: { trip: any; onSaved: () => void }) {
