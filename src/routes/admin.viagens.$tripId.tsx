@@ -7,6 +7,7 @@ import {
   CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CreateAccessButton } from "./admin.crm.$contactId";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,14 +67,18 @@ function TripDetail() {
       {!trip.contacts?.user_id && (
         <Card className="p-4 border-amber-500/40 bg-amber-500/5 flex items-start gap-3">
           <UserCheck className="size-5 text-amber-600 shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-700 dark:text-amber-300">Cliente ainda sem login vinculado</p>
+          <div className="text-sm flex-1">
+            <p className="font-medium text-amber-700 dark:text-amber-300">Cliente ainda sem login</p>
             <p className="text-muted-foreground mt-1">
-              Para que <strong>{trip.contacts?.full_name}</strong> veja a viagem na área dele,
-              ele precisa se cadastrar em <code>/signup</code> com o e-mail{" "}
-              <strong>{trip.contacts?.email}</strong> e você vincular o ID dele a este contato.
+              Crie um acesso para <strong>{trip.contacts?.full_name}</strong> usando o e-mail{" "}
+              <strong>{trip.contacts?.email}</strong>. Login e senha ficam salvos no CRM dele.
             </p>
-            <LinkUserDialog contactId={trip.contact_id} email={trip.contacts?.email ?? ""} onLinked={invalidate} />
+            <div className="mt-3">
+              <CreateAccessButton
+                contactId={trip.contact_id}
+                email={trip.contacts?.email ?? ""}
+              />
+            </div>
           </div>
         </Card>
       )}
@@ -141,33 +146,6 @@ function TripHeader({ trip, onSaved, onDeleted }: { trip: any; onSaved: () => vo
   );
 }
 
-function LinkUserDialog({ contactId, email, onLinked }: { contactId: string; email: string; onLinked: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState("");
-  const save = async () => {
-    if (!userId.trim()) return;
-    const { error } = await supabase.from("contacts").update({ user_id: userId.trim() }).eq("id", contactId);
-    if (error) return toast.error(error.message);
-    toast.success("Cliente vinculado!");
-    setOpen(false); onLinked();
-  };
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="mt-3">Vincular usuário</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Vincular conta do cliente</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Peça para o cliente fazer cadastro com o e-mail <strong>{email}</strong> e cole o ID do usuário aqui.
-          (Você encontra em <em>Auth → Users</em> no Lovable Cloud.)
-        </p>
-        <Input placeholder="UUID do usuário" value={userId} onChange={(e) => setUserId(e.target.value)} />
-        <DialogFooter><Button onClick={save}>Vincular</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 /* ============================== INFO TAB ============================== */
 function InfoTab({ trip, onSaved }: { trip: any; onSaved: () => void }) {

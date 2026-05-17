@@ -110,17 +110,34 @@ function ContactProfile() {
           </div>
         </div>
         <div className="flex gap-2">
-          {!contact.user_id && <CreateAccessButton contactId={contactId} email={contact.email} />}
-          {contact.user_id && (
-            <span className="inline-flex items-center gap-1 text-xs text-primary px-3 py-1.5 rounded-md bg-primary/10">
-              <Check className="size-3" /> Acesso criado
-            </span>
-          )}
+          <CreateAccessButton
+            contactId={contactId}
+            email={contact.email}
+            hasAccess={!!contact.user_id}
+          />
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             <Save className="size-4" /> Salvar
           </Button>
         </div>
       </div>
+
+      {contact.user_id && (contact as any).access_password && (
+        <Card className="p-4 bg-primary/5 border-primary/30">
+          <p className="text-xs uppercase tracking-wide text-primary font-medium mb-2">
+            <Check className="size-3 inline mr-1" /> Acesso do cliente
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 text-sm">
+            <div>
+              <Label className="text-xs text-muted-foreground">Login (e-mail)</Label>
+              <p className="font-mono">{contact.email}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Senha</Label>
+              <p className="font-mono">{(contact as any).access_password}</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="p-5 space-y-3">
@@ -202,22 +219,41 @@ function Field({ label, icon, children }: { label: string; icon?: React.ReactNod
   );
 }
 
-function CreateAccessButton({ contactId, email: defaultEmail }: { contactId: string; email: string }) {
+function genPassword() {
+  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  const arr = new Uint32Array(10);
+  crypto.getRandomValues(arr);
+  for (const n of arr) s += chars[n % chars.length];
+  return s;
+}
+
+export function CreateAccessButton({
+  contactId,
+  email: defaultEmail,
+  hasAccess,
+}: {
+  contactId: string;
+  email: string;
+  hasAccess?: boolean;
+}) {
   const qc = useQueryClient();
   const fn = useServerFn(createClientAccess);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(defaultEmail);
+  const [password, setPassword] = useState(() => genPassword());
   const [submitting, setSubmitting] = useState(false);
-  const [link, setLink] = useState<string | null>(null);
+  const [done, setDone] = useState<{ email: string; password: string } | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await fn({ data: { contactId, email: email.trim() } });
-      setLink(res.magicLink);
-      toast.success("Acesso criado. Copie o link e envie ao cliente.");
+      const res = await fn({ data: { contactId, email: email.trim(), password } });
+      setDone({ email: res.email, password: res.password });
+      toast.success("Acesso criado. Envie login e senha ao cliente.");
       qc.invalidateQueries({ queryKey: ["contact", contactId] });
+      qc.invalidateQueries({ queryKey: ["trip"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao criar acesso");
     } finally {
@@ -225,54 +261,74 @@ function CreateAccessButton({ contactId, email: defaultEmail }: { contactId: str
     }
   }
 
-  function copyLink() {
-    if (!link) return;
-    navigator.clipboard.writeText(link);
-    toast.success("Link copiado");
+  function copyCreds() {
+    if (!done) return;
+    navigator.clipboard.writeText(`Login: ${done.email}\nSenha: ${done.password}`);
+    toast.success("Login e senha copiados");
   }
 
   function close() {
     setOpen(false);
-    setLink(null);
+    setDone(null);
+    setPassword(genPassword());
   }
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : close())}>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <KeyRound className="size-4" /> Criar acesso do cliente
+        <KeyRound className="size-4" /> {hasAccess ? "Atualizar acesso" : "Criar acesso do cliente"}
       </Button>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Criar acesso do cliente</DialogTitle>
+          <DialogTitle>{hasAccess ? "Atualizar acesso" : "Criar acesso do cliente"}</DialogTitle>
           <DialogDescription>
-            O cliente recebe um link de acesso único. Sem senha — basta clicar para entrar na área dele.
+            Defina e-mail e senha. O cliente entra pela tela de login normal — basta enviar a ele essas credenciais.
           </DialogDescription>
         </DialogHeader>
 
-        {!link ? (
+        {!done ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="ca-email">E-mail do cliente</Label>
+              <Label htmlFor="ca-email">E-mail (login)</Label>
               <Input id="ca-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="ca-pass">Senha</Label>
+              <div className="flex gap-2">
+                <Input id="ca-pass" type="text" required minLength={6}
+                  value={password} onChange={(e) => setPassword(e.target.value)} className="font-mono" />
+                <Button type="button" variant="outline" onClick={() => setPassword(genPassword())}>
+                  Gerar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                A senha fica salva no CRM para consulta futura.
+              </p>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Gerando..." : "Gerar link de acesso"}
+                {submitting ? "Salvando..." : hasAccess ? "Atualizar senha" : "Criar acesso"}
               </Button>
             </DialogFooter>
           </form>
         ) : (
           <div className="space-y-4">
-            <div>
-              <Label>Link de acesso (válido por tempo limitado)</Label>
-              <Textarea readOnly value={link} rows={4} className="font-mono text-xs mt-1" />
+            <div className="rounded-md border bg-muted/40 p-3 space-y-2 text-sm">
+              <div>
+                <Label className="text-xs text-muted-foreground">Login</Label>
+                <p className="font-mono">{done.email}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Senha</Label>
+                <p className="font-mono">{done.password}</p>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Envie este link ao cliente por WhatsApp ou e-mail. Ele entra direto na área de viagem dele — sem precisar de senha.
+              Envie ao cliente por WhatsApp ou e-mail. Ele entra normalmente em <code>/login</code>.
             </p>
             <DialogFooter className="gap-2">
               <Button type="button" variant="outline" onClick={close}>Fechar</Button>
-              <Button type="button" onClick={copyLink}>Copiar link</Button>
+              <Button type="button" onClick={copyCreds}>Copiar login e senha</Button>
             </DialogFooter>
           </div>
         )}
@@ -280,3 +336,4 @@ function CreateAccessButton({ contactId, email: defaultEmail }: { contactId: str
     </Dialog>
   );
 }
+

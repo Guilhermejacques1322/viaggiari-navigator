@@ -6,13 +6,15 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const schema = z.object({
   contactId: z.string().uuid(),
   email: z.string().trim().email().max(255),
+  password: z.string().min(6).max(72),
 });
 
 /**
- * Creates a client-only access for a contact and returns a magic link.
- * - Never assigns the 'admin' role (only 'client').
- * - If a user with this email already exists, it is reused (and linked).
- * - The generated link logs the user directly into /minha-viagem.
+ * Creates (or updates) a client login for a contact using email + password.
+ * - Stores the chosen password on contacts.access_password so the admin can
+ *   look it up later from the CRM.
+ * - Never grants the 'admin' role (only 'client'), and removes any admin role
+ *   that may exist on the user.
  */
 export const createClientAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -28,7 +30,6 @@ export const createClientAccess = createServerFn({ method: "POST" })
     if (roleErr) throw new Error(roleErr.message);
     if (!roleRow) throw new Error("Apenas administradores podem criar acessos.");
 
-    // Ensure contact exists
     const { data: contact, error: cErr } = await supabaseAdmin
       .from("contacts")
       .select("id, full_name")
@@ -38,18 +39,22 @@ export const createClientAccess = createServerFn({ method: "POST" })
 
     const email = data.email.toLowerCase();
 
-    // Try to find an existing auth user with this email
+    // Find or create the auth user
     let userId: string | null = null;
     const { data: existing } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
     const found = existing?.users.find((u) => u.email?.toLowerCase() === email);
     if (found) {
       userId = found.id;
+      // Update password + ensure email confirmed
+      const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: data.password,
+        email_confirm: true,
+      });
+      if (updErr) throw new Error(updErr.message);
     } else {
-      // Create new user (email-confirmed, random unused password)
-      const randomPassword = crypto.randomUUID() + crypto.randomUUID();
       const { data: created, error: uErr } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password: randomPassword,
+        password: data.password,
         email_confirm: true,
         user_metadata: { full_name: contact.full_name },
       });
@@ -57,11 +62,13 @@ export const createClientAccess = createServerFn({ method: "POST" })
       userId = created.user.id;
     }
 
-    // Link contact -> user
-    await supabaseAdmin.from("contacts").update({ user_id: userId }).eq("id", data.contactId);
+    // Link contact -> user and store credentials for admin reference
+    await supabaseAdmin
+      .from("contacts")
+      .update({ user_id: userId, email, access_password: data.password })
+      .eq("id", data.contactId);
 
-    // SECURITY: ensure ONLY 'client' role; explicitly remove any admin role
-    // that may have been added by mistake.
+    // SECURITY: ensure ONLY 'client' role
     await supabaseAdmin
       .from("user_roles")
       .upsert({ user_id: userId, role: "client" }, { onConflict: "user_id,role" });
@@ -71,18 +78,5 @@ export const createClientAccess = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .eq("role", "admin");
 
-    // Generate a magic link they can click to sign in
-    const siteUrl = process.env.SITE_URL || "";
-    const { data: link, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-      options: siteUrl ? { redirectTo: `${siteUrl}/minha-viagem` } : undefined,
-    });
-    if (linkErr) throw new Error(linkErr.message);
-
-    return {
-      userId,
-      email,
-      magicLink: link?.properties?.action_link ?? "",
-    };
+    return { userId, email, password: data.password };
   });
