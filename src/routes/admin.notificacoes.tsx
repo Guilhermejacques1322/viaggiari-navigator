@@ -9,8 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Bell, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { Plus, Bell, Trash2, CheckCircle2, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { broadcastTestPush } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/admin/notificacoes")({ component: NotificacoesPage });
 
