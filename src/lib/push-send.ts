@@ -27,7 +27,7 @@ export async function sendPushTo(sub: SubRow, body: string): Promise<SendResult>
       subscription,
       getVapid(),
     );
-    const res = await fetch(sub.endpoint, payload);
+    const res = await fetch(sub.endpoint, payload as unknown as RequestInit);
     if (res.status >= 200 && res.status < 300) return { ok: true, status: res.status };
     const text = await res.text().catch(() => "");
     return { ok: false, status: res.status, error: text.slice(0, 200) };
