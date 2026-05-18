@@ -61,29 +61,18 @@ export const sendTestPushToSelf = createServerFn({ method: "POST" })
       .eq("user_id", userId);
     if (!subs || subs.length === 0) return { sent: 0 };
 
-    const webpush = (await import("web-push")).default;
-    webpush.setVapidDetails(
-      process.env.VAPID_SUBJECT || "mailto:contato@viaggiari.travel",
-      VAPID_PUBLIC_KEY,
-      process.env.VAPID_PRIVATE_KEY!,
-    );
+    const body = JSON.stringify({
+      title: "Notificações ativadas ✈️",
+      body: "Você receberá lembretes 1 dia e 1 hora antes de cada atividade.",
+      url: "/minha-viagem",
+      tag: "test-notification",
+    });
 
     let sent = 0;
     for (const s of subs) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          JSON.stringify({
-            title: "Notificações ativadas ✈️",
-            body: "Você receberá lembretes 1 dia e 1 hora antes de cada atividade.",
-            url: "/minha-viagem",
-            tag: "test-notification",
-          }),
-        );
-        sent++;
-      } catch (e) {
-        // Ignore individual failures (e.g. expired endpoint)
-      }
+      const r = await sendPushTo(s, body);
+      if (r.ok) sent++;
+      else console.error("[push self] falha", s.endpoint.slice(0, 60), r.status, r.error);
     }
     return { sent };
   });
@@ -93,7 +82,6 @@ export const broadcastTestPush = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // Admin check
     const { data: roleRow } = await supabase
       .from("user_roles")
       .select("role")
@@ -107,13 +95,6 @@ export const broadcastTestPush = createServerFn({ method: "POST" })
       .select("id,endpoint,p256dh,auth");
     if (!subs || subs.length === 0) return { sent: 0, total: 0, removed: 0 };
 
-    const webpush = (await import("web-push")).default;
-    webpush.setVapidDetails(
-      process.env.VAPID_SUBJECT || "mailto:contato@viaggiari.travel",
-      VAPID_PUBLIC_KEY,
-      process.env.VAPID_PRIVATE_KEY!,
-    );
-
     const payload = JSON.stringify({
       title: "Viaggiari ✈️",
       body: "Esse é um teste do sistema Viaggiari, estamos trabalhando para melhorar cada vez mais pensando em vocês. Obrigado!",
@@ -122,23 +103,22 @@ export const broadcastTestPush = createServerFn({ method: "POST" })
     });
 
     let sent = 0;
-    let removed = 0;
     const deadIds: string[] = [];
+    const errors: string[] = [];
     for (const s of subs) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          payload,
-        );
+      const r = await sendPushTo(s, payload);
+      if (r.ok) {
         sent++;
-      } catch (err: any) {
-        const status = err?.statusCode;
-        if (status === 404 || status === 410) deadIds.push(s.id);
+      } else if (r.status === 404 || r.status === 410) {
+        deadIds.push(s.id);
+      } else {
+        errors.push(`${r.status ?? "?"}: ${r.error ?? ""}`);
       }
     }
     if (deadIds.length > 0) {
       await supabase.from("push_subscriptions").delete().in("id", deadIds);
-      removed = deadIds.length;
     }
-    return { sent, total: subs.length, removed };
+    if (errors.length > 0) console.error("[push broadcast] erros:", errors);
+    return { sent, total: subs.length, removed: deadIds.length, errors: errors.slice(0, 3) };
   });
+
