@@ -24,12 +24,6 @@ export const Route = createFileRoute("/api/public/hooks/send-push-reminders")({
           { auth: { persistSession: false, autoRefreshToken: false } },
         );
 
-        const webpush = (await import("web-push")).default;
-        webpush.setVapidDetails(
-          process.env.VAPID_SUBJECT || "mailto:contato@viaggiari.travel",
-          "BPuzKuGTO-laFzVDcni9VYyxf8Bs8nhd0phOXttIiFEKKXF6jB6YHwF9_YHpV2QAEfx2emEbyvE5T6qXQtlNINI",
-          process.env.VAPID_PRIVATE_KEY!,
-        );
 
         // Pull all activities that could be relevant: visible trips, future, with a time
         // and at least one reminder still pending.
