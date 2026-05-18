@@ -109,7 +109,8 @@ function NotificacoesPage() {
               <Button onClick={createNotification} className="w-full">Agendar</Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {loading ? <p className="text-muted-foreground">Carregando…</p> : (
