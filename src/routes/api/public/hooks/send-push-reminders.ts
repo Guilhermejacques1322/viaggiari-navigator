@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { sendPushTo } from "@/lib/push-send";
+
 
 // Cron-triggered endpoint: scans upcoming activities, sends 24h and 1h reminders,
 // marks them as sent, and prunes dead subscriptions.
@@ -22,12 +24,6 @@ export const Route = createFileRoute("/api/public/hooks/send-push-reminders")({
           { auth: { persistSession: false, autoRefreshToken: false } },
         );
 
-        const webpush = (await import("web-push")).default;
-        webpush.setVapidDetails(
-          process.env.VAPID_SUBJECT || "mailto:contato@viaggiari.travel",
-          "BPuzKuGTO-laFzVDcni9VYyxf8Bs8nhd0phOXttIiFEKKXF6jB6YHwF9_YHpV2QAEfx2emEbyvE5T6qXQtlNINI",
-          process.env.VAPID_PRIVATE_KEY!,
-        );
 
         // Pull all activities that could be relevant: visible trips, future, with a time
         // and at least one reminder still pending.
@@ -89,19 +85,13 @@ export const Route = createFileRoute("/api/public/hooks/send-push-reminders")({
             });
 
             for (const s of subs) {
-              try {
-                await webpush.sendNotification(
-                  { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-                  payload,
-                );
+              const r = await sendPushTo(s, payload);
+              if (r.ok) {
                 results.sent++;
-              } catch (err: any) {
-                const status = err?.statusCode;
-                if (status === 404 || status === 410) {
-                  await supabase.from("push_subscriptions").delete().eq("id", s.id);
-                } else {
-                  results.errors.push(`sub ${s.id}: ${err?.message || "unknown"}`);
-                }
+              } else if (r.status === 404 || r.status === 410) {
+                await supabase.from("push_subscriptions").delete().eq("id", s.id);
+              } else {
+                results.errors.push(`sub ${s.id}: ${r.status ?? "?"} ${r.error ?? ""}`);
               }
             }
           }
