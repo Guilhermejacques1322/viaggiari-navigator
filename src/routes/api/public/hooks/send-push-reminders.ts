@@ -85,19 +85,13 @@ export const Route = createFileRoute("/api/public/hooks/send-push-reminders")({
             });
 
             for (const s of subs) {
-              try {
-                await webpush.sendNotification(
-                  { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-                  payload,
-                );
+              const r = await sendPushTo(s, payload);
+              if (r.ok) {
                 results.sent++;
-              } catch (err: any) {
-                const status = err?.statusCode;
-                if (status === 404 || status === 410) {
-                  await supabase.from("push_subscriptions").delete().eq("id", s.id);
-                } else {
-                  results.errors.push(`sub ${s.id}: ${err?.message || "unknown"}`);
-                }
+              } else if (r.status === 404 || r.status === 410) {
+                await supabase.from("push_subscriptions").delete().eq("id", s.id);
+              } else {
+                results.errors.push(`sub ${s.id}: ${r.status ?? "?"} ${r.error ?? ""}`);
               }
             }
           }
