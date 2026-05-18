@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { sendPushTo } from "@/lib/push-send";
+
 
 // Cron-triggered endpoint: scans upcoming activities, sends 24h and 1h reminders,
 // marks them as sent, and prunes dead subscriptions.
