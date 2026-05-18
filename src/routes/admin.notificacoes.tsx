@@ -9,8 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Bell, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { Plus, Bell, Trash2, CheckCircle2, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { broadcastTestPush } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/admin/notificacoes")({ component: NotificacoesPage });
 
@@ -84,8 +86,10 @@ function NotificacoesPage() {
           <h1 className="text-2xl font-display font-semibold">Notificações</h1>
           <p className="text-sm text-muted-foreground">Lembretes e avisos programados para clientes</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova notificação</Button></DialogTrigger>
+        <div className="flex items-center gap-2">
+          <TestBroadcastButton />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova notificação</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Agendar notificação</DialogTitle></DialogHeader>
             <div className="space-y-3">
@@ -105,7 +109,8 @@ function NotificacoesPage() {
               <Button onClick={createNotification} className="w-full">Agendar</Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {loading ? <p className="text-muted-foreground">Carregando…</p> : (
@@ -162,5 +167,27 @@ function NotificationRow({ n, onMarkSent, onDelete }: { n: Notification; onMarkS
         <Button size="icon" variant="ghost" onClick={onDelete}><Trash2 className="size-4" /></Button>
       </div>
     </Card>
+  );
+}
+
+function TestBroadcastButton() {
+  const broadcast = useServerFn(broadcastTestPush);
+  const [loading, setLoading] = useState(false);
+  async function run() {
+    if (!confirm("Enviar push de teste para TODOS os usuários inscritos?")) return;
+    setLoading(true);
+    try {
+      const res = await broadcast();
+      toast.success(`Enviado: ${res.sent}/${res.total}${res.removed ? ` (removidas ${res.removed} inativas)` : ""}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao enviar broadcast");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button variant="outline" onClick={run} disabled={loading}>
+      <Send className="size-4 mr-2" />{loading ? "Enviando…" : "Push de teste (todos)"}
+    </Button>
   );
 }
