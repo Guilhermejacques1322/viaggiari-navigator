@@ -2,9 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { sendPushTo, VAPID_PUBLIC_KEY } from "@/lib/push-send";
-
-  "BPuzKuGTO-laFzVDcni9VYyxf8Bs8nhd0phOXttIiFEKKXF6jB6YHwF9_YHpV2QAEfx2emEbyvE5T6qXQtlNINI";
-
 export const getVapidPublicKey = createServerFn({ method: "GET" }).handler(async () => {
   return { key: VAPID_PUBLIC_KEY };
 });
