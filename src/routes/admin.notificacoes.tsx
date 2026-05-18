@@ -86,8 +86,10 @@ function NotificacoesPage() {
           <h1 className="text-2xl font-display font-semibold">Notificações</h1>
           <p className="text-sm text-muted-foreground">Lembretes e avisos programados para clientes</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova notificação</Button></DialogTrigger>
+        <div className="flex items-center gap-2">
+          <TestBroadcastButton />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button><Plus className="size-4 mr-2" />Nova notificação</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Agendar notificação</DialogTitle></DialogHeader>
             <div className="space-y-3">
