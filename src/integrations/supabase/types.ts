@@ -239,6 +239,8 @@ export type Database = {
           maps_url: string | null
           name: string
           position: number
+          reminder_1h_sent_at: string | null
+          reminder_24h_sent_at: string | null
           time: string | null
         }
         Insert: {
@@ -263,6 +265,8 @@ export type Database = {
           maps_url?: string | null
           name: string
           position?: number
+          reminder_1h_sent_at?: string | null
+          reminder_24h_sent_at?: string | null
           time?: string | null
         }
         Update: {
@@ -287,6 +291,8 @@ export type Database = {
           maps_url?: string | null
           name?: string
           position?: number
+          reminder_1h_sent_at?: string | null
+          reminder_24h_sent_at?: string | null
           time?: string | null
         }
         Relationships: [
@@ -516,6 +522,39 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
