@@ -169,3 +169,25 @@ function NotificationRow({ n, onMarkSent, onDelete }: { n: Notification; onMarkS
     </Card>
   );
 }
+
+function TestBroadcastButton() {
+  const broadcast = useServerFn(broadcastTestPush);
+  const [loading, setLoading] = useState(false);
+  async function run() {
+    if (!confirm("Enviar push de teste para TODOS os usuários inscritos?")) return;
+    setLoading(true);
+    try {
+      const res = await broadcast();
+      toast.success(`Enviado: ${res.sent}/${res.total}${res.removed ? ` (removidas ${res.removed} inativas)` : ""}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao enviar broadcast");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button variant="outline" onClick={run} disabled={loading}>
+      <Send className="size-4 mr-2" />{loading ? "Enviando…" : "Push de teste (todos)"}
+    </Button>
+  );
+}
