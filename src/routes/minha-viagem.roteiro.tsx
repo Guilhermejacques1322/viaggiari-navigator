@@ -1,15 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip } from "lucide-react";
+import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip, Download, Plane, Train, Hotel, File } from "lucide-react";
 import { toast } from "sonner";
-import { useMyTrip, type Activity } from "@/hooks/use-my-trip";
+import { useMyTrip, type Activity, type Document } from "@/hooks/use-my-trip";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -76,8 +76,8 @@ function Roteiro() {
                     </p>
                   ) : (
                     visible.map((a) => {
-                      const docCount = (data.documents ?? []).filter((d) => d.activity_id === a.id).length;
-                      return <ActivityCard key={a.id} a={a} docCount={docCount} onReview={() => setReviewing(a)} />;
+                      const docs = (data.documents ?? []).filter((d) => d.activity_id === a.id);
+                      return <ActivityCard key={a.id} a={a} docs={docs} onReview={() => setReviewing(a)} />;
                     })
                   )}
                 </div>
@@ -97,7 +97,12 @@ function Roteiro() {
   );
 }
 
-function ActivityCard({ a, docCount, onReview }: { a: Activity; docCount: number; onReview: () => void }) {
+const DOC_ICONS = {
+  flight: Plane, train: Train, hotel: Hotel, ticket: Ticket, other: File,
+} as const;
+
+function ActivityCard({ a, docs, onReview }: { a: Activity; docs: Document[]; onReview: () => void }) {
+  const [docsOpen, setDocsOpen] = useState(false);
   return (
     <div className="rounded-lg border border-border p-3 bg-surface">
       <div className="flex items-start gap-3">
@@ -126,18 +131,84 @@ function ActivityCard({ a, docCount, onReview }: { a: Activity; docCount: number
                 <Ticket className="size-3" /> Ingresso
               </span>
             )}
-            {docCount > 0 && (
-              <span className="text-xs text-primary inline-flex items-center gap-1">
-                <Paperclip className="size-3" /> {docCount} doc{docCount > 1 ? "s" : ""}
-              </span>
+            {docs.length > 0 && (
+              <button
+                onClick={() => setDocsOpen(true)}
+                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+              >
+                <Paperclip className="size-3" /> {docs.length} doc{docs.length > 1 ? "s" : ""}
+              </button>
             )}
             <button onClick={onReview} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 ml-auto">
               <Star className="size-3" /> Avaliar
             </button>
           </div>
+
+          {docs.length > 0 && (
+            <ActivityDocsDialog
+              open={docsOpen}
+              onOpenChange={setDocsOpen}
+              activityName={a.name}
+              docs={docs}
+            />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function ActivityDocsDialog({
+  open, onOpenChange, activityName, docs,
+}: { open: boolean; onOpenChange: (v: boolean) => void; activityName: string; docs: Document[] }) {
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  async function openDoc(d: Document) {
+    setLoadingId(d.id);
+    const { data, error } = await supabase.storage
+      .from("trip-documents")
+      .createSignedUrl(d.storage_path, 300);
+    setLoadingId(null);
+    if (error || !data) { toast.error("Não foi possível abrir o documento"); return; }
+    window.open(data.signedUrl, "_blank");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base">Documentos</DialogTitle>
+          <DialogDescription className="text-xs">{activityName}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {docs.map((d) => {
+            const Icon = DOC_ICONS[d.category] ?? File;
+            return (
+              <button
+                key={d.id}
+                onClick={() => openDoc(d)}
+                disabled={loadingId === d.id}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-accent/30 transition-colors text-left disabled:opacity-50"
+              >
+                <div className="size-9 rounded-lg bg-primary/10 grid place-items-center text-primary shrink-0">
+                  <Icon className="size-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{d.name}</p>
+                  {d.event_date && (
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(d.event_date).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  )}
+                  {d.notes && <p className="text-xs text-muted-foreground truncate">{d.notes}</p>}
+                </div>
+                <Download className="size-4 text-muted-foreground shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

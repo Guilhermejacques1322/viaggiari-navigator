@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMyTrip } from "@/hooks/use-my-trip";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NotificationsToggle } from "@/components/notifications-toggle";
 
 export const Route = createFileRoute("/minha-viagem/")({
   component: Dashboard,
@@ -94,6 +95,8 @@ function Dashboard() {
           />
         )}
       </div>
+
+      <NotificationsToggle />
 
       {days.length > 0 && (
         <div>
