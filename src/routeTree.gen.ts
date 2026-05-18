@@ -31,6 +31,7 @@ import { Route as AdminDestinosRouteImport } from './routes/admin.destinos'
 import { Route as AdminCrmRouteImport } from './routes/admin.crm'
 import { Route as AdminViagensTripIdRouteImport } from './routes/admin.viagens.$tripId'
 import { Route as AdminCrmContactIdRouteImport } from './routes/admin.crm.$contactId'
+import { Route as ApiPublicHooksSendPushRemindersRouteImport } from './routes/api/public/hooks/send-push-reminders'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -142,6 +143,12 @@ const AdminCrmContactIdRoute = AdminCrmContactIdRouteImport.update({
   path: '/$contactId',
   getParentRoute: () => AdminCrmRoute,
 } as any)
+const ApiPublicHooksSendPushRemindersRoute =
+  ApiPublicHooksSendPushRemindersRouteImport.update({
+    id: '/api/public/hooks/send-push-reminders',
+    path: '/api/public/hooks/send-push-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
   '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
+  '/api/public/hooks/send-push-reminders': typeof ApiPublicHooksSendPushRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -188,6 +196,7 @@ export interface FileRoutesByTo {
   '/minha-viagem': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
   '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
+  '/api/public/hooks/send-push-reminders': typeof ApiPublicHooksSendPushRemindersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -213,6 +222,7 @@ export interface FileRoutesById {
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
   '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
+  '/api/public/hooks/send-push-reminders': typeof ApiPublicHooksSendPushRemindersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
     | '/admin/viagens/$tripId'
+    | '/api/public/hooks/send-push-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/minha-viagem'
     | '/admin/crm/$contactId'
     | '/admin/viagens/$tripId'
+    | '/api/public/hooks/send-push-reminders'
   id:
     | '__root__'
     | '/'
@@ -285,6 +297,7 @@ export interface FileRouteTypes {
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
     | '/admin/viagens/$tripId'
+    | '/api/public/hooks/send-push-reminders'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -295,6 +308,7 @@ export interface RootRouteChildren {
   MinhaViagemRoute: typeof MinhaViagemRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   OrcamentoTokenRoute: typeof OrcamentoTokenRoute
+  ApiPublicHooksSendPushRemindersRoute: typeof ApiPublicHooksSendPushRemindersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -453,6 +467,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCrmContactIdRouteImport
       parentRoute: typeof AdminCrmRoute
     }
+    '/api/public/hooks/send-push-reminders': {
+      id: '/api/public/hooks/send-push-reminders'
+      path: '/api/public/hooks/send-push-reminders'
+      fullPath: '/api/public/hooks/send-push-reminders'
+      preLoaderRoute: typeof ApiPublicHooksSendPushRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -532,6 +553,7 @@ const rootRouteChildren: RootRouteChildren = {
   MinhaViagemRoute: MinhaViagemRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   OrcamentoTokenRoute: OrcamentoTokenRoute,
+  ApiPublicHooksSendPushRemindersRoute: ApiPublicHooksSendPushRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
