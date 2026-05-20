@@ -229,7 +229,7 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
       )}
     </div>
   );
-}
+});
 
 function ActivityList({ day }: { day: MapDay }) {
   if (day.activities.length === 0) return null;
