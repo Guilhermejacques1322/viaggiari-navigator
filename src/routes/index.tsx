@@ -81,7 +81,17 @@ function Hero() {
   return (
     <section className="relative overflow-hidden bg-ink text-ink-foreground">
       <div className="absolute inset-0">
-        <img src={heroImg} alt="" width={1920} height={1280} className="h-full w-full object-cover opacity-50" />
+        <img
+          src={heroImg}
+          alt=""
+          width={1920}
+          height={1280}
+          loading="eager"
+          // @ts-expect-error — fetchpriority é HTML padrão, React types ainda atrasados
+          fetchpriority="high"
+          decoding="async"
+          className="h-full w-full object-cover opacity-50"
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/20" />
       </div>
       <div className="relative section-padding flex min-h-[88vh] items-center py-20">
