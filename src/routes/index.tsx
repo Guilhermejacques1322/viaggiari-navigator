@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail } from "lucide-react";
@@ -17,6 +17,12 @@ import lisbonImg from "@/assets/destination-lisbon.jpg";
 import nordesteImg from "@/assets/destination-nordeste.jpg";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    links: [
+      // Avisa o browser para já baixar a hero em paralelo ao HTML (melhora LCP)
+      { rel: "preload", as: "image", href: heroImg, fetchpriority: "high" },
+    ],
+  }),
   component: LandingPage,
 });
 
