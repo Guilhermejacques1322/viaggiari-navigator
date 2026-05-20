@@ -37,7 +37,7 @@ const DAY_COLORS = [
   "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
 ];
 
-export function TripMap({ days, className }: Props) {
+export const TripMap = memo(function TripMap({ days, className }: Props) {
   const tokenFn = useServerFn(getMapboxToken);
   const { data: tokenData, isLoading: tokenLoading } = useQuery({
     queryKey: ["mapbox-token"],
