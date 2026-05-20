@@ -59,6 +59,8 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
     const first = daysWithCoords.find((d) => d.activities.length > 0);
     return first?.id ?? "all";
   });
+  const selectAll = useCallback(() => setSelectedDay("all"), []);
+  const selectDay = useCallback((id: string) => setSelectedDay(id), []);
 
   const mapRef = useRef<MapboxNS.Map | null>(null);
   const mapboxRef = useRef<typeof MapboxNS | null>(null);
