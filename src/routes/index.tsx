@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     links: [
       // Avisa o browser para já baixar a hero em paralelo ao HTML (melhora LCP)
-      { rel: "preload", as: "image", href: heroImg, fetchpriority: "high" },
+      { rel: "preload", as: "image", href: heroImg, fetchPriority: "high" },
     ],
   }),
   component: LandingPage,
