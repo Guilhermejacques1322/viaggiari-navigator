@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     links: [
       // Avisa o browser para já baixar a hero em paralelo ao HTML (melhora LCP)
-      { rel: "preload", as: "image", href: heroImg, fetchpriority: "high" },
+      { rel: "preload", as: "image", href: heroImg, fetchPriority: "high" },
     ],
   }),
   component: LandingPage,
@@ -87,8 +87,7 @@ function Hero() {
           width={1920}
           height={1280}
           loading="eager"
-          // @ts-expect-error — fetchpriority é HTML padrão, React types ainda atrasados
-          fetchpriority="high"
+          fetchPriority="high"
           decoding="async"
           className="h-full w-full object-cover opacity-50"
         />
