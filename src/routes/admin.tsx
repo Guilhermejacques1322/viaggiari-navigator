@@ -34,9 +34,13 @@ function AdminShell() {
     else if (!isAdmin) navigate({ to: "/minha-viagem" });
   }, [user, isAdmin, loading, navigate]);
 
-  if (loading || !user || !isAdmin) {
+  // Boot inicial apenas — depois mantemos o Outlet montado para não
+  // perder estado da página em refresh de token em background.
+  if (loading && !user) {
     return <div className="min-h-screen grid place-items-center text-muted-foreground">Carregando…</div>;
   }
+  if (!user || !isAdmin) return null;
+
 
   return (
     <div className="min-h-screen flex bg-background">
