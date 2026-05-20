@@ -19,9 +19,14 @@ function ClientShell() {
     if (!loading && !user) navigate({ to: "/login" });
   }, [user, loading, navigate]);
 
-  if (loading || !user) {
+  // Só mostra tela de carregamento no boot inicial (quando ainda não
+  // temos usuário). Uma vez logado, nunca mais desmontamos a árvore —
+  // refresh de token em background não deve perder estado da página.
+  if (loading && !user) {
     return <div className="min-h-screen grid place-items-center text-muted-foreground">Carregando…</div>;
   }
+  if (!user) return null;
+
 
   return (
     <MyTripProvider>

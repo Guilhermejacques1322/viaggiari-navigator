@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,47 +19,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  // `loading` representa APENAS o boot inicial. Depois que resolvemos a
+  // sessão inicial (com ou sem usuário) ele nunca mais volta a true —
+  // assim refresh de token em background não desmonta a árvore.
   const [loading, setLoading] = useState(true);
+  const currentUserId = useRef<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadRolesFor(userId: string) {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (error) console.error("loadRoles error:", error);
+      if (!mounted) return;
+      setRoles((data ?? []).map((r) => r.role as Role));
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // Sempre sincroniza session/user — mas NÃO mexe em `loading`, e só
+      // recarrega roles quando o user.id realmente muda (login, logout,
+      // troca de conta). TOKEN_REFRESHED / USER_UPDATED do mesmo usuário
+      // viram no-op para a UI.
       setSession(newSession);
       setUser(newSession?.user ?? null);
-      if (newSession?.user) {
-        setLoading(true);
-        setTimeout(() => {
-          loadRoles(newSession.user.id).finally(() => setLoading(false));
-        }, 0);
+
+      const nextId = newSession?.user?.id ?? null;
+      if (nextId === currentUserId.current) return;
+      currentUserId.current = nextId;
+
+      if (nextId) {
+        // Adia para fora do callback do Supabase (evita deadlocks).
+        setTimeout(() => { loadRolesFor(nextId); }, 0);
       } else {
         setRoles([]);
-        setLoading(false);
       }
     });
 
+    // Boot inicial — única vez que mexemos em `loading`.
     supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!mounted) return;
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) {
-        loadRoles(s.user.id).finally(() => setLoading(false));
+      const initialId = s?.user?.id ?? null;
+      currentUserId.current = initialId;
+      if (initialId) {
+        loadRolesFor(initialId).finally(() => { if (mounted) setLoading(false); });
       } else {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
-
-  async function loadRoles(userId: string) {
-    const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-    if (error) console.error("loadRoles error:", error);
-    setRoles((data ?? []).map((r) => r.role as Role));
-  }
 
   async function signOut() {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setRoles([]);
+    currentUserId.current = null;
   }
 
   return (
