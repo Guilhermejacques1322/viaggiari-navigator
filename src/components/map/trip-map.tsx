@@ -199,7 +199,7 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
         <Button
           size="sm"
           variant={selectedDay === "all" ? "default" : "outline"}
-          onClick={() => setSelectedDay("all")}
+          onClick={selectAll}
         >
           Toda a viagem
         </Button>
@@ -211,7 +211,7 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
               key={d.id}
               size="sm"
               variant={active ? "default" : "outline"}
-              onClick={() => setSelectedDay(d.id)}
+              onClick={() => selectDay(d.id)}
               disabled={d.activities.length === 0}
               className="gap-1.5"
               style={active ? { backgroundColor: color, borderColor: color, color: "white" } : undefined}
