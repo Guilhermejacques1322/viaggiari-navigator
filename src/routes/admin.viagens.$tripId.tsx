@@ -555,7 +555,7 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
       />
     </>
   );
-}
+});
 
 function NewActivityDialog({ dayId, position, onDone }: {
   dayId: string; position: number; onDone: () => void;
