@@ -289,7 +289,7 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
   );
 }
 
-function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activity & { doc_count?: number })[] }; tripId: string; onChanged: () => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activity & { doc_count?: number })[] }; tripId: string; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
   const [addingAct, setAddingAct] = useState(false);
