@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -74,14 +74,21 @@ export function MyTripProvider({ children }: { children: ReactNode }) {
     queryKey: ["my-trip", user?.id],
     queryFn: () => fetchMyTrip(user!.id),
     enabled: !!user,
-    staleTime: 30_000,
+    // Dados de roteiro mudam raramente — vale cache longo para evitar refetch
+    // sempre que o usuário troca entre /minha-viagem/*
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
-  return (
-    <TripCtx.Provider value={{ data: query.data, loading: query.isLoading, refetch: query.refetch }}>
-      {children}
-    </TripCtx.Provider>
+  // Sem useMemo, o objeto value vira referência nova a cada render do
+  // Provider — todos os consumidores re-renderizam por nada.
+  const value = useMemo(
+    () => ({ data: query.data, loading: query.isLoading, refetch: query.refetch }),
+    [query.data, query.isLoading, query.refetch],
   );
+
+  return <TripCtx.Provider value={value}>{children}</TripCtx.Provider>;
 }
 
 export function useMyTrip() {

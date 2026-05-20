@@ -1,4 +1,5 @@
-import jsPDF from "jspdf";
+// jsPDF é importado dinamicamente dentro da função para virar chunk separado.
+// Economiza ~350kB no bundle do admin enquanto o usuário não clica em "Gerar PDF".
 
 export type QuotePDFData = {
   contactName: string;
@@ -18,7 +19,8 @@ const SERVICE_LABELS: Record<string, string> = {
   consultoria: "Consultoria",
 };
 
-export function generateQuotePDF(data: QuotePDFData) {
+export async function generateQuotePDF(data: QuotePDFData) {
+  const { default: jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210;
   const margin = 18;

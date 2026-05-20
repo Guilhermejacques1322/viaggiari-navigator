@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type * as MapboxNS from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useQuery } from "@tanstack/react-query";
@@ -37,7 +37,7 @@ const DAY_COLORS = [
   "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
 ];
 
-export function TripMap({ days, className }: Props) {
+export const TripMap = memo(function TripMap({ days, className }: Props) {
   const tokenFn = useServerFn(getMapboxToken);
   const { data: tokenData, isLoading: tokenLoading } = useQuery({
     queryKey: ["mapbox-token"],
@@ -59,6 +59,8 @@ export function TripMap({ days, className }: Props) {
     const first = daysWithCoords.find((d) => d.activities.length > 0);
     return first?.id ?? "all";
   });
+  const selectAll = useCallback(() => setSelectedDay("all"), []);
+  const selectDay = useCallback((id: string) => setSelectedDay(id), []);
 
   const mapRef = useRef<MapboxNS.Map | null>(null);
   const mapboxRef = useRef<typeof MapboxNS | null>(null);
@@ -197,7 +199,7 @@ export function TripMap({ days, className }: Props) {
         <Button
           size="sm"
           variant={selectedDay === "all" ? "default" : "outline"}
-          onClick={() => setSelectedDay("all")}
+          onClick={selectAll}
         >
           Toda a viagem
         </Button>
@@ -209,7 +211,7 @@ export function TripMap({ days, className }: Props) {
               key={d.id}
               size="sm"
               variant={active ? "default" : "outline"}
-              onClick={() => setSelectedDay(d.id)}
+              onClick={() => selectDay(d.id)}
               disabled={d.activities.length === 0}
               className="gap-1.5"
               style={active ? { backgroundColor: color, borderColor: color, color: "white" } : undefined}
@@ -229,7 +231,7 @@ export function TripMap({ days, className }: Props) {
       )}
     </div>
   );
-}
+});
 
 function ActivityList({ day }: { day: MapDay }) {
   if (day.activities.length === 0) return null;

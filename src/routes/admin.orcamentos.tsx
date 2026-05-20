@@ -103,8 +103,8 @@ function OrcamentosPage() {
     downloadPDF(data as Quote);
   }
 
-  function downloadPDF(q: Quote) {
-    generateQuotePDF({
+  async function downloadPDF(q: Quote) {
+    await generateQuotePDF({
       contactName: q.contacts?.full_name || "Cliente",
       serviceType: q.service_type,
       destinations: q.destinations || [],

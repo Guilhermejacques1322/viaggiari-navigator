@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail } from "lucide-react";
@@ -17,6 +17,12 @@ import lisbonImg from "@/assets/destination-lisbon.jpg";
 import nordesteImg from "@/assets/destination-nordeste.jpg";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    links: [
+      // Avisa o browser para já baixar a hero em paralelo ao HTML (melhora LCP)
+      { rel: "preload", as: "image", href: heroImg, fetchpriority: "high" },
+    ],
+  }),
   component: LandingPage,
 });
 
@@ -75,7 +81,17 @@ function Hero() {
   return (
     <section className="relative overflow-hidden bg-ink text-ink-foreground">
       <div className="absolute inset-0">
-        <img src={heroImg} alt="" width={1920} height={1280} className="h-full w-full object-cover opacity-50" />
+        <img
+          src={heroImg}
+          alt=""
+          width={1920}
+          height={1280}
+          loading="eager"
+          // @ts-expect-error — fetchpriority é HTML padrão, React types ainda atrasados
+          fetchpriority="high"
+          decoding="async"
+          className="h-full w-full object-cover opacity-50"
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/20" />
       </div>
       <div className="relative section-padding flex min-h-[88vh] items-center py-20">

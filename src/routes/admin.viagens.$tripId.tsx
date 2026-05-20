@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
@@ -289,7 +289,7 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
   );
 }
 
-function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activity & { doc_count?: number })[] }; tripId: string; onChanged: () => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activity & { doc_count?: number })[] }; tripId: string; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
   const [addingAct, setAddingAct] = useState(false);
@@ -358,9 +358,9 @@ function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activ
       </div>
     </Card>
   );
-}
+});
 
-function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
+const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<Partial<Activity>>(a);
@@ -555,7 +555,7 @@ function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_coun
       />
     </>
   );
-}
+});
 
 function NewActivityDialog({ dayId, position, onDone }: {
   dayId: string; position: number; onDone: () => void;
