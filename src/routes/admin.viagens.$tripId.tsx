@@ -358,9 +358,9 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
       </div>
     </Card>
   );
-}
+});
 
-function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
+const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<Partial<Activity>>(a);
