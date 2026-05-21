@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Home, Map as MapIcon, FileText, Heart, ListChecks, LogOut } from "lucide-react";
+import { Home, Map as MapIcon, FileText, ListChecks, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { MyTripProvider, useMyTrip } from "@/hooks/use-my-trip";
 import { Logo } from "@/components/brand/logo";
@@ -61,7 +61,6 @@ const NAV: NavItem[] = [
   { to: "/minha-viagem/mapa", label: "Mapa", icon: MapIcon },
   { to: "/minha-viagem/documentos", label: "Docs", icon: FileText },
   { to: "/minha-viagem/preroteiro", label: "Pré-roteiro", icon: ListChecks },
-  { to: "/minha-viagem/parceiros", label: "Parceiros", icon: Heart },
 ];
 
 function MobileBottomNav() {
