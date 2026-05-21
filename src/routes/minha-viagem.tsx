@@ -67,7 +67,7 @@ function MobileBottomNav() {
   const { pathname } = useLocation();
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur">
-      <ul className="grid grid-cols-6">
+      <ul className="grid grid-cols-5">
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
           const Icon = item.icon;
