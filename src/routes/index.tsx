@@ -274,8 +274,8 @@ function Footer() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <Logo size={36} withWordmark />
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="https://instagram.com/viaggiari" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition">
-            <Instagram className="w-4 h-4" /> @viaggiari
+          <a href="https://instagram.com/viaggiari_travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition">
+            <Instagram className="w-4 h-4" /> @viaggiari_travel
           </a>
           <a href="mailto:contato@viaggiari.travel" className="flex items-center gap-2 hover:text-foreground transition">
             <Mail className="w-4 h-4" /> contato@viaggiari.travel

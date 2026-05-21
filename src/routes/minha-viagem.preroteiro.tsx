@@ -53,8 +53,8 @@ function PreRoteiro() {
         <p className="brand-title text-xs text-primary mb-2">Pré-roteiro</p>
         <h1 className="font-display text-2xl md:text-3xl font-light">Você decide</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          A Nani separou estas sugestões para sua viagem. Marque o que tem fit com você —
-          isso ajuda a fechar o roteiro final.
+          Separamos estas sugestões para sua viagem - Marque o que tem fit com você,
+          isso vai nos ajudar a fechar o roteiro final.
         </p>
         <p className="text-xs text-muted-foreground mt-3">
           {decided} de {items.length} decididas
