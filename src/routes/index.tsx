@@ -117,41 +117,67 @@ function HowItWorks() {
   const items = [
     {
       icon: Plane,
-      title: "Pacotes e Passagens",
-      subtitle: "Para quem quer ir sem complicação",
-      body: "Vendemos passagens e pacotes via parceiros comissionados. Você só aproveita.",
-      cta: "Ver opções",
+      tag: "Sem complicação",
+      title: "Quero ir — e só isso.",
+      body: "Você quer embarcar sem dor de cabeça. A gente cuida das passagens, hospedagem e tudo mais — você só escolhe o destino e aproveita.",
+      cta: "Quero esse caminho →",
+      featured: false,
     },
     {
       icon: Compass,
-      title: "Assessoria Completa",
-      subtitle: "Para quem quer viver a melhor versão da viagem",
-      body: "Nacional R$ 130/dia · Internacional R$ 150/dia. 50% na contratação, 50% na entrega do roteiro. Inclui passagens, hospedagem, passeios e suporte durante toda a viagem.",
-      cta: "Quero uma assessoria",
+      tag: "Mais escolhido",
+      title: "Quero a viagem perfeita, do meu jeito.",
+      body: "Do primeiro voo ao último passeio — cada detalhe pensado para o seu estilo. Roteiro exclusivo, hospedagens escolhidas a dedo e suporte real enquanto você viaja.",
+      cta: "Quero minha viagem ideal →",
+      featured: true,
     },
     {
       icon: Sparkles,
-      title: "Consultoria Pontual",
-      subtitle: "Para quem já sabe viajar mas precisa de direção",
-      body: "Sessão de 1 hora com especialista. Ideal pra quem vai comprar tudo sozinho mas quer a estratégia certa.",
-      cta: "Agendar consultoria",
+      tag: "Viajante experiente",
+      title: "Sei o que quero. Só preciso de uma boa estratégia.",
+      body: "Você já pesquisa, já sabe viajar — mas quer uma hora com quem conhece os atalhos. Uma conversa que vale por semanas de pesquisa.",
+      cta: "Quero essa consultoria →",
+      featured: false,
     },
   ];
   return (
     <section id="servicos" className="section-padding py-24 md:py-32">
       <div className="max-w-6xl mx-auto">
         <div className="max-w-2xl mb-16">
-          <p className="brand-title text-xs text-primary mb-3">Como funciona</p>
-          <h2 className="font-display text-3xl md:text-4xl font-light">Três caminhos para a sua próxima viagem.</h2>
+          <p className="brand-title text-xs text-primary mb-3">Qual viajante é você?</p>
+          <h2 className="font-display text-3xl md:text-4xl font-light">Cada pessoa viaja de um jeito. A gente se adapta ao seu.</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:items-center">
           {items.map((it) => (
-            <article key={it.title} className="bg-surface border border-border rounded-xl p-8 flex flex-col">
-              <it.icon className="w-7 h-7 text-primary mb-6" strokeWidth={1.5} />
-              <h3 className="font-display text-xl mb-2">{it.title}</h3>
-              <p className="text-sm text-primary mb-4">{it.subtitle}</p>
+            <article
+              key={it.title}
+              className={[
+                "bg-surface border rounded-xl p-8 flex flex-col",
+                it.featured
+                  ? "border-primary/40 shadow-lg md:scale-[1.04] md:py-10 order-first md:order-none"
+                  : "border-border",
+              ].join(" ")}
+            >
+              <it.icon
+                className={["mb-6", it.featured ? "w-10 h-10 text-primary" : "w-8 h-8 text-primary"].join(" ")}
+                strokeWidth={1.25}
+              />
+              <span
+                className={[
+                  "brand-title text-[10px] mb-3 inline-block w-fit px-2.5 py-1 rounded-full",
+                  it.featured ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
+                ].join(" ")}
+              >
+                {it.tag}
+              </span>
+              <h3 className="font-display text-xl mb-4 leading-snug">{it.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed flex-1">{it.body}</p>
-              <Link to="/interesse" className="mt-8"><Button variant="outline" className="w-full">{it.cta}</Button></Link>
+              <Link
+                to="/interesse"
+                className="mt-8 text-sm font-medium text-primary hover:underline underline-offset-4"
+              >
+                {it.cta}
+              </Link>
             </article>
           ))}
         </div>
