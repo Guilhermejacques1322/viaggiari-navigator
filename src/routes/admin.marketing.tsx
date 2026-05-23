@@ -452,13 +452,3 @@ function PostDialog({
   );
 }
 
-// runs init effect only when "open" transitions to true
-function useMemoInit(open: boolean, fn: () => void) {
-  const [last, setLast] = useState(false);
-  if (open && !last) {
-    setLast(true);
-    fn();
-  } else if (!open && last) {
-    setLast(false);
-  }
-}
