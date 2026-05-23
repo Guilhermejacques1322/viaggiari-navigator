@@ -25,6 +25,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TripChecklistAdmin } from "@/components/trip-checklist-admin";
 import { TRIP_STATUS_LABEL } from "./admin.viagens";
 import type { Database } from "@/integrations/supabase/types";
 
