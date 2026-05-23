@@ -34,7 +34,7 @@ export function PreTripChecklist({
       if (error) throw error;
       return data;
     },
-    enabled: !tripStarted,
+    enabled: !tripStarted && isDelivered,
     staleTime: 60_000,
   });
 
