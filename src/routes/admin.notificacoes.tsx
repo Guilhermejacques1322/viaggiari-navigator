@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { broadcastTestPush } from "@/lib/push.functions";
 import { dispatchDueNotifications } from "@/lib/notifications.functions";
+import { dispatchDueNotifications } from "@/lib/notifications.functions";
 
 export const Route = createFileRoute("/admin/notificacoes")({ component: NotificacoesPage });
 
