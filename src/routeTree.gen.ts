@@ -27,6 +27,7 @@ import { Route as AdminViagensRouteImport } from './routes/admin.viagens'
 import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
 import { Route as AdminOrcamentosRouteImport } from './routes/admin.orcamentos'
 import { Route as AdminNotificacoesRouteImport } from './routes/admin.notificacoes'
+import { Route as AdminMarketingRouteImport } from './routes/admin.marketing'
 import { Route as AdminLeadsRouteImport } from './routes/admin.leads'
 import { Route as AdminDestinosRouteImport } from './routes/admin.destinos'
 import { Route as AdminCrmRouteImport } from './routes/admin.crm'
@@ -125,6 +126,11 @@ const AdminNotificacoesRoute = AdminNotificacoesRouteImport.update({
   path: '/notificacoes',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMarketingRoute = AdminMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLeadsRoute = AdminLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/destinos': typeof AdminDestinosRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/notificacoes': typeof AdminNotificacoesRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/parceiros': typeof AdminParceirosRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByTo {
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/destinos': typeof AdminDestinosRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/notificacoes': typeof AdminNotificacoesRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/parceiros': typeof AdminParceirosRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/admin/crm': typeof AdminCrmRouteWithChildren
   '/admin/destinos': typeof AdminDestinosRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/marketing': typeof AdminMarketingRoute
   '/admin/notificacoes': typeof AdminNotificacoesRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/parceiros': typeof AdminParceirosRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/admin/crm'
     | '/admin/destinos'
     | '/admin/leads'
+    | '/admin/marketing'
     | '/admin/notificacoes'
     | '/admin/orcamentos'
     | '/admin/parceiros'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/admin/crm'
     | '/admin/destinos'
     | '/admin/leads'
+    | '/admin/marketing'
     | '/admin/notificacoes'
     | '/admin/orcamentos'
     | '/admin/parceiros'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/admin/crm'
     | '/admin/destinos'
     | '/admin/leads'
+    | '/admin/marketing'
     | '/admin/notificacoes'
     | '/admin/orcamentos'
     | '/admin/parceiros'
@@ -465,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificacoesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/marketing': {
+      id: '/admin/marketing'
+      path: '/marketing'
+      fullPath: '/admin/marketing'
+      preLoaderRoute: typeof AdminMarketingRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/leads': {
       id: '/admin/leads'
       path: '/leads'
@@ -545,6 +564,7 @@ interface AdminRouteChildren {
   AdminCrmRoute: typeof AdminCrmRouteWithChildren
   AdminDestinosRoute: typeof AdminDestinosRoute
   AdminLeadsRoute: typeof AdminLeadsRoute
+  AdminMarketingRoute: typeof AdminMarketingRoute
   AdminNotificacoesRoute: typeof AdminNotificacoesRoute
   AdminOrcamentosRoute: typeof AdminOrcamentosRoute
   AdminParceirosRoute: typeof AdminParceirosRoute
@@ -556,6 +576,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCrmRoute: AdminCrmRouteWithChildren,
   AdminDestinosRoute: AdminDestinosRoute,
   AdminLeadsRoute: AdminLeadsRoute,
+  AdminMarketingRoute: AdminMarketingRoute,
   AdminNotificacoesRoute: AdminNotificacoesRoute,
   AdminOrcamentosRoute: AdminOrcamentosRoute,
   AdminParceirosRoute: AdminParceirosRoute,
