@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, X, MapPin, ExternalLink } from "lucide-react";
+import { Check, X, MapPin, ExternalLink, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useMyTrip, type Activity } from "@/hooks/use-my-trip";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,33 +69,55 @@ function PreRoteiro() {
         <div className="space-y-3">
           {items.map(({ activity, dayNumber, dayTitle }) => (
             <Card key={activity.id} className={cn(
-              "p-4 transition-opacity",
+              "overflow-hidden transition-opacity",
               activity.client_response === "skip" && "opacity-60"
             )}>
-              <div className="flex items-start gap-3">
-                <div className="size-9 rounded-full bg-primary/10 grid place-items-center text-primary font-display text-xs font-medium shrink-0">
-                  D{dayNumber}
+              {activity.image_url && (
+                <div className="aspect-video bg-muted overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={activity.image_url}
+                    alt={activity.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                  />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{activity.name}</p>
-                  {dayTitle && <p className="text-xs text-muted-foreground">{dayTitle}</p>}
-                  {activity.description && (
-                    <p className="text-sm text-muted-foreground mt-2">{activity.description}</p>
-                  )}
-                  {activity.address && (
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <MapPin className="size-3" /> {activity.address}
-                    </p>
-                  )}
-                  {activity.maps_url && (
-                    <a href={activity.maps_url} target="_blank" rel="noreferrer"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
-                      <ExternalLink className="size-3" /> Ver no mapa
-                    </a>
-                  )}
+              )}
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="size-9 rounded-full bg-primary/10 grid place-items-center text-primary font-display text-xs font-medium shrink-0">
+                    D{dayNumber}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{activity.name}</p>
+                    {dayTitle && <p className="text-xs text-muted-foreground">{dayTitle}</p>}
+                    {activity.description && (
+                      <p className="text-sm text-muted-foreground mt-2">{activity.description}</p>
+                    )}
+                    {activity.curiosities && (
+                      <div className="mt-2 p-3 rounded-md bg-primary/5 border border-primary/10 text-xs text-foreground/80 whitespace-pre-line">
+                        <p className="inline-flex items-center gap-1 text-primary font-medium mb-1">
+                          <Sparkles className="size-3" /> Curiosidades
+                        </p>
+                        {activity.curiosities}
+                      </div>
+                    )}
+                    {activity.address && (
+                      <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                        <MapPin className="size-3" /> {activity.address}
+                      </p>
+                    )}
+                    {activity.maps_url && (
+                      <a href={activity.maps_url} target="_blank" rel="noreferrer"
+                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
+                        <ExternalLink className="size-3" /> Ver no mapa
+                      </a>
+                    )}
+                  </div>
                 </div>
+                <Decision a={activity} disabled={pending === activity.id} onPick={(r) => respond(activity.id, r)} />
               </div>
-              <Decision a={activity} disabled={pending === activity.id} onPick={(r) => respond(activity.id, r)} />
             </Card>
           ))}
         </div>
