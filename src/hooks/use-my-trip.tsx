@@ -9,10 +9,11 @@ export type Day = Database["public"]["Tables"]["itinerary_days"]["Row"];
 export type Activity = Database["public"]["Tables"]["itinerary_activities"]["Row"];
 export type Document = Database["public"]["Tables"]["documents"]["Row"];
 export type Payment = Database["public"]["Tables"]["payments"]["Row"];
+export type ActivityPartner = Database["public"]["Tables"]["activity_partners"]["Row"];
 
 export interface MyTripData {
   trip: Trip | null;
-  days: (Day & { activities: Activity[] })[];
+  days: (Day & { activities: (Activity & { partners: ActivityPartner[] })[] })[];
   documents: Document[];
   payments: Payment[];
 }
@@ -54,9 +55,23 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
         .order("position")
     : { data: [] as Activity[] };
 
+  const activityIds = (activities ?? []).map((a) => a.id);
+  const { data: partners } = activityIds.length
+    ? await supabase
+        .from("activity_partners")
+        .select("*")
+        .in("activity_id", activityIds)
+        .order("created_at")
+    : { data: [] as ActivityPartner[] };
+
   const grouped = (days ?? []).map((d) => ({
     ...d,
-    activities: (activities ?? []).filter((a) => a.day_id === d.id),
+    activities: (activities ?? [])
+      .filter((a) => a.day_id === d.id)
+      .map((a) => ({
+        ...a,
+        partners: (partners ?? []).filter((p) => p.activity_id === a.id),
+      })),
   }));
 
   return { trip, days: grouped, documents: documents ?? [], payments: payments ?? [] };
