@@ -33,6 +33,7 @@ import { Route as AdminCrmRouteImport } from './routes/admin.crm'
 import { Route as AdminViagensTripIdRouteImport } from './routes/admin.viagens.$tripId'
 import { Route as AdminCrmContactIdRouteImport } from './routes/admin.crm.$contactId'
 import { Route as ApiPublicHooksSendPushRemindersRouteImport } from './routes/api/public/hooks/send-push-reminders'
+import { Route as ApiPublicHooksDispatchNotificationsRouteImport } from './routes/api/public/hooks/dispatch-notifications'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -155,6 +156,12 @@ const ApiPublicHooksSendPushRemindersRoute =
     path: '/api/public/hooks/send-push-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksDispatchNotificationsRoute =
+  ApiPublicHooksDispatchNotificationsRouteImport.update({
+    id: '/api/public/hooks/dispatch-notifications',
+    path: '/api/public/hooks/dispatch-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
   '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
+  '/api/public/hooks/dispatch-notifications': typeof ApiPublicHooksDispatchNotificationsRoute
   '/api/public/hooks/send-push-reminders': typeof ApiPublicHooksSendPushRemindersRoute
 }
 export interface FileRoutesByTo {
@@ -204,6 +212,7 @@ export interface FileRoutesByTo {
   '/minha-viagem': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
   '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
+  '/api/public/hooks/dispatch-notifications': typeof ApiPublicHooksDispatchNotificationsRoute
   '/api/public/hooks/send-push-reminders': typeof ApiPublicHooksSendPushRemindersRoute
 }
 export interface FileRoutesById {
@@ -231,6 +240,7 @@ export interface FileRoutesById {
   '/minha-viagem/': typeof MinhaViagemIndexRoute
   '/admin/crm/$contactId': typeof AdminCrmContactIdRoute
   '/admin/viagens/$tripId': typeof AdminViagensTripIdRoute
+  '/api/public/hooks/dispatch-notifications': typeof ApiPublicHooksDispatchNotificationsRoute
   '/api/public/hooks/send-push-reminders': typeof ApiPublicHooksSendPushRemindersRoute
 }
 export interface FileRouteTypes {
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
     | '/admin/viagens/$tripId'
+    | '/api/public/hooks/dispatch-notifications'
     | '/api/public/hooks/send-push-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/minha-viagem'
     | '/admin/crm/$contactId'
     | '/admin/viagens/$tripId'
+    | '/api/public/hooks/dispatch-notifications'
     | '/api/public/hooks/send-push-reminders'
   id:
     | '__root__'
@@ -309,6 +321,7 @@ export interface FileRouteTypes {
     | '/minha-viagem/'
     | '/admin/crm/$contactId'
     | '/admin/viagens/$tripId'
+    | '/api/public/hooks/dispatch-notifications'
     | '/api/public/hooks/send-push-reminders'
   fileRoutesById: FileRoutesById
 }
@@ -320,6 +333,7 @@ export interface RootRouteChildren {
   MinhaViagemRoute: typeof MinhaViagemRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   OrcamentoTokenRoute: typeof OrcamentoTokenRoute
+  ApiPublicHooksDispatchNotificationsRoute: typeof ApiPublicHooksDispatchNotificationsRoute
   ApiPublicHooksSendPushRemindersRoute: typeof ApiPublicHooksSendPushRemindersRoute
 }
 
@@ -493,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendPushRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/dispatch-notifications': {
+      id: '/api/public/hooks/dispatch-notifications'
+      path: '/api/public/hooks/dispatch-notifications'
+      fullPath: '/api/public/hooks/dispatch-notifications'
+      preLoaderRoute: typeof ApiPublicHooksDispatchNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -574,18 +595,10 @@ const rootRouteChildren: RootRouteChildren = {
   MinhaViagemRoute: MinhaViagemRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   OrcamentoTokenRoute: OrcamentoTokenRoute,
+  ApiPublicHooksDispatchNotificationsRoute:
+    ApiPublicHooksDispatchNotificationsRoute,
   ApiPublicHooksSendPushRemindersRoute: ApiPublicHooksSendPushRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
