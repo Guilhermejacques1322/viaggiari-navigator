@@ -815,6 +815,42 @@ export type Database = {
           },
         ]
       }
+      trip_checklist_items: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          position: number
+          title: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          title: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          title?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trips: {
         Row: {
           contact_id: string
