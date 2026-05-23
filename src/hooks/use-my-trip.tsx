@@ -10,12 +10,14 @@ export type Activity = Database["public"]["Tables"]["itinerary_activities"]["Row
 export type Document = Database["public"]["Tables"]["documents"]["Row"];
 export type Payment = Database["public"]["Tables"]["payments"]["Row"];
 export type ActivityPartner = Database["public"]["Tables"]["activity_partners"]["Row"];
+export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 
 export interface MyTripData {
   trip: Trip | null;
   days: (Day & { activities: (Activity & { partners: ActivityPartner[] })[] })[];
   documents: Document[];
   payments: Payment[];
+  notifications: Notification[];
 }
 
 async function fetchMyTrip(userId: string): Promise<MyTripData> {
@@ -26,7 +28,7 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!contact) return { trip: null, days: [], documents: [], payments: [] };
+  if (!contact) return { trip: null, days: [], documents: [], payments: [], notifications: [] };
 
   // Most recent visible trip
   const { data: trip } = await supabase
@@ -38,12 +40,13 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     .limit(1)
     .maybeSingle();
 
-  if (!trip) return { trip: null, days: [], documents: [], payments: [] };
+  if (!trip) return { trip: null, days: [], documents: [], payments: [], notifications: [] };
 
-  const [{ data: days }, { data: documents }, { data: payments }] = await Promise.all([
+  const [{ data: days }, { data: documents }, { data: payments }, { data: notifications }] = await Promise.all([
     supabase.from("itinerary_days").select("*").eq("trip_id", trip.id).order("day_number"),
     supabase.from("documents").select("*").eq("trip_id", trip.id).order("event_date", { nullsFirst: false }),
     supabase.from("payments").select("*").eq("trip_id", trip.id).order("installment"),
+    supabase.from("notifications").select("*").eq("trip_id", trip.id).order("scheduled_for", { ascending: false }).limit(20),
   ]);
 
   const dayIds = (days ?? []).map((d) => d.id);
@@ -74,7 +77,7 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
       })),
   }));
 
-  return { trip, days: grouped, documents: documents ?? [], payments: payments ?? [] };
+  return { trip, days: grouped, documents: documents ?? [], payments: payments ?? [], notifications: notifications ?? [] };
 }
 
 const TripCtx = createContext<{
