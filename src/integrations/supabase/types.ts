@@ -450,6 +450,51 @@ export type Database = {
           },
         ]
       }
+      marketing_posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          done_at: string | null
+          id: string
+          media_notes: string | null
+          media_type: Database["public"]["Enums"]["marketing_media_type"]
+          media_url: string | null
+          networks: string[]
+          publish_at: string
+          status: Database["public"]["Enums"]["marketing_post_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          media_notes?: string | null
+          media_type?: Database["public"]["Enums"]["marketing_media_type"]
+          media_url?: string | null
+          networks?: string[]
+          publish_at: string
+          status?: Database["public"]["Enums"]["marketing_post_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          media_notes?: string | null
+          media_type?: Database["public"]["Enums"]["marketing_media_type"]
+          media_url?: string | null
+          networks?: string[]
+          publish_at?: string
+          status?: Database["public"]["Enums"]["marketing_post_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           activity_id: string | null
@@ -962,6 +1007,8 @@ export type Database = {
         | "completed"
         | "inactive"
       document_category: "flight" | "train" | "hotel" | "ticket" | "other"
+      marketing_media_type: "photo" | "video"
+      marketing_post_status: "scheduled" | "done"
       payment_status: "pending" | "paid"
       preroteiro_response: "want" | "skip"
       quote_status: "sent" | "follow_up" | "lost" | "closed"
@@ -1116,6 +1163,8 @@ export const Constants = {
         "inactive",
       ],
       document_category: ["flight", "train", "hotel", "ticket", "other"],
+      marketing_media_type: ["photo", "video"],
+      marketing_post_status: ["scheduled", "done"],
       payment_status: ["pending", "paid"],
       preroteiro_response: ["want", "skip"],
       quote_status: ["sent", "follow_up", "lost", "closed"],
