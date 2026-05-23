@@ -294,8 +294,8 @@ function PostDialog({
   const [publishAt, setPublishAt] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // initialize when opening
-  useMemoInit(open, () => {
+  useEffect(() => {
+    if (!open) return;
     if (editing) {
       setTitle(editing.title);
       setMediaType(editing.media_type);
@@ -316,7 +316,7 @@ function PostDialog({
       d.setHours(d.getHours() + 1);
       setPublishAt(d.toISOString().slice(0, 16));
     }
-  });
+  }, [open, editing]);
 
   function toggleNet(v: string) {
     setNetworks((n) => (n.includes(v) ? n.filter((x) => x !== v) : [...n, v]));
