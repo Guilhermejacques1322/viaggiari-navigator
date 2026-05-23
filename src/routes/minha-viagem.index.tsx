@@ -97,6 +97,8 @@ function Dashboard() {
         )}
       </div>
 
+      <PreTripChecklist tripId={trip.id} startDate={trip.start_date} />
+
       <NotificationsToggle />
 
       {days.length > 0 && (
