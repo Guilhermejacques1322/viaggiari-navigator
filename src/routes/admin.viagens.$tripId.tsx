@@ -504,6 +504,27 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
               <p className="text-[11px] text-emerald-600">📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} — pronto para o mapa</p>
             )}
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+
+            <div>
+              <Label className="text-xs">URL da imagem do local</Label>
+              <Input type="url" placeholder="https://..." value={form.image_url ?? ""}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+              {form.image_url && (
+                <div className="mt-2 aspect-video bg-muted rounded-md overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={form.image_url} alt="preview" className="w-full h-full object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs">Curiosidades e recomendações</Label>
+              <Textarea rows={3} placeholder="História do lugar, prato mais pedido, dica especial..."
+                value={form.curiosities ?? ""}
+                onChange={(e) => setForm({ ...form, curiosities: e.target.value })} />
+            </div>
+
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
                 <Label className="text-xs">Custo estimado (cliente)</Label>
@@ -527,6 +548,8 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
                 onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
               <Label className="text-xs">Sugestão (pré-roteiro)</Label>
             </div>
+
+            <ActivityPartnersEditor activityId={a.id} />
 
             <div className="border-t border-border pt-3 mt-3 space-y-2">
               <Label className="text-xs font-medium">Salvar na biblioteca de atividades</Label>
