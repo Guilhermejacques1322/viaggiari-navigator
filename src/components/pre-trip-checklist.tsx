@@ -5,11 +5,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export function PreTripChecklist({ tripId, startDate }: { tripId: string; startDate: string | null }) {
+export function PreTripChecklist({
+  tripId,
+  startDate,
+  status,
+}: {
+  tripId: string;
+  startDate: string | null;
+  status: string | null;
+}) {
   const qc = useQueryClient();
   const [showCongrats, setShowCongrats] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  // Só aparece quando a viagem foi entregue ao cliente
+  const isDelivered = status === "delivered";
   // Hide entirely once trip has started
   const tripStarted = startDate ? new Date(startDate).getTime() <= Date.now() : false;
 
@@ -24,7 +34,7 @@ export function PreTripChecklist({ tripId, startDate }: { tripId: string; startD
       if (error) throw error;
       return data;
     },
-    enabled: !tripStarted,
+    enabled: !tripStarted && isDelivered,
     staleTime: 60_000,
   });
 
@@ -56,6 +66,7 @@ export function PreTripChecklist({ tripId, startDate }: { tripId: string; startD
     }
   }, [allDone, dismissed]);
 
+  if (!isDelivered) return null;
   if (tripStarted) return null;
   if (isLoading) return null;
   if (items.length === 0) return null;
