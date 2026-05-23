@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx";
-
 export type Column<T> = {
   header: string;
   /** key in the row or function returning the value */
@@ -7,12 +5,15 @@ export type Column<T> = {
   width?: number;
 };
 
-export function exportToExcel<T extends Record<string, unknown>>(
+export async function exportToExcel<T extends Record<string, unknown>>(
   filename: string,
   rows: T[],
   columns: Column<T>[],
   sheetName = "Relatório",
 ) {
+  // Dynamic import keeps xlsx out of the SSR bundle
+  const XLSX = await import("xlsx");
+
   const data = rows.map((row) => {
     const obj: Record<string, unknown> = {};
     columns.forEach((col) => {
