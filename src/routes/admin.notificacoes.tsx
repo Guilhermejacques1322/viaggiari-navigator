@@ -13,6 +13,7 @@ import { Plus, Bell, Trash2, CheckCircle2, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { broadcastTestPush } from "@/lib/push.functions";
+import { dispatchDueNotifications } from "@/lib/notifications.functions";
 
 export const Route = createFileRoute("/admin/notificacoes")({ component: NotificacoesPage });
 
@@ -172,7 +173,9 @@ function NotificationRow({ n, onMarkSent, onDelete }: { n: Notification; onMarkS
 
 function TestBroadcastButton() {
   const broadcast = useServerFn(broadcastTestPush);
+  const dispatchDue = useServerFn(dispatchDueNotifications);
   const [loading, setLoading] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
   async function run() {
     if (!confirm("Enviar push de teste para TODOS os usuários inscritos?")) return;
     setLoading(true);
@@ -185,9 +188,27 @@ function TestBroadcastButton() {
       setLoading(false);
     }
   }
+
+  async function runDueNotifications() {
+    setDispatching(true);
+    try {
+      const res = await dispatchDue();
+      toast.success(`Processadas: ${res.processed} • Push enviados: ${res.sent}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao enviar pendentes");
+    } finally {
+      setDispatching(false);
+    }
+  }
+
   return (
-    <Button variant="outline" onClick={run} disabled={loading}>
-      <Send className="size-4 mr-2" />{loading ? "Enviando…" : "Push de teste (todos)"}
-    </Button>
+    <>
+      <Button variant="outline" onClick={runDueNotifications} disabled={dispatching}>
+        <Bell className="size-4 mr-2" />{dispatching ? "Enviando pendentes…" : "Enviar pendentes"}
+      </Button>
+      <Button variant="outline" onClick={run} disabled={loading}>
+        <Send className="size-4 mr-2" />{loading ? "Enviando…" : "Push de teste (todos)"}
+      </Button>
+    </>
   );
 }
