@@ -586,7 +586,7 @@ function NewActivityDialog({ dayId, position, onDone }: {
   dayId: string; position: number; onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const initialForm = { name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false, estimated_cost: 0, currency: "BRL" };
+  const initialForm = { name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false, estimated_cost: 0, currency: "BRL", image_url: "", curiosities: "" };
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 
@@ -602,6 +602,8 @@ function NewActivityDialog({ dayId, position, onDone }: {
       in_preroteiro: form.in_preroteiro,
       estimated_cost: form.estimated_cost || 0,
       currency: form.currency,
+      image_url: form.image_url || null,
+      curiosities: form.curiosities || null,
     });
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -626,6 +628,10 @@ function NewActivityDialog({ dayId, position, onDone }: {
             </div>
             <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Textarea rows={3} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <Input type="url" placeholder="URL da imagem do local (https://...)" value={form.image_url}
+              onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+            <Textarea rows={2} placeholder="Curiosidades e recomendações" value={form.curiosities}
+              onChange={(e) => setForm({ ...form, curiosities: e.target.value })} />
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
                 <Label className="text-xs">Custo estimado (cliente)</Label>
