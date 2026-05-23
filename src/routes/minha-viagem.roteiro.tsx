@@ -113,57 +113,106 @@ const DOC_ICONS = {
   flight: Plane, train: Train, hotel: Hotel, ticket: Ticket, other: File,
 } as const;
 
-function ActivityCard({ a, docs, onReview }: { a: Activity; docs: Document[]; onReview: () => void }) {
+function ActivityCard({ a, docs, onReview }: { a: Activity & { partners?: ActivityPartner[] }; docs: Document[]; onReview: () => void }) {
   const [docsOpen, setDocsOpen] = useState(false);
+  const [showCuriosities, setShowCuriosities] = useState(false);
+  const partners = a.partners ?? [];
   return (
-    <div className="rounded-lg border border-border p-3 bg-surface">
-      <div className="flex items-start gap-3">
-        {a.time && (
-          <div className="text-xs text-primary font-medium whitespace-nowrap pt-0.5 flex items-center gap-1">
-            <Clock className="size-3" /> {a.time.slice(0, 5)}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm">{a.name}</p>
-          {a.description && <p className="text-xs text-muted-foreground mt-1">{a.description}</p>}
-          {a.address && (
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <MapPin className="size-3" /> {a.address}
-            </p>
+    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+      {a.image_url && (
+        <div className="aspect-video bg-muted overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={a.image_url}
+            alt={a.name}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+          />
+        </div>
+      )}
+      <div className="p-3">
+        <div className="flex items-start gap-3">
+          {a.time && (
+            <div className="text-xs text-primary font-medium whitespace-nowrap pt-0.5 flex items-center gap-1">
+              <Clock className="size-3" /> {a.time.slice(0, 5)}
+            </div>
           )}
-          <div className="flex flex-wrap gap-2 mt-2">
-            {a.maps_url && (
-              <a href={a.maps_url} target="_blank" rel="noreferrer"
-                className="text-xs text-primary hover:underline inline-flex items-center gap-1">
-                <ExternalLink className="size-3" /> Maps
-              </a>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">{a.name}</p>
+            {a.description && <p className="text-xs text-muted-foreground mt-1">{a.description}</p>}
+            {a.address && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <MapPin className="size-3" /> {a.address}
+              </p>
             )}
-            {a.has_ticket && (
-              <span className="text-xs text-primary inline-flex items-center gap-1">
-                <Ticket className="size-3" /> Ingresso
-              </span>
+
+            {partners.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {partners.map((p) => (
+                  <span key={p.id}
+                    className="text-[11px] inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/15">
+                    <UsersIcon className="size-3" />
+                    {p.role ? `${p.role}: ` : ""}{p.name}
+                    {p.included_in_package
+                      ? <span className="text-emerald-700 dark:text-emerald-400 ml-1">(incluso)</span>
+                      : Number(p.cost) > 0
+                        ? <span className="ml-1">+{Number(p.cost).toLocaleString("pt-BR", { style: "currency", currency: p.currency ?? "BRL" })}</span>
+                        : null}
+                  </span>
+                ))}
+              </div>
             )}
-            {docs.length > 0 && (
+
+            {a.curiosities && (
               <button
-                onClick={() => setDocsOpen(true)}
-                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                onClick={() => setShowCuriosities((v) => !v)}
+                className="mt-2 text-xs text-primary hover:underline inline-flex items-center gap-1"
               >
-                <Paperclip className="size-3" /> {docs.length} doc{docs.length > 1 ? "s" : ""}
+                <Sparkles className="size-3" />
+                {showCuriosities ? "Ocultar curiosidades" : "Curiosidades e recomendações"}
               </button>
             )}
-            <button onClick={onReview} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 ml-auto">
-              <Star className="size-3" /> Avaliar
-            </button>
-          </div>
+            {showCuriosities && a.curiosities && (
+              <div className="mt-2 p-3 rounded-md bg-primary/5 border border-primary/10 text-xs text-foreground/80 whitespace-pre-line">
+                {a.curiosities}
+              </div>
+            )}
 
-          {docs.length > 0 && (
-            <ActivityDocsDialog
-              open={docsOpen}
-              onOpenChange={setDocsOpen}
-              activityName={a.name}
-              docs={docs}
-            />
-          )}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {a.maps_url && (
+                <a href={a.maps_url} target="_blank" rel="noreferrer"
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                  <ExternalLink className="size-3" /> Maps
+                </a>
+              )}
+              {a.has_ticket && (
+                <span className="text-xs text-primary inline-flex items-center gap-1">
+                  <Ticket className="size-3" /> Ingresso
+                </span>
+              )}
+              {docs.length > 0 && (
+                <button
+                  onClick={() => setDocsOpen(true)}
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <Paperclip className="size-3" /> {docs.length} doc{docs.length > 1 ? "s" : ""}
+                </button>
+              )}
+              <button onClick={onReview} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 ml-auto">
+                <Star className="size-3" /> Avaliar
+              </button>
+            </div>
+
+            {docs.length > 0 && (
+              <ActivityDocsDialog
+                open={docsOpen}
+                onOpenChange={setDocsOpen}
+                activityName={a.name}
+                docs={docs}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
