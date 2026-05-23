@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip, Download, Plane, Train, Hotel, File } from "lucide-react";
+import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip, Download, Plane, Train, Hotel, File, Sparkles, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useMyTrip, type Activity, type Document } from "@/hooks/use-my-trip";
+import { useMyTrip, type Activity, type Document, type ActivityPartner } from "@/hooks/use-my-trip";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
