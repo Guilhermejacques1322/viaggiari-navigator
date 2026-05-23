@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
   { to: "/admin/orcamentos", label: "Orçamentos", icon: FileText },
   { to: "/admin/destinos", label: "Destinos", icon: MapPin },
   { to: "/admin/parceiros", label: "Parceiros", icon: ShoppingBag },
+  { to: "/admin/marketing", label: "Marketing", icon: Megaphone },
   { to: "/admin/notificacoes", label: "Notificações", icon: Bell },
 ];
 
