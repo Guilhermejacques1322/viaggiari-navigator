@@ -589,13 +589,14 @@ function NewActivityDialog({ dayId, position, onDone }: {
   const initialForm = { name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false, estimated_cost: 0, currency: "BRL", image_url: "", curiosities: "" };
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const reset = () => setForm(initialForm);
+  const reset = () => { setForm(initialForm); setCreatedId(null); };
 
   const save = async () => {
     if (!form.name) return toast.error("Informe o nome");
     setSaving(true);
-    const { error } = await supabase.from("itinerary_activities").insert({
+    const { data, error } = await supabase.from("itinerary_activities").insert({
       day_id: dayId, position, name: form.name,
       time: form.time || null, description: form.description || null,
       address: form.address || null, maps_url: form.maps_url || null,
@@ -604,13 +605,14 @@ function NewActivityDialog({ dayId, position, onDone }: {
       currency: form.currency,
       image_url: form.image_url || null,
       curiosities: form.curiosities || null,
-    });
+    }).select("id").single();
     setSaving(false);
     if (error) return toast.error(error.message);
-    reset();
-    setOpen(false);
+    setCreatedId(data.id);
     onDone();
   };
+
+  const finish = () => { reset(); setOpen(false); };
 
   return (
     <>
@@ -619,45 +621,62 @@ function NewActivityDialog({ dayId, position, onDone }: {
       </Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); setOpen(o); }}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Nova atividade</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Input placeholder="Nome da atividade" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
-              <Input placeholder="Maps URL" value={form.maps_url} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
-            </div>
-            <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            <Textarea rows={3} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <Input type="url" placeholder="URL da imagem do local (https://...)" value={form.image_url}
-              onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
-            <Textarea rows={2} placeholder="Curiosidades e recomendações" value={form.curiosities}
-              onChange={(e) => setForm({ ...form, curiosities: e.target.value })} />
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-2">
-                <Label className="text-xs">Custo estimado (cliente)</Label>
-                <Input type="number" step="0.01" value={form.estimated_cost || ""}
-                  onChange={(e) => setForm({ ...form, estimated_cost: e.target.value ? Number(e.target.value) : 0 })} />
+          <DialogHeader>
+            <DialogTitle>{createdId ? `Parceiros — ${form.name}` : "Nova atividade"}</DialogTitle>
+          </DialogHeader>
+          {!createdId ? (
+            <div className="space-y-2">
+              <Input placeholder="Nome da atividade" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+                <Input placeholder="Maps URL" value={form.maps_url} onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
               </div>
-              <div>
-                <Label className="text-xs">Moeda</Label>
-                <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BRL">BRL</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <Textarea rows={3} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Input type="url" placeholder="URL da imagem do local (https://...)" value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+              <Textarea rows={2} placeholder="Curiosidades e recomendações" value={form.curiosities}
+                onChange={(e) => setForm({ ...form, curiosities: e.target.value })} />
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <Label className="text-xs">Custo estimado (cliente)</Label>
+                  <Input type="number" step="0.01" value={form.estimated_cost || ""}
+                    onChange={(e) => setForm({ ...form, estimated_cost: e.target.value ? Number(e.target.value) : 0 })} />
+                </div>
+                <div>
+                  <Label className="text-xs">Moeda</Label>
+                  <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BRL">BRL</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.in_preroteiro} onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
+                <Label className="text-xs">É uma sugestão (pré-roteiro)</Label>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={form.in_preroteiro} onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
-              <Label className="text-xs">É uma sugestão (pré-roteiro)</Label>
+          ) : (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">
+                Atividade criada. Adicione parceiros operacionais agora ou clique em concluir.
+              </p>
+              <ActivityPartnersEditor activityId={createdId} />
             </div>
-          </div>
+          )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { reset(); setOpen(false); }}>Cancelar</Button>
-            <Button onClick={save} disabled={saving}>Adicionar</Button>
+            {!createdId ? (
+              <>
+                <Button variant="ghost" onClick={finish}>Cancelar</Button>
+                <Button onClick={save} disabled={saving}>Adicionar</Button>
+              </>
+            ) : (
+              <Button onClick={finish}>Concluir</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -894,7 +913,35 @@ function ActivityPartnersEditor({ activityId }: { activityId: string }) {
     },
   });
 
+  const { data: catalog } = useQuery({
+    queryKey: ["operational-partners-catalog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operational_partners")
+        .select("id,name,role,default_cost,currency")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
+
   const invalidate = () => qc.invalidateQueries({ queryKey: ["activity-partners", activityId] });
+
+  const pickFromCatalog = (id: string) => {
+    const p = (catalog ?? []).find((c) => c.id === id);
+    if (!p) return;
+    setForm({
+      name: p.name,
+      role: p.role ?? "",
+      cost: Number(p.default_cost ?? 0),
+      currency: p.currency ?? "BRL",
+      included_in_package: false,
+      notes: "",
+    });
+    setAdding(true);
+  };
 
   const add = async () => {
     if (!form.name.trim()) return toast.error("Informe o nome do parceiro");
@@ -921,13 +968,29 @@ function ActivityPartnersEditor({ activityId }: { activityId: string }) {
 
   return (
     <div className="border-t border-border pt-3 mt-3 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Label className="text-xs font-medium">Parceiros operacionais</Label>
-        {!adding && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(true)}>
-            <Plus className="size-3" /> Adicionar
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {(catalog?.length ?? 0) > 0 && (
+            <Select value="" onValueChange={pickFromCatalog}>
+              <SelectTrigger className="h-7 text-xs w-[150px]">
+                <SelectValue placeholder="Do catálogo…" />
+              </SelectTrigger>
+              <SelectContent>
+                {catalog!.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                    {c.name}{c.role ? ` · ${c.role}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {!adding && (
+            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(true)}>
+              <Plus className="size-3" /> Novo
+            </Button>
+          )}
+        </div>
       </div>
       {(partners ?? []).map((p) => (
         <div key={p.id} className="flex items-center gap-2 text-xs rounded border border-border p-2">
