@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
-  LayoutDashboard, Users, Plane, Inbox, LogOut, Menu, MapPin, FileText, Bell, ShoppingBag,
+  LayoutDashboard, Users, Plane, Inbox, LogOut, Menu, MapPin, FileText, Bell, ShoppingBag, Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "@/components/brand/logo";
