@@ -20,9 +20,11 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as OrcamentoTokenRouteImport } from './routes/orcamento.$token'
 import { Route as MinhaViagemRoteiroRouteImport } from './routes/minha-viagem.roteiro'
 import { Route as MinhaViagemPreroteiroRouteImport } from './routes/minha-viagem.preroteiro'
+import { Route as MinhaViagemParceirosRouteImport } from './routes/minha-viagem.parceiros'
 import { Route as MinhaViagemMapaRouteImport } from './routes/minha-viagem.mapa'
 import { Route as MinhaViagemDocumentosRouteImport } from './routes/minha-viagem.documentos'
 import { Route as AdminViagensRouteImport } from './routes/admin.viagens'
+import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
 import { Route as AdminOrcamentosRouteImport } from './routes/admin.orcamentos'
 import { Route as AdminNotificacoesRouteImport } from './routes/admin.notificacoes'
 import { Route as AdminLeadsRouteImport } from './routes/admin.leads'
@@ -87,6 +89,11 @@ const MinhaViagemPreroteiroRoute = MinhaViagemPreroteiroRouteImport.update({
   path: '/preroteiro',
   getParentRoute: () => MinhaViagemRoute,
 } as any)
+const MinhaViagemParceirosRoute = MinhaViagemParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
 const MinhaViagemMapaRoute = MinhaViagemMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -100,6 +107,11 @@ const MinhaViagemDocumentosRoute = MinhaViagemDocumentosRouteImport.update({
 const AdminViagensRoute = AdminViagensRouteImport.update({
   id: '/viagens',
   path: '/viagens',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminParceirosRoute = AdminParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminOrcamentosRoute = AdminOrcamentosRouteImport.update({
@@ -156,9 +168,11 @@ export interface FileRoutesByFullPath {
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/notificacoes': typeof AdminNotificacoesRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
+  '/admin/parceiros': typeof AdminParceirosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/mapa': typeof MinhaViagemMapaRoute
+  '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
   '/orcamento/$token': typeof OrcamentoTokenRoute
@@ -178,9 +192,11 @@ export interface FileRoutesByTo {
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/notificacoes': typeof AdminNotificacoesRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
+  '/admin/parceiros': typeof AdminParceirosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/mapa': typeof MinhaViagemMapaRoute
+  '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
   '/orcamento/$token': typeof OrcamentoTokenRoute
@@ -203,9 +219,11 @@ export interface FileRoutesById {
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/notificacoes': typeof AdminNotificacoesRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
+  '/admin/parceiros': typeof AdminParceirosRoute
   '/admin/viagens': typeof AdminViagensRouteWithChildren
   '/minha-viagem/documentos': typeof MinhaViagemDocumentosRoute
   '/minha-viagem/mapa': typeof MinhaViagemMapaRoute
+  '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
   '/orcamento/$token': typeof OrcamentoTokenRoute
@@ -229,9 +247,11 @@ export interface FileRouteTypes {
     | '/admin/leads'
     | '/admin/notificacoes'
     | '/admin/orcamentos'
+    | '/admin/parceiros'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
     | '/minha-viagem/mapa'
+    | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
     | '/orcamento/$token'
@@ -251,9 +271,11 @@ export interface FileRouteTypes {
     | '/admin/leads'
     | '/admin/notificacoes'
     | '/admin/orcamentos'
+    | '/admin/parceiros'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
     | '/minha-viagem/mapa'
+    | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
     | '/orcamento/$token'
@@ -275,9 +297,11 @@ export interface FileRouteTypes {
     | '/admin/leads'
     | '/admin/notificacoes'
     | '/admin/orcamentos'
+    | '/admin/parceiros'
     | '/admin/viagens'
     | '/minha-viagem/documentos'
     | '/minha-viagem/mapa'
+    | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
     | '/orcamento/$token'
@@ -378,6 +402,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MinhaViagemPreroteiroRouteImport
       parentRoute: typeof MinhaViagemRoute
     }
+    '/minha-viagem/parceiros': {
+      id: '/minha-viagem/parceiros'
+      path: '/parceiros'
+      fullPath: '/minha-viagem/parceiros'
+      preLoaderRoute: typeof MinhaViagemParceirosRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
     '/minha-viagem/mapa': {
       id: '/minha-viagem/mapa'
       path: '/mapa'
@@ -397,6 +428,13 @@ declare module '@tanstack/react-router' {
       path: '/viagens'
       fullPath: '/admin/viagens'
       preLoaderRoute: typeof AdminViagensRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/parceiros': {
+      id: '/admin/parceiros'
+      path: '/parceiros'
+      fullPath: '/admin/parceiros'
+      preLoaderRoute: typeof AdminParceirosRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/orcamentos': {
@@ -488,6 +526,7 @@ interface AdminRouteChildren {
   AdminLeadsRoute: typeof AdminLeadsRoute
   AdminNotificacoesRoute: typeof AdminNotificacoesRoute
   AdminOrcamentosRoute: typeof AdminOrcamentosRoute
+  AdminParceirosRoute: typeof AdminParceirosRoute
   AdminViagensRoute: typeof AdminViagensRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -498,6 +537,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLeadsRoute: AdminLeadsRoute,
   AdminNotificacoesRoute: AdminNotificacoesRoute,
   AdminOrcamentosRoute: AdminOrcamentosRoute,
+  AdminParceirosRoute: AdminParceirosRoute,
   AdminViagensRoute: AdminViagensRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -507,6 +547,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface MinhaViagemRouteChildren {
   MinhaViagemDocumentosRoute: typeof MinhaViagemDocumentosRoute
   MinhaViagemMapaRoute: typeof MinhaViagemMapaRoute
+  MinhaViagemParceirosRoute: typeof MinhaViagemParceirosRoute
   MinhaViagemPreroteiroRoute: typeof MinhaViagemPreroteiroRoute
   MinhaViagemRoteiroRoute: typeof MinhaViagemRoteiroRoute
   MinhaViagemIndexRoute: typeof MinhaViagemIndexRoute
@@ -515,6 +556,7 @@ interface MinhaViagemRouteChildren {
 const MinhaViagemRouteChildren: MinhaViagemRouteChildren = {
   MinhaViagemDocumentosRoute: MinhaViagemDocumentosRoute,
   MinhaViagemMapaRoute: MinhaViagemMapaRoute,
+  MinhaViagemParceirosRoute: MinhaViagemParceirosRoute,
   MinhaViagemPreroteiroRoute: MinhaViagemPreroteiroRoute,
   MinhaViagemRoteiroRoute: MinhaViagemRoteiroRoute,
   MinhaViagemIndexRoute: MinhaViagemIndexRoute,
@@ -537,3 +579,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
