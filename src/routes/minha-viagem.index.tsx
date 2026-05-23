@@ -5,6 +5,7 @@ import { useMyTrip } from "@/hooks/use-my-trip";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NotificationsToggle } from "@/components/notifications-toggle";
+import { PreTripChecklist } from "@/components/pre-trip-checklist";
 
 export const Route = createFileRoute("/minha-viagem/")({
   component: Dashboard,
@@ -95,6 +96,8 @@ function Dashboard() {
           />
         )}
       </div>
+
+      <PreTripChecklist tripId={trip.id} startDate={trip.start_date} />
 
       <NotificationsToggle />
 
