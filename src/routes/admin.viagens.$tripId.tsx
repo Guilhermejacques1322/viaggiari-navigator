@@ -913,7 +913,35 @@ function ActivityPartnersEditor({ activityId }: { activityId: string }) {
     },
   });
 
+  const { data: catalog } = useQuery({
+    queryKey: ["operational-partners-catalog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operational_partners")
+        .select("id,name,role,default_cost,currency")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
+
   const invalidate = () => qc.invalidateQueries({ queryKey: ["activity-partners", activityId] });
+
+  const pickFromCatalog = (id: string) => {
+    const p = (catalog ?? []).find((c) => c.id === id);
+    if (!p) return;
+    setForm({
+      name: p.name,
+      role: p.role ?? "",
+      cost: Number(p.default_cost ?? 0),
+      currency: p.currency ?? "BRL",
+      included_in_package: false,
+      notes: "",
+    });
+    setAdding(true);
+  };
 
   const add = async () => {
     if (!form.name.trim()) return toast.error("Informe o nome do parceiro");
@@ -940,13 +968,29 @@ function ActivityPartnersEditor({ activityId }: { activityId: string }) {
 
   return (
     <div className="border-t border-border pt-3 mt-3 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Label className="text-xs font-medium">Parceiros operacionais</Label>
-        {!adding && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(true)}>
-            <Plus className="size-3" /> Adicionar
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {(catalog?.length ?? 0) > 0 && (
+            <Select value="" onValueChange={pickFromCatalog}>
+              <SelectTrigger className="h-7 text-xs w-[150px]">
+                <SelectValue placeholder="Do catálogo…" />
+              </SelectTrigger>
+              <SelectContent>
+                {catalog!.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                    {c.name}{c.role ? ` · ${c.role}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {!adding && (
+            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(true)}>
+              <Plus className="size-3" /> Novo
+            </Button>
+          )}
+        </div>
       </div>
       {(partners ?? []).map((p) => (
         <div key={p.id} className="flex items-center gap-2 text-xs rounded border border-border p-2">
