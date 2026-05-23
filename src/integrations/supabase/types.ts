@@ -24,6 +24,7 @@ export type Database = {
           included_in_package: boolean | null
           name: string
           notes: string | null
+          partner_id: string | null
           role: string | null
         }
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           included_in_package?: boolean | null
           name: string
           notes?: string | null
+          partner_id?: string | null
           role?: string | null
         }
         Update: {
@@ -46,6 +48,7 @@ export type Database = {
           included_in_package?: boolean | null
           name?: string
           notes?: string | null
+          partner_id?: string | null
           role?: string | null
         }
         Relationships: [
@@ -54,6 +57,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "itinerary_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_partners_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "operational_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -490,6 +500,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      operational_partners: {
+        Row: {
+          active: boolean | null
+          city: string | null
+          contact: string | null
+          country: string | null
+          created_at: string
+          currency: string | null
+          default_cost: number | null
+          id: string
+          name: string
+          notes: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          city?: string | null
+          contact?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          default_cost?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          city?: string | null
+          contact?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          default_cost?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       partner_products: {
         Row: {
