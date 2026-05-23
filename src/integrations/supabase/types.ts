@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_partners: {
+        Row: {
+          activity_id: string
+          cost: number | null
+          created_at: string
+          currency: string | null
+          id: string
+          included_in_package: boolean | null
+          name: string
+          notes: string | null
+          role: string | null
+        }
+        Insert: {
+          activity_id: string
+          cost?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          included_in_package?: boolean | null
+          name: string
+          notes?: string | null
+          role?: string | null
+        }
+        Update: {
+          activity_id?: string
+          cost?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          included_in_package?: boolean | null
+          name?: string
+          notes?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_partners_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           access_password: string | null
@@ -225,6 +269,7 @@ export type Database = {
             | Database["public"]["Enums"]["preroteiro_response"]
             | null
           created_at: string
+          curiosities: string | null
           currency: string | null
           day_id: string
           description: string | null
@@ -232,6 +277,7 @@ export type Database = {
           estimated_cost: number | null
           has_ticket: boolean | null
           id: string
+          image_url: string | null
           in_preroteiro: boolean | null
           is_paid: boolean | null
           latitude: number | null
@@ -251,6 +297,7 @@ export type Database = {
             | Database["public"]["Enums"]["preroteiro_response"]
             | null
           created_at?: string
+          curiosities?: string | null
           currency?: string | null
           day_id: string
           description?: string | null
@@ -258,6 +305,7 @@ export type Database = {
           estimated_cost?: number | null
           has_ticket?: boolean | null
           id?: string
+          image_url?: string | null
           in_preroteiro?: boolean | null
           is_paid?: boolean | null
           latitude?: number | null
@@ -277,6 +325,7 @@ export type Database = {
             | Database["public"]["Enums"]["preroteiro_response"]
             | null
           created_at?: string
+          curiosities?: string | null
           currency?: string | null
           day_id?: string
           description?: string | null
@@ -284,6 +333,7 @@ export type Database = {
           estimated_cost?: number | null
           has_ticket?: boolean | null
           id?: string
+          image_url?: string | null
           in_preroteiro?: boolean | null
           is_paid?: boolean | null
           latitude?: number | null
@@ -440,6 +490,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      partner_products: {
+        Row: {
+          active: boolean | null
+          category: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          image_url: string | null
+          product_name: string
+          purchase_url: string
+          store_name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          product_name: string
+          purchase_url: string
+          store_name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          product_name?: string
+          purchase_url?: string
+          store_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {

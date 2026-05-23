@@ -395,6 +395,8 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
       currency: form.currency ?? "BRL",
       latitude: form.latitude ?? null,
       longitude: form.longitude ?? null,
+      image_url: form.image_url ?? null,
+      curiosities: form.curiosities ?? null,
     }).eq("id", a.id);
     if (error) return toast.error(error.message);
     setEditOpen(false); onChanged();
@@ -502,6 +504,27 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
               <p className="text-[11px] text-emerald-600">📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} — pronto para o mapa</p>
             )}
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+
+            <div>
+              <Label className="text-xs">URL da imagem do local</Label>
+              <Input type="url" placeholder="https://..." value={form.image_url ?? ""}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+              {form.image_url && (
+                <div className="mt-2 aspect-video bg-muted rounded-md overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={form.image_url} alt="preview" className="w-full h-full object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs">Curiosidades e recomendações</Label>
+              <Textarea rows={3} placeholder="História do lugar, prato mais pedido, dica especial..."
+                value={form.curiosities ?? ""}
+                onChange={(e) => setForm({ ...form, curiosities: e.target.value })} />
+            </div>
+
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
                 <Label className="text-xs">Custo estimado (cliente)</Label>
@@ -525,6 +548,8 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
                 onCheckedChange={(v) => setForm({ ...form, in_preroteiro: v })} />
               <Label className="text-xs">Sugestão (pré-roteiro)</Label>
             </div>
+
+            <ActivityPartnersEditor activityId={a.id} />
 
             <div className="border-t border-border pt-3 mt-3 space-y-2">
               <Label className="text-xs font-medium">Salvar na biblioteca de atividades</Label>
@@ -561,7 +586,7 @@ function NewActivityDialog({ dayId, position, onDone }: {
   dayId: string; position: number; onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const initialForm = { name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false, estimated_cost: 0, currency: "BRL" };
+  const initialForm = { name: "", time: "", description: "", address: "", maps_url: "", in_preroteiro: false, estimated_cost: 0, currency: "BRL", image_url: "", curiosities: "" };
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 
@@ -577,6 +602,8 @@ function NewActivityDialog({ dayId, position, onDone }: {
       in_preroteiro: form.in_preroteiro,
       estimated_cost: form.estimated_cost || 0,
       currency: form.currency,
+      image_url: form.image_url || null,
+      curiosities: form.curiosities || null,
     });
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -601,6 +628,10 @@ function NewActivityDialog({ dayId, position, onDone }: {
             </div>
             <Input placeholder="Endereço" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Textarea rows={3} placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <Input type="url" placeholder="URL da imagem do local (https://...)" value={form.image_url}
+              onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+            <Textarea rows={2} placeholder="Curiosidades e recomendações" value={form.curiosities}
+              onChange={(e) => setForm({ ...form, curiosities: e.target.value })} />
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2">
                 <Label className="text-xs">Custo estimado (cliente)</Label>
@@ -847,4 +878,110 @@ function MapaTab({ tripId }: { tripId: string }) {
   if (isLoading || !data) return <Skeleton className="h-96" />;
   return <TripMap days={data} />;
 }
+
+/* ============================== ACTIVITY PARTNERS ============================== */
+function ActivityPartnersEditor({ activityId }: { activityId: string }) {
+  const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ name: "", role: "", cost: 0, currency: "BRL", included_in_package: false, notes: "" });
+
+  const { data: partners } = useQuery({
+    queryKey: ["activity-partners", activityId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("activity_partners").select("*").eq("activity_id", activityId).order("created_at");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["activity-partners", activityId] });
+
+  const add = async () => {
+    if (!form.name.trim()) return toast.error("Informe o nome do parceiro");
+    const { error } = await supabase.from("activity_partners").insert({
+      activity_id: activityId,
+      name: form.name.trim(),
+      role: form.role.trim() || null,
+      cost: form.cost || 0,
+      currency: form.currency,
+      included_in_package: form.included_in_package,
+      notes: form.notes.trim() || null,
+    });
+    if (error) return toast.error(error.message);
+    setForm({ name: "", role: "", cost: 0, currency: "BRL", included_in_package: false, notes: "" });
+    setAdding(false);
+    invalidate();
+  };
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("activity_partners").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    invalidate();
+  };
+
+  return (
+    <div className="border-t border-border pt-3 mt-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-medium">Parceiros operacionais</Label>
+        {!adding && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(true)}>
+            <Plus className="size-3" /> Adicionar
+          </Button>
+        )}
+      </div>
+      {(partners ?? []).map((p) => (
+        <div key={p.id} className="flex items-center gap-2 text-xs rounded border border-border p-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-medium">{p.role ? `${p.role}: ` : ""}{p.name}</p>
+            <p className="text-muted-foreground">
+              {p.included_in_package
+                ? "Incluso no pacote"
+                : Number(p.cost) > 0
+                  ? Number(p.cost).toLocaleString("pt-BR", { style: "currency", currency: p.currency ?? "BRL" })
+                  : "Sem custo definido"}
+              {p.notes ? ` · ${p.notes}` : ""}
+            </p>
+          </div>
+          <Button type="button" size="sm" variant="ghost" onClick={() => remove(p.id)} className="text-destructive">
+            <Trash2 className="size-3" />
+          </Button>
+        </div>
+      ))}
+      {adding && (
+        <div className="rounded border border-border p-2 space-y-2 bg-muted/30">
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input placeholder="Função (guia, tradutor...)" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
+              <Input type="number" step="0.01" placeholder="Custo" value={form.cost || ""}
+                onChange={(e) => setForm({ ...form, cost: e.target.value ? Number(e.target.value) : 0 })}
+                disabled={form.included_in_package} />
+            </div>
+            <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BRL">BRL</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="EUR">EUR</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={form.included_in_package}
+              onCheckedChange={(v) => setForm({ ...form, included_in_package: v })} />
+            <Label className="text-xs">Incluso no pacote</Label>
+          </div>
+          <Input placeholder="Notas (opcional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button>
+            <Button type="button" size="sm" onClick={add}>Salvar parceiro</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 

@@ -1,38 +1,93 @@
-# Corrigir perda de estado ao voltar de outra aba
+## Melhorias no roteiro e nova área de Parceiros
 
-## Causa raiz (resumo)
+### 1. Imagens e curiosidades nas atividades
 
-Ao trocar de aba, o Supabase renova o token e emite `TOKEN_REFRESHED`. O listener em `use-auth.tsx` reage a **todos** os eventos chamando `setLoading(true)` + `loadRoles()` de novo. Os shells `minha-viagem.tsx` e `admin.tsx`, ao verem `loading=true`, retornam um placeholder "Carregando…" no lugar do `<Outlet/>`, **desmontando toda a subárvore** — perdendo scroll, accordion aberto, dialogs, formulários, etc. Quando o role recarrega, o `<Outlet/>` remonta do zero.
+Adicionar dois campos novos em `itinerary_activities`:
+- `image_url` (text) — URL pública da imagem do local
+- `curiosities` (text) — texto livre "Curiosidades e Recomendações"
 
-## Mudanças
+**Admin** (`admin.viagens.$tripId.tsx` — formulário de atividade):
+- Input "URL da imagem" + preview pequeno ao colar
+- Textarea "Curiosidades e Recomendações"
 
-### 1. `src/hooks/use-auth.tsx` — listener inteligente
+**Cliente** (`minha-viagem.roteiro.tsx`):
+- Imagem renderizada no topo do card da atividade (aspect 16/9, lazy, fallback se vazio)
+- Bloco "Curiosidades" expandível abaixo da descrição
 
-- Só tratar `loading` no boot inicial (uma vez), nunca mais.
-- No `onAuthStateChange`, sincronizar `session`/`user`, mas **não tocar em `loading`**.
-- Só recarregar `roles` quando o `user.id` realmente mudar (login/logout/troca de usuário). Eventos `TOKEN_REFRESHED` / `USER_UPDATED` com o mesmo userId não devem disparar `loadRoles`.
-- Limpar `roles` apenas em `SIGNED_OUT` (ou quando `newSession?.user` for nulo).
+**Pré-roteiro** (`minha-viagem.preroteiro.tsx`):
+- Quando o cliente favorita ("want"), a imagem aparece junto no card
+- Curiosidades também visíveis (ajudam o cliente a decidir)
 
-Efeito: refresh de token em background vira no-op para a UI.
+### 2. Parceiros operacionais por atividade (item 4)
 
-### 2. `src/routes/minha-viagem.tsx` — não desmontar o Outlet
+Nova tabela `activity_partners` (vinculada a `itinerary_activities`):
+- `activity_id`, `name`, `role` (guia, tradutor, motorista, agência...), `cost`, `currency`, `included_in_package` (bool), `notes`
 
-- Manter o redirect para `/login` quando `!user && !loading`.
-- Remover o `return <div>Carregando…</div>` que substitui a árvore inteira. Renderizar sempre o shell + `<MyTripProvider>` + `<Outlet/>`.
-- Mostrar um indicador discreto (ou nada) apenas no boot inicial quando `loading && !user`. Uma vez que `user` exista, nunca mais ocultar o Outlet por causa de `loading`.
+**Admin**: dentro do editor da atividade, seção "Parceiros operacionais" com lista + botão adicionar.
 
-### 3. `src/routes/admin.tsx` — mesma correção
+**Cliente** (no card da atividade do roteiro): badge discreto tipo
+`👤 Guia: João (incluso)` ou `🗣 Tradutor: +R$ 200`.
 
-- Mesma lógica: redirecionar se `!loading && !user`, redirecionar se `!loading && user && !isAdmin`.
-- Não substituir a árvore por "Carregando…" depois do primeiro render com usuário válido. Manter `<Outlet/>` montado.
+### 3. Vitrine global de parceiros (item 5) — nova aba
 
-### 4. Verificação
+Nova tabela `partner_products`:
+- `store_name`, `product_name`, `purchase_url`, `image_url`, `description` (opcional), `category` (opcional: mala, eletrônico, seguro, etc.), `display_order`, `active` (bool)
+- RLS: admin gerencia tudo; qualquer cliente autenticado vê os ativos
 
-- Build automático.
-- Smoke test mental: login → abrir roteiro → expandir um dia → trocar de aba 30s → voltar → o dia continua expandido, scroll preservado, nenhuma navegação para "/" ou "/minha-viagem".
+**Admin** — nova rota `/admin/parceiros`:
+- Lista em cards (foto, loja, produto, link)
+- Botão "Adicionar parceiro" → modal com upload de URL da imagem, nome da loja, nome do produto, link, categoria
+- Editar/desativar/excluir inline
+- Link no menu lateral do admin
 
-## Fora de escopo
+**Cliente** — nova rota `/minha-viagem/parceiros`:
+- Grid responsivo de cards (imagem em destaque, nome do produto, loja em texto pequeno, badge de categoria, botão "Ver na loja →" abrindo `purchase_url` em nova aba)
+- Filtro por categoria (chips no topo) se houver mais de uma
+- Empty state amigável se ainda não há parceiros
+- Adicionar item "Parceiros" na navegação de `minha-viagem.tsx`
 
-- Migrar guards para `beforeLoad` no `_authenticated` (refator maior; fica como follow-up).
-- Mudar o `NotFoundComponent` do root.
-- Mexer em queries do React Query (já estão com `refetchOnWindowFocus: false`).
+### Detalhes técnicos
+
+**Migração SQL** (uma única migration):
+```sql
+ALTER TABLE itinerary_activities
+  ADD COLUMN image_url text,
+  ADD COLUMN curiosities text;
+
+CREATE TABLE activity_partners (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  activity_id uuid NOT NULL REFERENCES itinerary_activities(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  role text,
+  cost numeric DEFAULT 0,
+  currency text DEFAULT 'BRL',
+  included_in_package boolean DEFAULT false,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+-- RLS: admin all; cliente SELECT via join trips.visible_to_client + contacts.user_id (mesmo padrão das atividades)
+
+CREATE TABLE partner_products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_name text NOT NULL,
+  product_name text NOT NULL,
+  purchase_url text NOT NULL,
+  image_url text,
+  description text,
+  category text,
+  display_order int DEFAULT 0,
+  active boolean DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+-- RLS: admin ALL; authenticated SELECT WHERE active = true
+```
+
+**Cliente — hook `use-my-trip`**: incluir `activity_partners` no fetch agrupado por atividade.
+
+**Validação URLs**: aceitar qualquer https; usar `<img loading="lazy" onError={hide}>` para falhas.
+
+### Fora de escopo
+- Upload real de imagens para storage (item futuro)
+- CRM completo de parceiros por país/cidade (a base por atividade já cobre o uso operacional pedido)
+- Vinculação dos `partner_products` da vitrine com atividades específicas (a vitrine é global)
