@@ -66,6 +66,7 @@ export function PreTripChecklist({
     }
   }, [allDone, dismissed]);
 
+  if (!isDelivered) return null;
   if (tripStarted) return null;
   if (isLoading) return null;
   if (items.length === 0) return null;
