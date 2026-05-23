@@ -395,6 +395,8 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
       currency: form.currency ?? "BRL",
       latitude: form.latitude ?? null,
       longitude: form.longitude ?? null,
+      image_url: form.image_url ?? null,
+      curiosities: form.curiosities ?? null,
     }).eq("id", a.id);
     if (error) return toast.error(error.message);
     setEditOpen(false); onChanged();
