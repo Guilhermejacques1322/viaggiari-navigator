@@ -93,11 +93,13 @@ function TripDetail() {
           <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
           <TabsTrigger value="mapa">Mapa</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
+          <TabsTrigger value="checklist">Checklist</TabsTrigger>
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
         <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
         <TabsContent value="mapa" className="mt-4"><MapaTab tripId={tripId} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
+        <TabsContent value="checklist" className="mt-4"><TripChecklistAdmin tripId={tripId} /></TabsContent>
       </Tabs>
     </div>
   );
