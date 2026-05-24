@@ -310,7 +310,7 @@ function PartnerProductsTab() {
   };
 
   const remove = async (p: Product) => {
-    if (!confirm(`Excluir "${p.product_name}"?`)) return;
+    if (!(await confirmAction(`Excluir "${p.product_name}"?`, { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("partner_products").delete().eq("id", p.id);
     if (error) return toast.error(error.message);
     invalidate();
