@@ -167,8 +167,8 @@ function MarketingPage() {
                     post={p}
                     onToggleDone={() => toggleDone.mutate(p)}
                     onEdit={() => openEdit(p)}
-                    onDelete={() => {
-                      if (confirm("Excluir esta postagem?")) remove.mutate(p.id);
+                    onDelete={async () => {
+                      if (await confirmAction("Excluir esta postagem?", { confirmLabel: "Excluir" })) remove.mutate(p.id);
                     }}
                   />
                 ))}
