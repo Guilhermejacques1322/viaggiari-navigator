@@ -123,7 +123,7 @@ function LeadsPage() {
                       Converter
                     </Button>
                     <Button size="sm" variant="ghost"
-                      onClick={() => { if (confirm("Remover este lead?")) remove.mutate(lead.id); }}>
+                      onClick={async () => { if (await confirmAction("Remover este lead?", { confirmLabel: "Remover" })) remove.mutate(lead.id); }}>
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
