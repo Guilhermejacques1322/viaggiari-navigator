@@ -71,7 +71,7 @@ function NotificacoesPage() {
   }
 
   async function deleteNotification(id: string) {
-    if (!confirm("Excluir notificação?")) return;
+    if (!(await confirmAction("Excluir notificação?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("notifications").delete().eq("id", id);
     if (error) return toast.error(error.message);
     load();
