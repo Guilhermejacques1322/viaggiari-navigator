@@ -341,7 +341,9 @@ function QuoteFinance({ quoteId, total }: { quoteId: string; total: number }) {
   }
 
   async function remove(id: string) {
-    await supabase.from("payments").delete().eq("id", id);
+    if (!(await confirmAction("Excluir esta parcela?", { confirmLabel: "Excluir" }))) return;
+    const { error } = await supabase.from("payments").delete().eq("id", id);
+    if (error) return toast.error(error.message);
     load();
   }
 
