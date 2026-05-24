@@ -27,6 +27,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TripChecklistAdmin } from "@/components/trip-checklist-admin";
 import { TRIP_STATUS_LABEL } from "./admin.viagens";
+import { confirmAction } from "@/lib/confirm";
 import type { Database } from "@/integrations/supabase/types";
 
 type Trip = Database["public"]["Tables"]["trips"]["Row"];
