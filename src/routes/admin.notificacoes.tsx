@@ -13,6 +13,7 @@ import { Plus, Bell, Trash2, CheckCircle2, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { broadcastTestPush } from "@/lib/push.functions";
+import { confirmAction } from "@/lib/confirm";
 
 export const Route = createFileRoute("/admin/notificacoes")({ component: NotificacoesPage });
 
@@ -70,7 +71,7 @@ function NotificacoesPage() {
   }
 
   async function deleteNotification(id: string) {
-    if (!confirm("Excluir notificação?")) return;
+    if (!(await confirmAction("Excluir notificação?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("notifications").delete().eq("id", id);
     if (error) return toast.error(error.message);
     load();
@@ -174,7 +175,7 @@ function TestBroadcastButton() {
   const broadcast = useServerFn(broadcastTestPush);
   const [loading, setLoading] = useState(false);
   async function run() {
-    if (!confirm("Enviar push de teste para TODOS os usuários inscritos?")) return;
+    if (!(await confirmAction("Enviar push de teste para TODOS os usuários inscritos?", { confirmLabel: "Enviar" }))) return;
     setLoading(true);
     try {
       const res = await broadcast();

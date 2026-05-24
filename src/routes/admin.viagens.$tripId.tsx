@@ -27,6 +27,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TripChecklistAdmin } from "@/components/trip-checklist-admin";
 import { TRIP_STATUS_LABEL } from "./admin.viagens";
+import { confirmAction } from "@/lib/confirm";
 import type { Database } from "@/integrations/supabase/types";
 
 type Trip = Database["public"]["Tables"]["trips"]["Row"];
@@ -66,7 +67,7 @@ function TripDetail() {
         <ArrowLeft className="size-4" /> Voltar
       </Link>
 
-      <TripHeader trip={trip} onSaved={invalidate} onDeleted={() => navigate({ to: "/admin/viagens" })} />
+      <TripHeader trip={trip} onSaved={invalidate} onDeleted={() => { qc.invalidateQueries({ queryKey: ["trips"] }); navigate({ to: "/admin/viagens" }); }} />
 
       {!trip.contacts?.user_id && (
         <Card className="p-4 border-amber-500/40 bg-amber-500/5 flex items-start gap-3">
@@ -119,7 +120,7 @@ function TripHeader({ trip, onSaved, onDeleted }: { trip: any; onSaved: () => vo
     onSaved();
   };
   const remove = async () => {
-    if (!confirm(`Excluir a viagem "${trip.title}"? Isso apaga roteiro, documentos e pagamentos.`)) return;
+    if (!(await confirmAction(`Excluir a viagem "${trip.title}"?`, { description: "Isso apaga roteiro, documentos e pagamentos.", confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("trips").delete().eq("id", trip.id);
     if (error) return toast.error(error.message);
     toast.success("Viagem excluída");
@@ -303,7 +304,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
     setEditing(false); onChanged();
   };
   const remove = async () => {
-    if (!confirm(`Excluir Dia ${day.day_number}?`)) return;
+    if (!(await confirmAction(`Excluir Dia ${day.day_number}?`, { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("itinerary_days").delete().eq("id", day.id);
     if (error) return toast.error(error.message);
     onChanged();
@@ -405,7 +406,7 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
     setEditOpen(false); onChanged();
   };
   const remove = async () => {
-    if (!confirm("Excluir atividade?")) return;
+    if (!(await confirmAction("Excluir atividade?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("itinerary_activities").delete().eq("id", a.id);
     if (error) return toast.error(error.message);
     onChanged();
@@ -793,9 +794,11 @@ function DocsTab({ tripId }: { tripId: string }) {
   }
 
   async function remove(doc: Document) {
-    if (!confirm(`Excluir "${doc.name}"?`)) return;
+    if (!(await confirmAction(`Excluir "${doc.name}"?`, { confirmLabel: "Excluir" }))) return;
     await supabase.storage.from("trip-documents").remove([doc.storage_path]);
-    await supabase.from("documents").delete().eq("id", doc.id);
+    const { error } = await supabase.from("documents").delete().eq("id", doc.id);
+    if (error) return toast.error(error.message);
+    toast.success("Documento excluído");
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
     qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
   }

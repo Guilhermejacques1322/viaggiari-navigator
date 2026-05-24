@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { confirmAction } from "@/lib/confirm";
 import type { Database } from "@/integrations/supabase/types";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
@@ -122,7 +123,7 @@ function LeadsPage() {
                       Converter
                     </Button>
                     <Button size="sm" variant="ghost"
-                      onClick={() => { if (confirm("Remover este lead?")) remove.mutate(lead.id); }}>
+                      onClick={async () => { if (await confirmAction("Remover este lead?", { confirmLabel: "Remover" })) remove.mutate(lead.id); }}>
                       <Trash2 className="size-4" />
                     </Button>
                   </div>

@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { confirmAction } from "@/lib/confirm";
 import type { Database } from "@/integrations/supabase/types";
 
 type Product = Database["public"]["Tables"]["partner_products"]["Row"];
@@ -114,7 +115,7 @@ function OperationalPartnersTab() {
   };
 
   const remove = async (p: OpPartner) => {
-    if (!confirm(`Excluir "${p.name}"?`)) return;
+    if (!(await confirmAction(`Excluir "${p.name}"?`, { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("operational_partners").delete().eq("id", p.id);
     if (error) return toast.error(error.message);
     invalidate();
@@ -309,7 +310,7 @@ function PartnerProductsTab() {
   };
 
   const remove = async (p: Product) => {
-    if (!confirm(`Excluir "${p.product_name}"?`)) return;
+    if (!(await confirmAction(`Excluir "${p.product_name}"?`, { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("partner_products").delete().eq("id", p.id);
     if (error) return toast.error(error.message);
     invalidate();

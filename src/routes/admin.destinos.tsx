@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { confirmAction } from "@/lib/confirm";
 
 export const Route = createFileRoute("/admin/destinos")({ component: DestinosPage });
 
@@ -76,9 +77,10 @@ function DestinosPage() {
   }
 
   async function deleteDestination(id: string) {
-    if (!confirm("Excluir destino?")) return;
+    if (!(await confirmAction("Excluir destino?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("destinations").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    toast.success("Destino excluído");
     load();
   }
 

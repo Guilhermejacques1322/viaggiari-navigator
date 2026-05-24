@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, FileDown, Link2, Trash2, Bell, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { generateQuotePDF } from "@/lib/quote-pdf";
+import { confirmAction } from "@/lib/confirm";
 
 export const Route = createFileRoute("/admin/orcamentos")({ component: OrcamentosPage });
 
@@ -238,9 +239,10 @@ function QuoteCard({ q, onChanged, onDownload, showFinance }: {
   }
 
   async function deleteQuote() {
-    if (!confirm("Excluir orçamento?")) return;
+    if (!(await confirmAction("Excluir orçamento?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("quotes").delete().eq("id", q.id);
     if (error) return toast.error(error.message);
+    toast.success("Orçamento excluído");
     onChanged();
   }
 
@@ -339,7 +341,9 @@ function QuoteFinance({ quoteId, total }: { quoteId: string; total: number }) {
   }
 
   async function remove(id: string) {
-    await supabase.from("payments").delete().eq("id", id);
+    if (!(await confirmAction("Excluir esta parcela?", { confirmLabel: "Excluir" }))) return;
+    const { error } = await supabase.from("payments").delete().eq("id", id);
+    if (error) return toast.error(error.message);
     load();
   }
 

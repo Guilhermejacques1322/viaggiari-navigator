@@ -27,6 +27,7 @@ import {
   Tabs, TabsList, TabsTrigger, TabsContent,
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/lib/confirm";
 
 export const Route = createFileRoute("/admin/marketing")({
   component: MarketingPage,
@@ -166,8 +167,8 @@ function MarketingPage() {
                     post={p}
                     onToggleDone={() => toggleDone.mutate(p)}
                     onEdit={() => openEdit(p)}
-                    onDelete={() => {
-                      if (confirm("Excluir esta postagem?")) remove.mutate(p.id);
+                    onDelete={async () => {
+                      if (await confirmAction("Excluir esta postagem?", { confirmLabel: "Excluir" })) remove.mutate(p.id);
                     }}
                   />
                 ))}
