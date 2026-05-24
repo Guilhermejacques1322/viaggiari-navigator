@@ -115,7 +115,7 @@ function OperationalPartnersTab() {
   };
 
   const remove = async (p: OpPartner) => {
-    if (!confirm(`Excluir "${p.name}"?`)) return;
+    if (!(await confirmAction(`Excluir "${p.name}"?`, { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("operational_partners").delete().eq("id", p.id);
     if (error) return toast.error(error.message);
     invalidate();
