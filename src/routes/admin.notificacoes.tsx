@@ -175,7 +175,7 @@ function TestBroadcastButton() {
   const broadcast = useServerFn(broadcastTestPush);
   const [loading, setLoading] = useState(false);
   async function run() {
-    if (!confirm("Enviar push de teste para TODOS os usuários inscritos?")) return;
+    if (!(await confirmAction("Enviar push de teste para TODOS os usuários inscritos?", { confirmLabel: "Enviar" }))) return;
     setLoading(true);
     try {
       const res = await broadcast();
