@@ -27,6 +27,7 @@ import {
   Tabs, TabsList, TabsTrigger, TabsContent,
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/lib/confirm";
 
 export const Route = createFileRoute("/admin/marketing")({
   component: MarketingPage,
