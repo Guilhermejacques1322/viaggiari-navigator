@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, FileDown, Link2, Trash2, Bell, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { generateQuotePDF } from "@/lib/quote-pdf";
+import { confirmAction } from "@/lib/confirm";
 
 export const Route = createFileRoute("/admin/orcamentos")({ component: OrcamentosPage });
 
