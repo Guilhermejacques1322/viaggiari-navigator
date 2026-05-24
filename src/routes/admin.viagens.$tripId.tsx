@@ -406,7 +406,7 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
     setEditOpen(false); onChanged();
   };
   const remove = async () => {
-    if (!confirm("Excluir atividade?")) return;
+    if (!(await confirmAction("Excluir atividade?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("itinerary_activities").delete().eq("id", a.id);
     if (error) return toast.error(error.message);
     onChanged();
