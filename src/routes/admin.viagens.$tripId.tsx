@@ -67,7 +67,7 @@ function TripDetail() {
         <ArrowLeft className="size-4" /> Voltar
       </Link>
 
-      <TripHeader trip={trip} onSaved={invalidate} onDeleted={() => navigate({ to: "/admin/viagens" })} />
+      <TripHeader trip={trip} onSaved={invalidate} onDeleted={() => { qc.invalidateQueries({ queryKey: ["trips"] }); navigate({ to: "/admin/viagens" }); }} />
 
       {!trip.contacts?.user_id && (
         <Card className="p-4 border-amber-500/40 bg-amber-500/5 flex items-start gap-3">
