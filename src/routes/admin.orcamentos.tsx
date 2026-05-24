@@ -239,9 +239,10 @@ function QuoteCard({ q, onChanged, onDownload, showFinance }: {
   }
 
   async function deleteQuote() {
-    if (!confirm("Excluir orçamento?")) return;
+    if (!(await confirmAction("Excluir orçamento?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("quotes").delete().eq("id", q.id);
     if (error) return toast.error(error.message);
+    toast.success("Orçamento excluído");
     onChanged();
   }
 
