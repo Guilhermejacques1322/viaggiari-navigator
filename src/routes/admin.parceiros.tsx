@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { confirmAction } from "@/lib/confirm";
 import type { Database } from "@/integrations/supabase/types";
 
 type Product = Database["public"]["Tables"]["partner_products"]["Row"];
