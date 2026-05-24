@@ -77,9 +77,10 @@ function DestinosPage() {
   }
 
   async function deleteDestination(id: string) {
-    if (!confirm("Excluir destino?")) return;
+    if (!(await confirmAction("Excluir destino?", { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("destinations").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    toast.success("Destino excluído");
     load();
   }
 
