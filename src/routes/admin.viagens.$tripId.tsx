@@ -304,7 +304,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
     setEditing(false); onChanged();
   };
   const remove = async () => {
-    if (!confirm(`Excluir Dia ${day.day_number}?`)) return;
+    if (!(await confirmAction(`Excluir Dia ${day.day_number}?`, { confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("itinerary_days").delete().eq("id", day.id);
     if (error) return toast.error(error.message);
     onChanged();
