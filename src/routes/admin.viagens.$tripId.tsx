@@ -120,7 +120,7 @@ function TripHeader({ trip, onSaved, onDeleted }: { trip: any; onSaved: () => vo
     onSaved();
   };
   const remove = async () => {
-    if (!confirm(`Excluir a viagem "${trip.title}"? Isso apaga roteiro, documentos e pagamentos.`)) return;
+    if (!(await confirmAction(`Excluir a viagem "${trip.title}"?`, { description: "Isso apaga roteiro, documentos e pagamentos.", confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("trips").delete().eq("id", trip.id);
     if (error) return toast.error(error.message);
     toast.success("Viagem excluída");
