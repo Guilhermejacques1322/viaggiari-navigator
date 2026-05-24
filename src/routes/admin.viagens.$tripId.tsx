@@ -794,9 +794,11 @@ function DocsTab({ tripId }: { tripId: string }) {
   }
 
   async function remove(doc: Document) {
-    if (!confirm(`Excluir "${doc.name}"?`)) return;
+    if (!(await confirmAction(`Excluir "${doc.name}"?`, { confirmLabel: "Excluir" }))) return;
     await supabase.storage.from("trip-documents").remove([doc.storage_path]);
-    await supabase.from("documents").delete().eq("id", doc.id);
+    const { error } = await supabase.from("documents").delete().eq("id", doc.id);
+    if (error) return toast.error(error.message);
+    toast.success("Documento excluído");
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
     qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
   }
