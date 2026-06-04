@@ -26,16 +26,16 @@ export async function generateQuotePDF(data: QuotePDFData) {
   const margin = 18;
   let y = 22;
 
-  // Header band
-  doc.setFillColor(107, 157, 194);
+  // Header band — Viaggiari oliva (#7A7A5C)
+  doc.setFillColor(122, 122, 92);
   doc.rect(0, 0, W, 38, "F");
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(240, 230, 210);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.text("Viaggiari Travel", margin, 20);
+  doc.text("Viaggiari", margin, 20);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text("Assessoria de viagens personalizada", margin, 28);
+  doc.text("Agência de viagens", margin, 28);
 
   y = 50;
   doc.setTextColor(20, 20, 20);
@@ -76,7 +76,7 @@ export async function generateQuotePDF(data: QuotePDFData) {
   doc.text(brl(data.dailyRate), bx, by);
   doc.text(String(data.days), bx + 60, by);
   doc.text(brl(data.discount), bx + 100, by);
-  doc.setTextColor(107, 157, 194);
+  doc.setTextColor(209, 122, 71);
   doc.setFontSize(15);
   doc.text(brl(data.total), bx + 140, by);
   by += 12;
@@ -96,7 +96,7 @@ export async function generateQuotePDF(data: QuotePDFData) {
   // Footer
   doc.setFontSize(8); doc.setTextColor(140, 140, 140);
   doc.text(`Link público: /orcamento/${data.shareToken}`, margin, 285);
-  doc.text("Viaggiari Travel · contato@viaggiari.com.br", margin, 290);
+  doc.text("Viaggiari · contato@viaggiari.com.br", margin, 290);
 
   doc.save(`orcamento-viaggiari-${data.shareToken.slice(0, 8)}.pdf`);
 }

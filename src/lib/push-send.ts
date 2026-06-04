@@ -39,7 +39,7 @@ export function getVapidPublicKey() {
 
 function getVapid(): VapidKeys {
   return {
-    subject: process.env.VAPID_SUBJECT || "mailto:contato@viaggiari.travel",
+    subject: process.env.VAPID_SUBJECT || "mailto:contato@viaggiari.com.br",
     publicKey: getVapidPublicKey(),
     privateKey: getVapidPrivateKey(),
   };

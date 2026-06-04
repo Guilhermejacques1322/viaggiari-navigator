@@ -119,7 +119,7 @@ function PublicQuotePage() {
             )}
 
             <div className="border-t border-border pt-4 text-xs text-muted-foreground text-center">
-              Viaggiari Travel · Para aceitar, responda a Nani ou S. pelo Instagram ou WhatsApp.
+              Viaggiari · Para aceitar, responda a Nani ou S. pelo Instagram ou WhatsApp.
             </div>
           </Card>
         )}

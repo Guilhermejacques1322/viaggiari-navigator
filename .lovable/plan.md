@@ -1,80 +1,77 @@
-## Dashboard com métricas, filtros de período e exportação
+# Rebranding Viaggiari
 
-### Objetivo
+Aplicação da nova identidade visual em todo o app — admin e cliente — substituindo a marca antiga "Viaggiari Travel" pela nova "Viaggiari".
 
-Transformar o dashboard atual em uma central de insights com filtro de período global, cards expandidos e exportação Excel por relatório.
+## 1. Nova identidade visual
 
-### 1. Filtro de período global (topo do dashboard)
+**Paleta extraída dos logos:**
+- Verde-oliva (fundo institucional): `#7A7A5C` aprox.
+- Laranja terracota (acento/primária da marca): `#D17A47` aprox.
+- Creme (texto claro / superfícies sobre escuro): `#F0E6D2`
+- Tons neutros escuros mantidos para texto
 
-Seletor único que afeta todos os blocos:
+**Nova primária do sistema:** laranja terracota (substitui o steel-blue atual). O verde-oliva passa a ser usado em sidebar admin, hero e superfícies "ink".
 
-- **Este mês** (padrão)
-- **Mês passado**
-- **Últimos 30 dias**
-- **Últimos 90 dias**
-- **Este ano**
-- **Personalizado** (date range picker)
+## 2. Assets a substituir/criar
 
-### 2. Cards de métricas (linha superior)
+Upload via `lovable-assets` a partir de `/mnt/user-uploads/`:
+- `viaggiari-logo-full.png` (v2 — fundo oliva, plane laranja) → wordmark padrão escuro
+- `viaggiari-logo-full-orange.png` (v1 — fundo laranja, plane oliva) → variante alternativa
+- `viaggiari-monogram-vg.png` (T.png — VG + avião) → ícone do app (PWA / favicon / apple-touch-icon)
 
-Cada card mostra o valor + variação % vs período anterior equivalente:
+Gerar a partir do monograma:
+- `/public/icon-512.png` (PWA standalone, mantém o nome do arquivo para não quebrar manifest)
+- `/public/icon-192.png`
+- `/public/favicon.ico` substituído
 
-- **Leads no período** (contagem em `leads`)
-- **Orçamentos enviados** (contagem em `quotes` no período)
-- **Orçamentos em aberto** (status `sent` + `follow_up`, total acumulado)
-- **Taxa de conversão** (orçamentos fechados ÷ enviados no período)
-- **Receita no período** (soma `payments.amount` onde `status=paid` e `paid_date` no range)
-- **Ticket médio** (receita ÷ clientes fechados)
-- **Viagens em andamento** (status `building/delivered/in_progress`)
-- **Clientes ativos** (contacts `active_client`)
+## 3. Arquivos a editar
 
-### 3. Relatórios detalhados (cada um com botão "Exportar Excel" no canto superior direito)
+**Design system:**
+- `src/styles.css` — atualizar tokens `--primary` (laranja), `--primary-soft`, `--sidebar` (oliva escuro), `--ink` (oliva), `--ring`, `--chart-*`. Manter contraste light/dark.
 
-Cada painel terá ícone `Download` que gera um `.xlsx` via biblioteca `xlsx` (SheetJS). Arquivo nomeado `{relatorio}_{periodo}.xlsx`.
+**Logo:**
+- `src/components/brand/logo.tsx` — trocar `viaggiari-logo.png` pelo novo asset wordmark; remover "Viaggiari Travel" do wordmark — só "Viaggiari".
 
-**Relatórios:**
+**Identidade textual ("Travel" → remover):**
+- `index.html` (title, meta)
+- `src/routes/__root.tsx` (todos meta tags, og, twitter, apple-mobile-web-app-title já é "Viaggiari" ✓, mas title e descriptions usam "Viaggiari Travel")
+- `public/manifest.webmanifest` — `name`, `short_name`, `description`
+- `src/routes/index.tsx` (landing — headlines/copy)
+- `src/routes/login.tsx`, `src/routes/interesse.tsx`
+- `src/routes/orcamento.$token.tsx` (PDF/template)
+- `src/lib/quote-pdf.ts` (header do PDF)
+- `src/routes/sitemap[.]xml.ts` se houver título
+- Qualquer ocorrência de "Viaggiari Travel" em alt text, footers, emails, etc. — busca global por `Viaggiari Travel` e `viaggiari travel`.
 
-1. **Leads recentes** — nome, email, telefone, destino, período, origem, data
-2. **Orçamentos em aberto** — cliente, destino, valor, status, dias desde envio, follow-up agendado
-3. **Receita detalhada** — data pagamento, cliente, viagem/orçamento, parcela, valor, forma pagamento
-4. **Próximas viagens** — título, cliente, destinos, datas, status, valor total
-5. **Funil de conversão** *(novo — recomendação)* — lead → contato → orçamento → fechado, com counts e %
-6. **Performance por destino** *(novo — recomendação)* — agrupa leads + viagens + receita por destino, ranking dos top destinos
+**PWA / mobile:**
+- `public/manifest.webmanifest` — `theme_color` e `background_color` atualizados para a nova paleta (oliva escuro `#3F3F2E` ou similar), ícone monograma VG
+- `public/sw.js` — verificar se referencia ícones antigos
 
-### 4. Gráficos visuais (recomendações extras)
+## 4. Aplicação visual nas telas
 
-Usando `recharts` (já comum no stack shadcn):
+Não vou redesenhar layouts — apenas trocar tokens e logo, o que propaga automaticamente para:
+- Shell admin (`src/routes/admin.tsx`) — sidebar passa a oliva
+- Shell cliente (`src/routes/minha-viagem.tsx`) — header + bottom nav usam nova primária laranja
+- Botões, badges, charts, links — herdam via tokens
+- Landing (`index.tsx`), login, orçamento público — herdam
 
-- **Receita ao longo do tempo** — line chart agrupado por dia/semana/mês conforme o range
-- **Leads por origem** — bar chart (source de `leads`/`contacts`)
-- **Status dos orçamentos** — donut (sent / follow_up / closed / lost)
+## 5. QA
 
-### 5. Outras recomendações baseadas no app
+Após mudanças, abrir preview e verificar:
+- Landing `/`
+- Login `/login`
+- Cliente `/minha-viagem` (e sub-rotas)
+- Admin `/admin` (dashboard, viagens, marketing, etc.)
+- Orçamento público
+- Manifest no DevTools (ícone PWA correto)
+- Busca residual por "Travel" no nome da marca
 
-- **Alertas operacionais** no topo: orçamentos sem follow-up há >7 dias, pagamentos vencidos, viagens começando em <7 dias sem documentos
-- **Próximos pagamentos a vencer** (próximos 30 dias) — ajuda no fluxo de caixa
-- **Atividades favoritadas pendentes de confirmação** no pré-roteiro — útil para o time saber o que está aguardando resposta
-- **Aniversário de viagem** *(opcional)* — clientes cuja viagem acontece no mês, gancho para reengajamento
+## Detalhes técnicos
 
-### Detalhes técnicos
-
-- Adicionar `bun add xlsx` (SheetJS) para exportação client-side
-- Criar helper `src/lib/export-xlsx.ts` com `exportToExcel(filename, rows, columns)`
-- Refatorar `admin.index.tsx`: extrair cada painel em componente próprio recebendo `dateRange` via prop, com seu próprio `useQuery` e botão de export
-- Date range usando `react-day-picker` (já instalado via shadcn calendar)
-- Comparação % vs período anterior: calcular range espelho automaticamente
-- Cores de variação: verde (+), vermelho (-), cinza (=) usando tokens semânticos
-
-### Fora de escopo
-
-- Exportar PDF (Excel é o pedido)
-- Agendamento/envio automático de relatórios por email
-- Dashboard configurável (drag-and-drop de widgets)
-
-### Pergunta antes de implementar
-
-Quer que eu inclua **todos** os relatórios + gráficos + alertas listados acima, ou prefere começar enxuto (só os 5 relatórios que você citou + filtro de período + export) e adicionarmos gráficos/alertas em uma segunda rodada?
-
-&nbsp;
-
-Pode adicionar todos os relatórios. 
+- Cores em `oklch()` conforme convenção do `styles.css`. Aproximações:
+  - `--primary: oklch(0.68 0.13 45)` (terracota)
+  - `--sidebar: oklch(0.32 0.02 95)` (oliva escuro)
+  - `--ink: oklch(0.42 0.025 95)` (oliva)
+- Logo component aceita prop `withWordmark` — wordmark agora é apenas "Viaggiari" (uppercase tracking mantém no `.brand-title`).
+- Assets via `lovable-assets` CLI, importados como JSON pointer.
+- Não tocar em lógica de negócio, banco, auth, server functions.

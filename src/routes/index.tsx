@@ -95,7 +95,7 @@ function Hero() {
       </div>
       <div className="relative section-padding flex min-h-[88vh] items-center py-20">
         <div className="max-w-2xl">
-          <p className="brand-title text-xs text-primary-soft mb-6">Viaggiari Travel</p>
+          <p className="brand-title text-xs text-primary-soft mb-6">Viaggiari · agência de viagens</p>
           <h1 className="font-display text-4xl md:text-6xl font-light leading-[1.05] text-ink-foreground">
             Sua viagem dos sonhos, <span className="text-primary-soft">planejada com quem vive para viajar.</span>
           </h1>
@@ -274,14 +274,14 @@ function Footer() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <Logo size={36} withWordmark />
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="https://instagram.com/viaggiari_travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition">
-            <Instagram className="w-4 h-4" /> @viaggiari_travel
+          <a href="https://instagram.com/viaggiari.ag" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition">
+            <Instagram className="w-4 h-4" /> @viaggiari.ag
           </a>
-          <a href="mailto:contato@viaggiari.travel" className="flex items-center gap-2 hover:text-foreground transition">
-            <Mail className="w-4 h-4" /> contato@viaggiari.travel
+          <a href="mailto:contato@viaggiari.com.br" className="flex items-center gap-2 hover:text-foreground transition">
+            <Mail className="w-4 h-4" /> contato@viaggiari.com.br
           </a>
         </div>
-        <p className="text-xs text-muted-foreground">© 2025 Viaggiari Travel — Assessoria especializada em viagens</p>
+        <p className="text-xs text-muted-foreground">© 2025 Viaggiari — Agência de viagens</p>
       </div>
     </footer>
   );

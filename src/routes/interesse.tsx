@@ -15,7 +15,7 @@ import {
 export const Route = createFileRoute("/interesse")({
   head: () => ({
     meta: [
-      { title: "Planejar minha viagem — Viaggiari Travel" },
+      { title: "Planejar minha viagem — Viaggiari" },
       { name: "description", content: "Conte para nós sobre a viagem dos seus sonhos. Respondemos em até 24h." },
     ],
   }),

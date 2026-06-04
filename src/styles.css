@@ -4,8 +4,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Viaggiari Travel — Design System
- * Brand: steel-blue (#6B9DC2), premium dark hero, clean light surfaces.
+/* Viaggiari — Design System
+ * Brand: terracotta orange (#D17A47) + olive (#7A7A5C) + cream (#F0E6D2).
  * Typography: Montserrat (display, +0.12em tracking) + DM Sans (body).
  */
 
@@ -62,81 +62,81 @@
   --radius: 0.5rem;
 
   /* Base surfaces */
-  --background: oklch(0.985 0.002 250);            /* #F8F8F8 warm-cool */
-  --foreground: oklch(0.18 0.01 260);              /* near #1A1A1A */
+  --background: oklch(0.985 0.003 80);             /* warm off-white */
+  --foreground: oklch(0.2 0.015 60);               /* deep warm ink */
   --surface: oklch(1 0 0);                         /* pure white */
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.01 260);
+  --card-foreground: oklch(0.2 0.015 60);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.01 260);
+  --popover-foreground: oklch(0.2 0.015 60);
 
-  /* Brand — steel blue from the logo */
-  --primary: oklch(0.68 0.075 240);                /* #6B9DC2 */
-  --primary-foreground: oklch(0.99 0 0);
-  --primary-soft: oklch(0.78 0.055 240);           /* #9DB8CC */
+  /* Brand — terracotta orange */
+  --primary: oklch(0.68 0.135 45);                 /* #D17A47 */
+  --primary-foreground: oklch(0.99 0.005 80);
+  --primary-soft: oklch(0.85 0.07 70);             /* warm cream-orange */
 
-  --secondary: oklch(0.96 0.005 250);
-  --secondary-foreground: oklch(0.18 0.01 260);
+  --secondary: oklch(0.96 0.008 80);
+  --secondary-foreground: oklch(0.2 0.015 60);
 
-  --muted: oklch(0.95 0.005 250);
-  --muted-foreground: oklch(0.45 0.01 260);
+  --muted: oklch(0.95 0.008 80);
+  --muted-foreground: oklch(0.48 0.012 60);
 
-  --accent: oklch(0.94 0.02 240);
-  --accent-foreground: oklch(0.18 0.01 260);
+  --accent: oklch(0.93 0.025 70);                  /* soft terracotta tint */
+  --accent-foreground: oklch(0.2 0.015 60);
 
   --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
 
-  --border: oklch(0.9 0.005 250);                  /* #E2E2E2 */
-  --input: oklch(0.9 0.005 250);
-  --ring: oklch(0.68 0.075 240);
+  --border: oklch(0.9 0.008 80);
+  --input: oklch(0.9 0.008 80);
+  --ring: oklch(0.68 0.135 45);
 
-  /* Dark surface — for hero, admin sidebar */
-  --ink: oklch(0.16 0.005 260);                    /* #1A1A1A */
-  --ink-foreground: oklch(0.94 0.002 250);         /* #E8E8E8 */
+  /* Dark surface — olive (matches brand v2) */
+  --ink: oklch(0.45 0.025 105);                    /* #7A7A5C olive */
+  --ink-foreground: oklch(0.95 0.025 85);          /* #F0E6D2 cream */
 
-  /* Sidebar (admin) */
-  --sidebar: oklch(0.13 0.005 260);                /* #111111 */
-  --sidebar-foreground: oklch(0.92 0.002 250);
-  --sidebar-primary: oklch(0.68 0.075 240);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.22 0.005 260);
-  --sidebar-accent-foreground: oklch(0.94 0.002 250);
-  --sidebar-border: oklch(0.28 0.005 260);
-  --sidebar-ring: oklch(0.68 0.075 240);
+  /* Sidebar (admin) — deep olive */
+  --sidebar: oklch(0.32 0.022 105);                /* darker olive */
+  --sidebar-foreground: oklch(0.94 0.025 85);
+  --sidebar-primary: oklch(0.68 0.135 45);
+  --sidebar-primary-foreground: oklch(0.99 0.005 80);
+  --sidebar-accent: oklch(0.42 0.025 105);
+  --sidebar-accent-foreground: oklch(0.96 0.025 85);
+  --sidebar-border: oklch(0.42 0.025 105);
+  --sidebar-ring: oklch(0.68 0.135 45);
 
-  --chart-1: oklch(0.68 0.075 240);
-  --chart-2: oklch(0.78 0.055 240);
-  --chart-3: oklch(0.55 0.08 220);
-  --chart-4: oklch(0.45 0.06 250);
-  --chart-5: oklch(0.85 0.04 240);
+  --chart-1: oklch(0.68 0.135 45);                 /* terracotta */
+  --chart-2: oklch(0.45 0.025 105);                /* olive */
+  --chart-3: oklch(0.78 0.09 55);                  /* light terracotta */
+  --chart-4: oklch(0.55 0.03 100);                 /* muted olive */
+  --chart-5: oklch(0.85 0.05 70);                  /* cream */
 }
 
 .dark {
-  --background: oklch(0.13 0.005 260);
-  --foreground: oklch(0.94 0.002 250);
-  --surface: oklch(0.18 0.005 260);
-  --card: oklch(0.18 0.005 260);
-  --card-foreground: oklch(0.94 0.002 250);
-  --popover: oklch(0.18 0.005 260);
-  --popover-foreground: oklch(0.94 0.002 250);
-  --primary: oklch(0.72 0.08 240);
-  --primary-foreground: oklch(0.13 0.005 260);
-  --primary-soft: oklch(0.82 0.055 240);
-  --secondary: oklch(0.22 0.005 260);
-  --secondary-foreground: oklch(0.94 0.002 250);
-  --muted: oklch(0.22 0.005 260);
-  --muted-foreground: oklch(0.7 0.005 250);
-  --accent: oklch(0.25 0.02 240);
-  --accent-foreground: oklch(0.94 0.002 250);
+  --background: oklch(0.18 0.01 100);
+  --foreground: oklch(0.95 0.02 85);
+  --surface: oklch(0.22 0.012 100);
+  --card: oklch(0.22 0.012 100);
+  --card-foreground: oklch(0.95 0.02 85);
+  --popover: oklch(0.22 0.012 100);
+  --popover-foreground: oklch(0.95 0.02 85);
+  --primary: oklch(0.72 0.13 48);
+  --primary-foreground: oklch(0.18 0.01 100);
+  --primary-soft: oklch(0.82 0.08 60);
+  --secondary: oklch(0.28 0.012 100);
+  --secondary-foreground: oklch(0.95 0.02 85);
+  --muted: oklch(0.28 0.012 100);
+  --muted-foreground: oklch(0.72 0.015 90);
+  --accent: oklch(0.32 0.03 70);
+  --accent-foreground: oklch(0.95 0.02 85);
   --destructive: oklch(0.65 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.28 0.005 260);
-  --input: oklch(0.28 0.005 260);
-  --ring: oklch(0.72 0.08 240);
-  --ink: oklch(0.1 0.005 260);
-  --ink-foreground: oklch(0.94 0.002 250);
+  --border: oklch(0.32 0.012 100);
+  --input: oklch(0.32 0.012 100);
+  --ring: oklch(0.72 0.13 48);
+  --ink: oklch(0.4 0.025 105);
+  --ink-foreground: oklch(0.95 0.025 85);
 }
 
 @layer base {
