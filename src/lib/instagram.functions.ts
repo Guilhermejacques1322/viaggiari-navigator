@@ -61,17 +61,17 @@ async function scrapeProfileInternal(supabase: any, profileId: string, username:
     throw new Error(`@${username} é privado — não é possível coletar posts`);
   }
 
-  // 2) Posts (últimos 12)
+  // 2) Posts (últimos 20)
   const posts = await callApify("apify~instagram-scraper", {
     directUrls: [`https://www.instagram.com/${username}/`],
     resultsType: "posts",
-    resultsLimit: 12,
+    resultsLimit: 20,
     addParentData: false,
   });
 
   if (!posts.length) return { posts: 0 };
 
-  const rows = posts.slice(0, 12).map((post: any) => ({
+  const rows = posts.slice(0, 20).map((post: any) => ({
     profile_id: profileId,
     external_id: String(post.id ?? post.shortCode ?? post.url),
     posted_at: post.timestamp ?? null,
