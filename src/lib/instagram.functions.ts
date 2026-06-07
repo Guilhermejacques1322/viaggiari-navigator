@@ -248,9 +248,10 @@ export const analyzeProfile = createServerFn({ method: "POST" })
 
 
     await context.supabase.from("instagram_profiles").update({
-      last_ai_summary: result.style_summary,
+      last_ai_summary: finalSummary,
       last_ai_summary_at: new Date().toISOString(),
     }).eq("id", data.profileId);
+
 
     // remove ideias antigas desse perfil e insere novas
     await context.supabase.from("instagram_ai_ideas").delete().eq("profile_id", data.profileId).eq("is_cross_trend", false);
