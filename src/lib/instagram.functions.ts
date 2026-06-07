@@ -61,17 +61,17 @@ async function scrapeProfileInternal(supabase: any, profileId: string, username:
     throw new Error(`@${username} é privado — não é possível coletar posts`);
   }
 
-  // 2) Posts (últimos 12)
+  // 2) Posts (últimos 20)
   const posts = await callApify("apify~instagram-scraper", {
     directUrls: [`https://www.instagram.com/${username}/`],
     resultsType: "posts",
-    resultsLimit: 12,
+    resultsLimit: 20,
     addParentData: false,
   });
 
   if (!posts.length) return { posts: 0 };
 
-  const rows = posts.slice(0, 12).map((post: any) => ({
+  const rows = posts.slice(0, 20).map((post: any) => ({
     profile_id: profileId,
     external_id: String(post.id ?? post.shortCode ?? post.url),
     posted_at: post.timestamp ?? null,
@@ -176,7 +176,7 @@ export const analyzeProfile = createServerFn({ method: "POST" })
       .from("instagram_profiles").select("*").eq("id", data.profileId).single();
     if (!prof) throw new Error("Perfil não encontrado");
     const { data: posts } = await context.supabase
-      .from("instagram_posts").select("*").eq("profile_id", data.profileId).order("posted_at", { ascending: false }).limit(12);
+      .from("instagram_posts").select("*").eq("profile_id", data.profileId).order("posted_at", { ascending: false }).limit(20);
     if (!posts?.length) throw new Error("Sem posts para analisar. Atualize o perfil primeiro.");
 
     const summarized = posts.map((p: any) => ({
@@ -192,20 +192,23 @@ export const analyzeProfile = createServerFn({ method: "POST" })
       [
         {
           role: "system",
-          content: "Você é um estrategista de marketing para a Viaggiari (agência de viagens premium brasileira). Analise perfis do Instagram e gere insights acionáveis em português do Brasil. Seja específico, evite genéricos.",
+          content: "Você é um consultor de marketing digital especializado em agências de viagem. Responda em português do Brasil, seja específico e prático.",
         },
         {
           role: "user",
-          content: `Analise o perfil @${prof.username} (bio: ${prof.bio ?? "—"}).\nÚltimos posts:\n${JSON.stringify(summarized, null, 2)}\n\nGere:\n1. Resumo de estilo em markdown (tom de voz, temas, formatos preferidos, hashtags recorrentes, frequência semanal aproximada, melhores horários aparentes).\n2. Cinco ideias de postagem adaptadas para Viaggiari, inspiradas (não copiadas) nesse perfil.`,
+          content: `Analise os seguintes posts do Instagram do perfil @${prof.username} (bio: ${prof.bio ?? "—"}) e responda:\n\n1. Quais são os 3 temas que mais engajam neste perfil?\n2. Qual o melhor formato (foto, carrossel, reel)?\n3. Quais hashtags aparecem mais?\n4. Sugira 5 ideias de pauta para uma agência de viagens baseadas nessa análise.\n\nPosts:\n${JSON.stringify(summarized, null, 2)}`,
         },
       ],
       {
         name: "deliver_analysis",
-        description: "Retorna análise de estilo e ideias de postagem",
+        description: "Retorna análise estruturada e ideias de pauta",
         parameters: {
           type: "object",
           properties: {
-            style_summary: { type: "string", description: "Resumo em markdown" },
+            top_themes: { type: "array", items: { type: "string" }, description: "Os 3 temas que mais engajam" },
+            best_format: { type: "string", description: "Melhor formato: foto, carrossel ou reel" },
+            top_hashtags: { type: "array", items: { type: "string" }, description: "Hashtags mais usadas" },
+            style_summary: { type: "string", description: "Resumo geral em markdown reunindo temas, formato e hashtags" },
             ideas: {
               type: "array",
               items: {
@@ -223,15 +226,32 @@ export const analyzeProfile = createServerFn({ method: "POST" })
               },
             },
           },
-          required: ["style_summary", "ideas"],
+          required: ["top_themes", "best_format", "top_hashtags", "style_summary", "ideas"],
         },
       },
     );
 
+    // Monta um markdown final consolidando os 4 pontos pedidos
+    const finalSummary = [
+      `### 🎯 Top 3 temas que engajam`,
+      ...result.top_themes.map((t: string, i: number) => `${i + 1}. ${t}`),
+      ``,
+      `### 📱 Melhor formato`,
+      result.best_format,
+      ``,
+      `### #️⃣ Hashtags em destaque`,
+      result.top_hashtags.map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "),
+      ``,
+      `---`,
+      result.style_summary,
+    ].join("\n");
+
+
     await context.supabase.from("instagram_profiles").update({
-      last_ai_summary: result.style_summary,
+      last_ai_summary: finalSummary,
       last_ai_summary_at: new Date().toISOString(),
     }).eq("id", data.profileId);
+
 
     // remove ideias antigas desse perfil e insere novas
     await context.supabase.from("instagram_ai_ideas").delete().eq("profile_id", data.profileId).eq("is_cross_trend", false);
