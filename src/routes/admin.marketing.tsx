@@ -34,6 +34,33 @@ export const Route = createFileRoute("/admin/marketing")({
   component: MarketingPage,
 });
 
+function MarketingPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="brand-title text-xs text-primary mb-1">Marketing</p>
+        <h1 className="font-display text-3xl font-light">Cronograma & Inspiração</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Planeje suas postagens e descubra o que perfis de referência estão fazendo.
+        </p>
+      </div>
+
+      <Tabs defaultValue="schedule">
+        <TabsList>
+          <TabsTrigger value="schedule"><Calendar className="size-4" /> Cronograma</TabsTrigger>
+          <TabsTrigger value="inspiration"><Sparkles className="size-4" /> Inspiração</TabsTrigger>
+        </TabsList>
+        <TabsContent value="schedule" className="mt-6">
+          <Cronograma />
+        </TabsContent>
+        <TabsContent value="inspiration" className="mt-6">
+          <MarketingInspiration />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
 type MediaType = "photo" | "video";
 type PostStatus = "scheduled" | "done";
 
