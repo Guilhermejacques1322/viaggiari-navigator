@@ -6,8 +6,9 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   Plus, Image as ImageIcon, Video, Check, Pencil, Trash2, Calendar, CheckCircle2,
-  Instagram, Facebook, Linkedin, Youtube, Music2,
+  Instagram, Facebook, Linkedin, Youtube, Music2, Sparkles,
 } from "lucide-react";
+import { MarketingInspiration } from "@/components/marketing-inspiration";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
