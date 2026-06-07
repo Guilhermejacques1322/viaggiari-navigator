@@ -6,8 +6,9 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   Plus, Image as ImageIcon, Video, Check, Pencil, Trash2, Calendar, CheckCircle2,
-  Instagram, Facebook, Linkedin, Youtube, Music2,
+  Instagram, Facebook, Linkedin, Youtube, Music2, Sparkles,
 } from "lucide-react";
+import { MarketingInspiration } from "@/components/marketing-inspiration";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,33 @@ import { confirmAction } from "@/lib/confirm";
 export const Route = createFileRoute("/admin/marketing")({
   component: MarketingPage,
 });
+
+function MarketingPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="brand-title text-xs text-primary mb-1">Marketing</p>
+        <h1 className="font-display text-3xl font-light">Cronograma & Inspiração</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Planeje suas postagens e descubra o que perfis de referência estão fazendo.
+        </p>
+      </div>
+
+      <Tabs defaultValue="schedule">
+        <TabsList>
+          <TabsTrigger value="schedule"><Calendar className="size-4" /> Cronograma</TabsTrigger>
+          <TabsTrigger value="inspiration"><Sparkles className="size-4" /> Inspiração</TabsTrigger>
+        </TabsList>
+        <TabsContent value="schedule" className="mt-6">
+          <Cronograma />
+        </TabsContent>
+        <TabsContent value="inspiration" className="mt-6">
+          <MarketingInspiration />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
 
 type MediaType = "photo" | "video";
 type PostStatus = "scheduled" | "done";
@@ -61,7 +89,7 @@ function networkMeta(value: string) {
   return NETWORKS.find((n) => n.value === value);
 }
 
-function MarketingPage() {
+function Cronograma() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Post | null>(null);
   const [open, setOpen] = useState(false);
@@ -124,18 +152,13 @@ function MarketingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="brand-title text-xs text-primary mb-1">Marketing</p>
-          <h1 className="font-display text-3xl font-light">Cronograma de postagens</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Planeje, organize e acompanhe o que vai ao ar nas redes.
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <Button onClick={openCreate}>
           <Plus className="size-4" /> Nova postagem
         </Button>
       </div>
+
+
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Programadas" value={groups.upcoming.length} tone="default" />

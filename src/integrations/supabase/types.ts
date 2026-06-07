@@ -270,6 +270,167 @@ export type Database = {
           },
         ]
       }
+      instagram_ai_ideas: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_cross_trend: boolean | null
+          profile_id: string | null
+          suggested_media_type:
+            | Database["public"]["Enums"]["ig_media_type"]
+            | null
+          suggested_networks: string[] | null
+          title: string
+          used_post_id: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_cross_trend?: boolean | null
+          profile_id?: string | null
+          suggested_media_type?:
+            | Database["public"]["Enums"]["ig_media_type"]
+            | null
+          suggested_networks?: string[] | null
+          title: string
+          used_post_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_cross_trend?: boolean | null
+          profile_id?: string | null
+          suggested_media_type?:
+            | Database["public"]["Enums"]["ig_media_type"]
+            | null
+          suggested_networks?: string[] | null
+          title?: string
+          used_post_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_ai_ideas_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instagram_ai_ideas_used_post_id_fkey"
+            columns: ["used_post_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_posts: {
+        Row: {
+          caption: string | null
+          comments: number | null
+          created_at: string
+          external_id: string
+          hashtags: string[] | null
+          id: string
+          likes: number | null
+          media_type: Database["public"]["Enums"]["ig_media_type"] | null
+          permalink: string | null
+          posted_at: string | null
+          profile_id: string
+          thumbnail_url: string | null
+        }
+        Insert: {
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          external_id: string
+          hashtags?: string[] | null
+          id?: string
+          likes?: number | null
+          media_type?: Database["public"]["Enums"]["ig_media_type"] | null
+          permalink?: string | null
+          posted_at?: string | null
+          profile_id: string
+          thumbnail_url?: string | null
+        }
+        Update: {
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          external_id?: string
+          hashtags?: string[] | null
+          id?: string
+          likes?: number | null
+          media_type?: Database["public"]["Enums"]["ig_media_type"] | null
+          permalink?: string | null
+          posted_at?: string | null
+          profile_id?: string
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_profiles: {
+        Row: {
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          followers: number | null
+          id: string
+          is_private: boolean | null
+          last_ai_summary: string | null
+          last_ai_summary_at: string | null
+          last_scraped_at: string | null
+          niche_note: string | null
+          posts_count: number | null
+          profile_pic_url: string | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          followers?: number | null
+          id?: string
+          is_private?: boolean | null
+          last_ai_summary?: string | null
+          last_ai_summary_at?: string | null
+          last_scraped_at?: string | null
+          niche_note?: string | null
+          posts_count?: number | null
+          profile_pic_url?: string | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          followers?: number | null
+          id?: string
+          is_private?: boolean | null
+          last_ai_summary?: string | null
+          last_ai_summary_at?: string | null
+          last_scraped_at?: string | null
+          niche_note?: string | null
+          posts_count?: number | null
+          profile_pic_url?: string | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       itinerary_activities: {
         Row: {
           activity_type: Database["public"]["Enums"]["activity_type"] | null
@@ -1007,6 +1168,7 @@ export type Database = {
         | "completed"
         | "inactive"
       document_category: "flight" | "train" | "hotel" | "ticket" | "other"
+      ig_media_type: "photo" | "video" | "carousel" | "reel"
       marketing_media_type: "photo" | "video"
       marketing_post_status: "scheduled" | "done"
       payment_status: "pending" | "paid"
@@ -1163,6 +1325,7 @@ export const Constants = {
         "inactive",
       ],
       document_category: ["flight", "train", "hotel", "ticket", "other"],
+      ig_media_type: ["photo", "video", "carousel", "reel"],
       marketing_media_type: ["photo", "video"],
       marketing_post_status: ["scheduled", "done"],
       payment_status: ["pending", "paid"],
