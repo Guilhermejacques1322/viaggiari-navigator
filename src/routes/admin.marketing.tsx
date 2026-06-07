@@ -158,7 +158,7 @@ function Cronograma() {
         </Button>
       </div>
 
-      </div>
+
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Programadas" value={groups.upcoming.length} tone="default" />
