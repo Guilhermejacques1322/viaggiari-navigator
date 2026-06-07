@@ -1,77 +1,92 @@
-# Rebranding Viaggiari
+## Visão geral
 
-Aplicação da nova identidade visual em todo o app — admin e cliente — substituindo a marca antiga "Viaggiari Travel" pela nova "Viaggiari".
+Nova aba **Inspiração** dentro de `/admin/marketing` para monitorar perfis do Instagram, ver o que postam e gerar ideias com IA — tudo sob demanda (sem cron), 12 posts por atualização.
 
-## 1. Nova identidade visual
+## Ator Apify escolhido
 
-**Paleta extraída dos logos:**
-- Verde-oliva (fundo institucional): `#7A7A5C` aprox.
-- Laranja terracota (acento/primária da marca): `#D17A47` aprox.
-- Creme (texto claro / superfícies sobre escuro): `#F0E6D2`
-- Tons neutros escuros mantidos para texto
+Você abriu o `apify/instagram-hashtag-scraper` — esse é por hashtag. Para perfis, vou usar dois atores oficiais Apify:
 
-**Nova primária do sistema:** laranja terracota (substitui o steel-blue atual). O verde-oliva passa a ser usado em sidebar admin, hero e superfícies "ink".
+- **`apify/instagram-profile-scraper`** → bio, foto, seguidores, total de posts.
+- **`apify/instagram-scraper`** com `resultsType: "posts"` e `resultsLimit: 12` → últimos 12 posts (foto/reel/carrossel, legenda, likes, comments, timestamp, hashtags, thumbnail).
 
-## 2. Assets a substituir/criar
+Chamada via REST sync:
+`POST https://api.apify.com/v2/acts/{actor}/run-sync-get-dataset-items?token=APIFY_API_TOKEN`
 
-Upload via `lovable-assets` a partir de `/mnt/user-uploads/`:
-- `viaggiari-logo-full.png` (v2 — fundo oliva, plane laranja) → wordmark padrão escuro
-- `viaggiari-logo-full-orange.png` (v1 — fundo laranja, plane oliva) → variante alternativa
-- `viaggiari-monogram-vg.png` (T.png — VG + avião) → ícone do app (PWA / favicon / apple-touch-icon)
+Custo aproximado: **~US$ 0,03 por perfil por atualização**.
 
-Gerar a partir do monograma:
-- `/public/icon-512.png` (PWA standalone, mantém o nome do arquivo para não quebrar manifest)
-- `/public/icon-192.png`
-- `/public/favicon.ico` substituído
+## Setup (1 passo manual seu)
 
-## 3. Arquivos a editar
+1. Apify Console → Settings → **Integrations → Personal API tokens** → Create token.
+2. Eu peço o secret `APIFY_API_TOKEN` via tool segura — você cola lá, sem expor no código.
 
-**Design system:**
-- `src/styles.css` — atualizar tokens `--primary` (laranja), `--primary-soft`, `--sidebar` (oliva escuro), `--ink` (oliva), `--ring`, `--chart-*`. Manter contraste light/dark.
+## Banco (1 migração)
 
-**Logo:**
-- `src/components/brand/logo.tsx` — trocar `viaggiari-logo.png` pelo novo asset wordmark; remover "Viaggiari Travel" do wordmark — só "Viaggiari".
+```text
+instagram_profiles
+  username (unique), display_name, bio, profile_pic_url,
+  followers, posts_count, niche_note,
+  last_scraped_at, last_ai_summary, last_ai_summary_at
 
-**Identidade textual ("Travel" → remover):**
-- `index.html` (title, meta)
-- `src/routes/__root.tsx` (todos meta tags, og, twitter, apple-mobile-web-app-title já é "Viaggiari" ✓, mas title e descriptions usam "Viaggiari Travel")
-- `public/manifest.webmanifest` — `name`, `short_name`, `description`
-- `src/routes/index.tsx` (landing — headlines/copy)
-- `src/routes/login.tsx`, `src/routes/interesse.tsx`
-- `src/routes/orcamento.$token.tsx` (PDF/template)
-- `src/lib/quote-pdf.ts` (header do PDF)
-- `src/routes/sitemap[.]xml.ts` se houver título
-- Qualquer ocorrência de "Viaggiari Travel" em alt text, footers, emails, etc. — busca global por `Viaggiari Travel` e `viaggiari travel`.
+instagram_posts
+  profile_id, external_id, posted_at, media_type,
+  caption, thumbnail_url, permalink, likes, comments, hashtags[]
 
-**PWA / mobile:**
-- `public/manifest.webmanifest` — `theme_color` e `background_color` atualizados para a nova paleta (oliva escuro `#3F3F2E` ou similar), ícone monograma VG
-- `public/sw.js` — verificar se referencia ícones antigos
+instagram_ai_ideas
+  profile_id (nullable = ideia cruzada), title, body,
+  suggested_media_type, suggested_networks[], created_at,
+  used_post_id (nullable, vira FK p/ marketing_posts)
+```
 
-## 4. Aplicação visual nas telas
+Tudo com RLS `admin only` (mesma policy de `marketing_posts`).
 
-Não vou redesenhar layouts — apenas trocar tokens e logo, o que propaga automaticamente para:
-- Shell admin (`src/routes/admin.tsx`) — sidebar passa a oliva
-- Shell cliente (`src/routes/minha-viagem.tsx`) — header + bottom nav usam nova primária laranja
-- Botões, badges, charts, links — herdam via tokens
-- Landing (`index.tsx`), login, orçamento público — herdam
+## Server functions (`src/lib/instagram.functions.ts`)
 
-## 5. QA
+Todas com `requireSupabaseAuth` + checagem `has_role(admin)`:
 
-Após mudanças, abrir preview e verificar:
-- Landing `/`
-- Login `/login`
-- Cliente `/minha-viagem` (e sub-rotas)
-- Admin `/admin` (dashboard, viagens, marketing, etc.)
-- Orçamento público
-- Manifest no DevTools (ícone PWA correto)
-- Busca residual por "Travel" no nome da marca
+- `addProfile({ username, niche_note })` — insere e dispara scrape inicial.
+- `scrapeProfile({ profileId })` — chama os 2 atores Apify, salva perfil + 12 posts (upsert por `external_id`).
+- `analyzeProfile({ profileId })` — pega últimos posts, manda pro Lovable AI Gateway (`google/gemini-3-flash-preview`) e gera:
+  - **Resumo de estilo** (tom, temas, formato preferido, hashtags recorrentes, frequência por semana, melhores horários aparentes).
+  - **5 ideias de postagem** adaptadas para Viaggiari → salvas em `instagram_ai_ideas`.
+- `analyzeCrossTrends()` — recebe resumos dos perfis monitorados e devolve **tendências cruzadas** (temas/formatos em alta).
+- `convertIdeaToPost({ ideaId, publishAt, networks })` — cria registro em `marketing_posts` pré-preenchido e marca `used_post_id`.
+- `removeProfile({ profileId })`.
 
-## Detalhes técnicos
+Tudo no servidor: token Apify e `LOVABLE_API_KEY` nunca chegam ao browser.
 
-- Cores em `oklch()` conforme convenção do `styles.css`. Aproximações:
-  - `--primary: oklch(0.68 0.13 45)` (terracota)
-  - `--sidebar: oklch(0.32 0.02 95)` (oliva escuro)
-  - `--ink: oklch(0.42 0.025 95)` (oliva)
-- Logo component aceita prop `withWordmark` — wordmark agora é apenas "Viaggiari" (uppercase tracking mantém no `.brand-title`).
-- Assets via `lovable-assets` CLI, importados como JSON pointer.
-- Não tocar em lógica de negócio, banco, auth, server functions.
+## UI (`src/routes/admin.marketing.tsx`)
+
+Vira `Tabs` no topo: **Cronograma** (o que já existe) | **Inspiração** (novo).
+
+Aba Inspiração:
+- Botão **+ Adicionar perfil** (input `@handle` + nota de nicho).
+- Botão **Analisar tendências cruzadas** no header (habilita com 3+ perfis).
+- Grid de cards de perfil:
+  - Avatar, @handle, seguidores, posts/semana (calculado dos timestamps).
+  - Mix de formato (foto/reel/carrossel) em barra fina.
+  - Botões: **Atualizar** (re-scrape), **Analisar com IA**, **Remover**.
+  - Expand: últimos 12 posts em grid 4×3 (thumb + likes + tipo); resumo de IA renderizado em markdown; lista de ideias com botão **Usar como postagem** (abre o `PostDialog` já existente pré-preenchido).
+- Card separado "Tendências cruzadas" quando gerado.
+
+Loading states com skeletons, toast em erros Apify (rate limit, perfil privado), confirm na exclusão usando `confirmAction` existente.
+
+## Tratamento de erros
+
+- Apify 429/insuficiência de créditos → toast claro, sem quebrar UI.
+- Perfis privados → marcar `is_private` e bloquear scrape.
+- IA 402/429 (Lovable AI Gateway) → toast pedindo tentar novamente / verificar créditos.
+
+## Fora deste plano (futuro)
+
+- Cron diário automático.
+- Análise de hashtags via `apify/instagram-hashtag-scraper`.
+- Histórico de evolução de seguidores (gráfico).
+- Detecção automática de "post viralizou" (alerta).
+
+## Ordem de execução
+
+1. Pedir `APIFY_API_TOKEN` via secret tool.
+2. Migration (tabelas + RLS + grants).
+3. `src/lib/instagram.functions.ts` (Apify + IA).
+4. Refator de `admin.marketing.tsx` em Tabs + novo componente `MarketingInspiration.tsx`.
+5. Smoke test: adicionar 1 perfil real, scrape, analisar, converter ideia em postagem.
