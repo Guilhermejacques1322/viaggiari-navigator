@@ -89,7 +89,7 @@ function networkMeta(value: string) {
   return NETWORKS.find((n) => n.value === value);
 }
 
-function MarketingPage() {
+function Cronograma() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Post | null>(null);
   const [open, setOpen] = useState(false);
@@ -152,17 +152,12 @@ function MarketingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="brand-title text-xs text-primary mb-1">Marketing</p>
-          <h1 className="font-display text-3xl font-light">Cronograma de postagens</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Planeje, organize e acompanhe o que vai ao ar nas redes.
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <Button onClick={openCreate}>
           <Plus className="size-4" /> Nova postagem
         </Button>
+      </div>
+
       </div>
 
       <div className="grid grid-cols-3 gap-3">
