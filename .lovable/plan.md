@@ -1,92 +1,71 @@
-## Visão geral
+# Rotas e Modos de Transporte (estilo Wanderlog)
 
-Nova aba **Inspiração** dentro de `/admin/marketing` para monitorar perfis do Instagram, ver o que postam e gerar ideias com IA — tudo sob demanda (sem cron), 12 posts por atualização.
+Sim, totalmente possível. Mapbox já está configurado (`MAPBOX_PUBLIC_TOKEN`) e a tabela `itinerary_activities` já tem `latitude`/`longitude`. Falta só calcular o trecho entre pontos consecutivos, cachear no banco e mostrar a linha de conexão + bottom sheet.
 
-## Ator Apify escolhido
+## 1. Banco de dados
 
-Você abriu o `apify/instagram-hashtag-scraper` — esse é por hashtag. Para perfis, vou usar dois atores oficiais Apify:
+**Nova tabela `activity_routes**` (cache de rotas — evita chamar a API Mapbox toda vez):
 
-- **`apify/instagram-profile-scraper`** → bio, foto, seguidores, total de posts.
-- **`apify/instagram-scraper`** com `resultsType: "posts"` e `resultsLimit: 12` → últimos 12 posts (foto/reel/carrossel, legenda, likes, comments, timestamp, hashtags, thumbnail).
+- `from_activity_id`, `to_activity_id` (FK, cascade)
+- `driving_duration_sec`, `driving_distance_m`
+- `transit_duration_sec`, `transit_distance_m` *(ver nota abaixo)*
+- `walking_duration_sec`, `walking_distance_m`
+- `computed_at`
+- UNIQUE (from, to)
+- RLS: cliente lê rotas da própria viagem; admin gerencia.
 
-Chamada via REST sync:
-`POST https://api.apify.com/v2/acts/{actor}/run-sync-get-dataset-items?token=APIFY_API_TOKEN`
+**Preferência de modo** — duas colunas, sem nova tabela:
 
-Custo aproximado: **~US$ 0,03 por perfil por atualização**.
+- `itinerary_activities.transport_mode_to_next` (`driving|transit|walking|hidden|null`) — override por trecho.
+- `trips.default_transport_mode` (mesmo enum, default `driving`) — usado pelo botão "Alterar padrão para todos os lugares".
 
-## Setup (1 passo manual seu)
+## 2. Lógica (server functions Mapbox)
 
-1. Apify Console → Settings → **Integrations → Personal API tokens** → Create token.
-2. Eu peço o secret `APIFY_API_TOKEN` via tool segura — você cola lá, sem expor no código.
+Arquivo novo `src/lib/routes.functions.ts`:
 
-## Banco (1 migração)
+- `computeDayRoutes({ dayId })` — protegida por `requireSupabaseAuth`. Busca atividades ordenadas por `position` com lat/lon, monta pares consecutivos, e para cada par sem cache (ou stale) chama Mapbox Directions:
+  - Driving: `mapbox/driving-traffic`
+  - Walking: `mapbox/walking`
+  - Transit: Mapbox **não tem** Directions de transporte público. Estratégia: usar `mapbox/driving` como estimativa-base e aplicar um fator (~1.5x duração, mesma distância) marcado como "estimado", **ou** integrar Google Directions Transit depois. Recomendo começar com a estimativa Mapbox e flag `transit_is_estimate: true` no retorno — alternativa: pedir conexão Google Maps (já temos guidance). Decidir antes de implementar.
+  - Upsert em `activity_routes`.
+- `getDayRoutes({ dayId })` — só lê o cache.
+- `setTripDefaultTransport({ tripId, mode })` e `setSegmentTransport({ fromActivityId, mode })`.
 
-```text
-instagram_profiles
-  username (unique), display_name, bio, profile_pic_url,
-  followers, posts_count, niche_note,
-  last_scraped_at, last_ai_summary, last_ai_summary_at
+Endereços sem coordenadas: geocodar no momento do save da atividade (já existe `geocodeAddress` em `mapbox.functions.ts`) — adicionar trigger no admin para preencher lat/lon ao criar/editar.
 
-instagram_posts
-  profile_id, external_id, posted_at, media_type,
-  caption, thumbnail_url, permalink, likes, comments, hashtags[]
+## 3. UI
 
-instagram_ai_ideas
-  profile_id (nullable = ideia cruzada), title, body,
-  suggested_media_type, suggested_networks[], created_at,
-  used_post_id (nullable, vira FK p/ marketing_posts)
-```
+`**use-my-trip` hook**: incluir `routes` no fetch (single query por trip) e o `default_transport_mode` da trip.
 
-Tudo com RLS `admin only` (mesma policy de `marketing_posts`).
+**Componente novo `RouteConnector**` renderizado entre cada par de `ActivityCard` no roteiro:
 
-## Server functions (`src/lib/instagram.functions.ts`)
+- Linha tracejada vertical fina + chip horizontal: ícone do modo atual + "42 min • 24 km" + link "Direções".
+- Se não há rota calculada ainda: botão "Calcular rotas do dia" (chama `computeDayRoutes`).
+- Se modo do trecho = `hidden`: render mínimo "Ocultas".
+- Clique abre **Bottom Sheet** (Sheet `side="bottom"` do shadcn — já existe).
 
-Todas com `requireSupabaseAuth` + checagem `has_role(admin)`:
+**Bottom Sheet "Modo de transporte"**:
 
-- `addProfile({ username, niche_note })` — insere e dispara scrape inicial.
-- `scrapeProfile({ profileId })` — chama os 2 atores Apify, salva perfil + 12 posts (upsert por `external_id`).
-- `analyzeProfile({ profileId })` — pega últimos posts, manda pro Lovable AI Gateway (`google/gemini-3-flash-preview`) e gera:
-  - **Resumo de estilo** (tom, temas, formato preferido, hashtags recorrentes, frequência por semana, melhores horários aparentes).
-  - **5 ideias de postagem** adaptadas para Viaggiari → salvas em `instagram_ai_ideas`.
-- `analyzeCrossTrends()` — recebe resumos dos perfis monitorados e devolve **tendências cruzadas** (temas/formatos em alta).
-- `convertIdeaToPost({ ideaId, publishAt, networks })` — cria registro em `marketing_posts` pré-preenchido e marca `used_post_id`.
-- `removeProfile({ profileId })`.
+- Título centralizado.
+- Lista: Condução / Transporte / Caminhada — cada linha com ícone (`Car`, `Bus`, `Footprints` do lucide), nome, e à direita "tempo • km". Selecionar marca como padrão **deste trecho** (`setSegmentTransport`).
+- Linha "Ocultar direções" (`EyeOff`).
+- Divider + botão texto "Alterar padrão para todos os lugares" → chama `setTripDefaultTransport` com o modo selecionado e limpa overrides do trecho.
 
-Tudo no servidor: token Apify e `LOVABLE_API_KEY` nunca chegam ao browser.
+**Admin (`admin.viagens.$tripId`)**: botão "Recalcular rotas" por dia (chama `computeDayRoutes` ignorando cache).
 
-## UI (`src/routes/admin.marketing.tsx`)
+## 4. Custos / performance
 
-Vira `Tabs` no topo: **Cronograma** (o que já existe) | **Inspiração** (novo).
+- Cache em `activity_routes` evita chamadas repetidas; só recalcula quando atividades são adicionadas/movidas (invalidar via trigger ou botão admin).
+- 3 chamadas Mapbox por par de pontos. Dia com 5 pontos = 4 pares × 3 = 12 requests, ~1s total.
 
-Aba Inspiração:
-- Botão **+ Adicionar perfil** (input `@handle` + nota de nicho).
-- Botão **Analisar tendências cruzadas** no header (habilita com 3+ perfis).
-- Grid de cards de perfil:
-  - Avatar, @handle, seguidores, posts/semana (calculado dos timestamps).
-  - Mix de formato (foto/reel/carrossel) em barra fina.
-  - Botões: **Atualizar** (re-scrape), **Analisar com IA**, **Remover**.
-  - Expand: últimos 12 posts em grid 4×3 (thumb + likes + tipo); resumo de IA renderizado em markdown; lista de ideias com botão **Usar como postagem** (abre o `PostDialog` já existente pré-preenchido).
-- Card separado "Tendências cruzadas" quando gerado.
+## Decisões necessárias antes de implementar
 
-Loading states com skeletons, toast em erros Apify (rate limit, perfil privado), confirm na exclusão usando `confirmAction` existente.
+1. **Transporte público**: estimativa via Mapbox driving × fator, **ou** adicionar conector Google Maps (Routes API suporta `TRANSIT`)?  
+  
+via mapbox  
 
-## Tratamento de erros
+2. **Quando recalcular**: automático ao salvar atividade (admin) ou só botão manual?  
+  
+Só manual
 
-- Apify 429/insuficiência de créditos → toast claro, sem quebrar UI.
-- Perfis privados → marcar `is_private` e bloquear scrape.
-- IA 402/429 (Lovable AI Gateway) → toast pedindo tentar novamente / verificar créditos.
-
-## Fora deste plano (futuro)
-
-- Cron diário automático.
-- Análise de hashtags via `apify/instagram-hashtag-scraper`.
-- Histórico de evolução de seguidores (gráfico).
-- Detecção automática de "post viralizou" (alerta).
-
-## Ordem de execução
-
-1. Pedir `APIFY_API_TOKEN` via secret tool.
-2. Migration (tabelas + RLS + grants).
-3. `src/lib/instagram.functions.ts` (Apify + IA).
-4. Refator de `admin.marketing.tsx` em Tabs + novo componente `MarketingInspiration.tsx`.
-5. Smoke test: adicionar 1 perfil real, scrape, analisar, converter ideia em postagem.
+Posso seguir com (1) estimativa Mapbox + (2) botão manual + auto na criação, se você não responder — mas confirme.

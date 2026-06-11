@@ -68,6 +68,69 @@ export type Database = {
           },
         ]
       }
+      activity_routes: {
+        Row: {
+          computed_at: string
+          created_at: string
+          driving_distance_m: number | null
+          driving_duration_sec: number | null
+          from_activity_id: string
+          id: string
+          to_activity_id: string
+          transit_distance_m: number | null
+          transit_duration_sec: number | null
+          transit_is_estimate: boolean
+          updated_at: string
+          walking_distance_m: number | null
+          walking_duration_sec: number | null
+        }
+        Insert: {
+          computed_at?: string
+          created_at?: string
+          driving_distance_m?: number | null
+          driving_duration_sec?: number | null
+          from_activity_id: string
+          id?: string
+          to_activity_id: string
+          transit_distance_m?: number | null
+          transit_duration_sec?: number | null
+          transit_is_estimate?: boolean
+          updated_at?: string
+          walking_distance_m?: number | null
+          walking_duration_sec?: number | null
+        }
+        Update: {
+          computed_at?: string
+          created_at?: string
+          driving_distance_m?: number | null
+          driving_duration_sec?: number | null
+          from_activity_id?: string
+          id?: string
+          to_activity_id?: string
+          transit_distance_m?: number | null
+          transit_duration_sec?: number | null
+          transit_is_estimate?: boolean
+          updated_at?: string
+          walking_distance_m?: number | null
+          walking_duration_sec?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_routes_from_activity_id_fkey"
+            columns: ["from_activity_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_routes_to_activity_id_fkey"
+            columns: ["to_activity_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           access_password: string | null
@@ -459,6 +522,9 @@ export type Database = {
           reminder_1h_sent_at: string | null
           reminder_24h_sent_at: string | null
           time: string | null
+          transport_mode_to_next:
+            | Database["public"]["Enums"]["transport_mode"]
+            | null
         }
         Insert: {
           activity_type?: Database["public"]["Enums"]["activity_type"] | null
@@ -487,6 +553,9 @@ export type Database = {
           reminder_1h_sent_at?: string | null
           reminder_24h_sent_at?: string | null
           time?: string | null
+          transport_mode_to_next?:
+            | Database["public"]["Enums"]["transport_mode"]
+            | null
         }
         Update: {
           activity_type?: Database["public"]["Enums"]["activity_type"] | null
@@ -515,6 +584,9 @@ export type Database = {
           reminder_1h_sent_at?: string | null
           reminder_24h_sent_at?: string | null
           time?: string | null
+          transport_mode_to_next?:
+            | Database["public"]["Enums"]["transport_mode"]
+            | null
         }
         Relationships: [
           {
@@ -1061,6 +1133,7 @@ export type Database = {
         Row: {
           contact_id: string
           created_at: string
+          default_transport_mode: Database["public"]["Enums"]["transport_mode"]
           destinations: string[] | null
           end_date: string | null
           id: string
@@ -1078,6 +1151,7 @@ export type Database = {
         Insert: {
           contact_id: string
           created_at?: string
+          default_transport_mode?: Database["public"]["Enums"]["transport_mode"]
           destinations?: string[] | null
           end_date?: string | null
           id?: string
@@ -1095,6 +1169,7 @@ export type Database = {
         Update: {
           contact_id?: string
           created_at?: string
+          default_transport_mode?: Database["public"]["Enums"]["transport_mode"]
           destinations?: string[] | null
           end_date?: string | null
           id?: string
@@ -1175,6 +1250,7 @@ export type Database = {
       preroteiro_response: "want" | "skip"
       quote_status: "sent" | "follow_up" | "lost" | "closed"
       service_type: "package" | "assessoria" | "consultoria"
+      transport_mode: "driving" | "transit" | "walking" | "hidden"
       trip_status:
         | "quote_sent"
         | "contract_signed"
@@ -1332,6 +1408,7 @@ export const Constants = {
       preroteiro_response: ["want", "skip"],
       quote_status: ["sent", "follow_up", "lost", "closed"],
       service_type: ["package", "assessoria", "consultoria"],
+      transport_mode: ["driving", "transit", "walking", "hidden"],
       trip_status: [
         "quote_sent",
         "contract_signed",
