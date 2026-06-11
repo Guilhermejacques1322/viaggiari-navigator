@@ -23,8 +23,27 @@ export const Route = createFileRoute("/minha-viagem/roteiro")({
 
 function Roteiro() {
   const { data, loading, refetch } = useMyTrip();
+  const { isAdmin } = useAuth();
   const [openDay, setOpenDay] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<Activity | null>(null);
+  const [computing, setComputing] = useState<string | null>(null);
+  const compute = useServerFn(computeDayRoutes);
+
+  async function handleCompute(dayId: string) {
+    setComputing(dayId);
+    try {
+      const res = await compute({ data: { dayId } });
+      if (res.withoutCoords > 0) {
+        toast.warning(`${res.withoutCoords} ponto(s) sem coordenadas foram ignorados`);
+      }
+      toast.success(`${res.computed} rota(s) calculada(s)`);
+      refetch();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setComputing(null);
+    }
+  }
 
   if (loading) {
     return (
