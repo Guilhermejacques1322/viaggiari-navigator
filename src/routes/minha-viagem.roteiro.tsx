@@ -101,18 +101,53 @@ function Roteiro() {
               </button>
 
               {expanded && (
-                <div className="px-4 pb-4 space-y-3 border-t border-border pt-4">
+                <div className="px-4 pb-4 space-y-1 border-t border-border pt-4">
                   {day.description && (
-                    <p className="text-sm text-muted-foreground italic">{day.description}</p>
+                    <p className="text-sm text-muted-foreground italic mb-2">{day.description}</p>
+                  )}
+                  {isAdmin && visible.length >= 2 && (
+                    <div className="flex justify-end pb-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={computing === day.id}
+                        onClick={() => handleCompute(day.id)}
+                        className="h-7 text-xs gap-1"
+                      >
+                        <RefreshCw className={cn("size-3", computing === day.id && "animate-spin")} />
+                        Calcular rotas
+                      </Button>
+                    </div>
                   )}
                   {visible.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       Sem atividades programadas
                     </p>
                   ) : (
-                    visible.map((a) => {
+                    visible.map((a, idx) => {
                       const docs = (data.documents ?? []).filter((d) => d.activity_id === a.id);
-                      return <ActivityCard key={a.id} a={a} docs={docs} onReview={() => setReviewing(a)} />;
+                      const next = visible[idx + 1];
+                      const route = next
+                        ? (data.routes ?? []).find((r) => r.from_activity_id === a.id && r.to_activity_id === next.id) ?? null
+                        : null;
+                      const segMode = (a.transport_mode_to_next ?? data.trip!.default_transport_mode) as "driving" | "transit" | "walking" | "hidden";
+                      return (
+                        <div key={a.id} className="space-y-1">
+                          <ActivityCard a={a} docs={docs} onReview={() => setReviewing(a)} />
+                          {next && (
+                            <RouteConnector
+                              fromActivityId={a.id}
+                              fromName={a.name}
+                              toName={next.name}
+                              route={route}
+                              currentMode={segMode}
+                              tripId={data.trip!.id}
+                              isAdmin={isAdmin}
+                              onChanged={refetch}
+                            />
+                          )}
+                        </div>
+                      );
                     })
                   )}
                 </div>
