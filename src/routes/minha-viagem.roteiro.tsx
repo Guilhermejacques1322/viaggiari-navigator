@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip, Download, Plane, Train, Hotel, File, Sparkles, Users as UsersIcon } from "lucide-react";
+import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip, Download, Plane, Train, Hotel, File, Sparkles, Users as UsersIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { useMyTrip, type Activity, type Document, type ActivityPartner } from "@/hooks/use-my-trip";
+import { useServerFn } from "@tanstack/react-start";
+import { useMyTrip, type Activity, type Document, type ActivityPartner, type ActivityRoute } from "@/hooks/use-my-trip";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import { RouteConnector } from "@/components/route-connector";
+import { computeDayRoutes } from "@/lib/routes.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/minha-viagem/roteiro")({
