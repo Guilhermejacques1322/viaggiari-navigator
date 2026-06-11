@@ -11,6 +11,7 @@ export type Document = Database["public"]["Tables"]["documents"]["Row"];
 export type Payment = Database["public"]["Tables"]["payments"]["Row"];
 export type ActivityPartner = Database["public"]["Tables"]["activity_partners"]["Row"];
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+export type ActivityRoute = Database["public"]["Tables"]["activity_routes"]["Row"];
 
 export interface MyTripData {
   trip: Trip | null;
@@ -18,6 +19,7 @@ export interface MyTripData {
   documents: Document[];
   payments: Payment[];
   notifications: Notification[];
+  routes: ActivityRoute[];
 }
 
 async function fetchMyTrip(userId: string): Promise<MyTripData> {
@@ -28,7 +30,7 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!contact) return { trip: null, days: [], documents: [], payments: [], notifications: [] };
+  if (!contact) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [] };
 
   // Most recent visible trip
   const { data: trip } = await supabase
@@ -40,7 +42,7 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     .limit(1)
     .maybeSingle();
 
-  if (!trip) return { trip: null, days: [], documents: [], payments: [], notifications: [] };
+  if (!trip) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [] };
 
   const [{ data: days }, { data: documents }, { data: payments }, { data: notifications }] = await Promise.all([
     supabase.from("itinerary_days").select("*").eq("trip_id", trip.id).order("day_number"),
@@ -59,13 +61,14 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     : { data: [] as Activity[] };
 
   const activityIds = (activities ?? []).map((a) => a.id);
-  const { data: partners } = activityIds.length
-    ? await supabase
-        .from("activity_partners")
-        .select("*")
-        .in("activity_id", activityIds)
-        .order("created_at")
-    : { data: [] as ActivityPartner[] };
+  const [{ data: partners }, { data: routes }] = await Promise.all([
+    activityIds.length
+      ? supabase.from("activity_partners").select("*").in("activity_id", activityIds).order("created_at")
+      : Promise.resolve({ data: [] as ActivityPartner[] }),
+    activityIds.length
+      ? supabase.from("activity_routes").select("*").in("from_activity_id", activityIds)
+      : Promise.resolve({ data: [] as ActivityRoute[] }),
+  ]);
 
   const grouped = (days ?? []).map((d) => ({
     ...d,
@@ -77,7 +80,14 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
       })),
   }));
 
-  return { trip, days: grouped, documents: documents ?? [], payments: payments ?? [], notifications: notifications ?? [] };
+  return {
+    trip,
+    days: grouped,
+    documents: documents ?? [],
+    payments: payments ?? [],
+    notifications: notifications ?? [],
+    routes: routes ?? [],
+  };
 }
 
 const TripCtx = createContext<{
