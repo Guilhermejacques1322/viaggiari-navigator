@@ -11,6 +11,7 @@ export type Document = Database["public"]["Tables"]["documents"]["Row"];
 export type Payment = Database["public"]["Tables"]["payments"]["Row"];
 export type ActivityPartner = Database["public"]["Tables"]["activity_partners"]["Row"];
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+export type ActivityRoute = Database["public"]["Tables"]["activity_routes"]["Row"];
 
 export interface MyTripData {
   trip: Trip | null;
@@ -18,6 +19,7 @@ export interface MyTripData {
   documents: Document[];
   payments: Payment[];
   notifications: Notification[];
+  routes: ActivityRoute[];
 }
 
 async function fetchMyTrip(userId: string): Promise<MyTripData> {
