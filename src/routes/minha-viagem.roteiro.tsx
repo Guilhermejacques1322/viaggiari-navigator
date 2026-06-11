@@ -33,7 +33,7 @@ function Roteiro() {
     setComputing(dayId);
     try {
       const res = await compute({ data: { dayId } });
-      if (res.withoutCoords > 0) {
+      if ((res.withoutCoords ?? 0) > 0) {
         toast.warning(`${res.withoutCoords} ponto(s) sem coordenadas foram ignorados`);
       }
       toast.success(`${res.computed} rota(s) calculada(s)`);
