@@ -9,7 +9,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
 import { TripMap } from "@/components/map/trip-map";
-import { geocodeAddress } from "@/lib/mapbox.functions";
+import { geocodeAddress, regeocodeTripActivities } from "@/lib/mapbox.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -272,14 +272,18 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-sm text-muted-foreground">
           {preroteiroMode
             ? "Pré-roteiro ativo — cliente pode marcar Quero/Pulo nas atividades."
             : "Pré-roteiro desativado — cliente verá apenas o que estiver fechado."}
         </p>
-        <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
+        <div className="flex gap-2">
+          <RegeocodeButton tripId={tripId} onDone={invalidate} />
+          <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
+        </div>
       </div>
+
       {!days?.length ? (
         <Card className="p-12 text-center text-muted-foreground border-dashed">
           Comece adicionando o primeiro dia do roteiro.
