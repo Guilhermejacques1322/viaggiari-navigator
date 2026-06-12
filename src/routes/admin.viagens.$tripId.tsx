@@ -565,9 +565,53 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
                 <MapPin className="size-4" />{geocoding ? "..." : "Buscar"}
               </Button>
             </div>
-            {form.latitude != null && form.longitude != null && (
-              <p className="text-[11px] text-emerald-600">📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} — pronto para o mapa</p>
+            {candidates.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/30 p-2 space-y-1 max-h-48 overflow-y-auto">
+                <p className="text-[11px] font-medium text-muted-foreground px-1">Escolha o local correto:</p>
+                {candidates.map((c, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setForm((f) => ({ ...f, latitude: c.latitude, longitude: c.longitude }));
+                      setCandidates([]);
+                      toast.success("Coordenadas atualizadas");
+                    }}
+                    className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-accent flex items-start gap-2"
+                  >
+                    <MapPin className="size-3 mt-0.5 shrink-0 text-primary" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{c.place_name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {c.country?.toUpperCase()} · {c.latitude.toFixed(4)}, {c.longitude.toFixed(4)} · rel {Math.round(c.relevance * 100)}%
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Latitude</Label>
+                <Input type="number" step="0.000001" placeholder="-33.4378" value={form.latitude ?? ""}
+                  onChange={(e) => setForm({ ...form, latitude: e.target.value ? Number(e.target.value) : null })} />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Longitude</Label>
+                <Input type="number" step="0.000001" placeholder="-70.6504" value={form.longitude ?? ""}
+                  onChange={(e) => setForm({ ...form, longitude: e.target.value ? Number(e.target.value) : null })} />
+              </div>
+            </div>
+            {form.latitude != null && form.longitude != null && (
+              <p className="text-[11px] text-emerald-600">
+                📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} —{" "}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`}
+                  target="_blank" rel="noreferrer" className="underline"
+                >conferir no mapa</a>
+              </p>
+            )}
+
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
             <div>
