@@ -1,71 +1,52 @@
-# Rotas e Modos de Transporte (estilo Wanderlog)
+## Diagnóstico
 
-Sim, totalmente possível. Mapbox já está configurado (`MAPBOX_PUBLIC_TOKEN`) e a tabela `itinerary_activities` já tem `latitude`/`longitude`. Falta só calcular o trecho entre pontos consecutivos, cachear no banco e mostrar a linha de conexão + bottom sheet.
+### 1) Por que os tempos aparecem como "—" no roteiro
 
-## 1. Banco de dados
+Confirmei no banco: a tabela `activity_routes` tem **0 linhas**. Ou seja, nenhuma rota foi calculada ainda. O componente `RouteConnector` renderiza "—" quando não encontra o registro de rota para aquele par de atividades.
 
-**Nova tabela `activity_routes**` (cache de rotas — evita chamar a API Mapbox toda vez):
+**Como funciona hoje, na prática:**
+1. Cada atividade precisa ter `latitude`/`longitude` (geocodificadas pelo botão "Geocodificar" no admin).
+2. O admin abre o roteiro do dia → clica no botão **"Calcular rotas"** (canto direito, só visível para admin).
+3. O servidor chama o Mapbox Directions para cada par consecutivo (driving + walking) e estima transit como `driving × 1.6`.
+4. Só depois disso o `RouteConnector` mostra tempo/km.
 
-- `from_activity_id`, `to_activity_id` (FK, cascade)
-- `driving_duration_sec`, `driving_distance_m`
-- `transit_duration_sec`, `transit_distance_m` *(ver nota abaixo)*
-- `walking_duration_sec`, `walking_distance_m`
-- `computed_at`
-- UNIQUE (from, to)
-- RLS: cliente lê rotas da própria viagem; admin gerencia.
+Atividades **sem coordenadas são ignoradas** com aviso. No dia 1 da viagem atual, da atividade 9 em diante (Almoço, Apart Hotel, etc.) faltam lat/lng — esses trechos nunca terão rota até serem geocodificados.
 
-**Preferência de modo** — duas colunas, sem nova tabela:
+### 2) Por que o Mapbox manda para o lugar errado (dia 1, atividade "Paseo Bandera")
 
-- `itinerary_activities.transport_mode_to_next` (`driving|transit|walking|hidden|null`) — override por trecho.
-- `trips.default_transport_mode` (mesmo enum, default `driving`) — usado pelo botão "Alterar padrão para todos os lugares".
+No banco, o endereço `Bandera 100, 8320297 401, Santiago, Región Metropolitana, Chile` foi geocodificado para `-36.81, -73.05` — isso é **Concepción**, ~500 km ao sul de Santiago.
 
-## 2. Lógica (server functions Mapbox)
+Causas:
+- A função `geocodeAddress` faz uma chamada crua com `limit=1` e **sem filtro de país nem viés de proximidade**. O endereço tem um "401" estranho no meio que confunde o ranqueador do Mapbox e ele escolhe outra cidade.
+- Não há revisão visual: o admin clica "Geocodificar" e o primeiro resultado é salvo cegamente.
 
-Arquivo novo `src/lib/routes.functions.ts`:
+## Plano de correção
 
-- `computeDayRoutes({ dayId })` — protegida por `requireSupabaseAuth`. Busca atividades ordenadas por `position` com lat/lon, monta pares consecutivos, e para cada par sem cache (ou stale) chama Mapbox Directions:
-  - Driving: `mapbox/driving-traffic`
-  - Walking: `mapbox/walking`
-  - Transit: Mapbox **não tem** Directions de transporte público. Estratégia: usar `mapbox/driving` como estimativa-base e aplicar um fator (~1.5x duração, mesma distância) marcado como "estimado", **ou** integrar Google Directions Transit depois. Recomendo começar com a estimativa Mapbox e flag `transit_is_estimate: true` no retorno — alternativa: pedir conexão Google Maps (já temos guidance). Decidir antes de implementar.
-  - Upsert em `activity_routes`.
-- `getDayRoutes({ dayId })` — só lê o cache.
-- `setTripDefaultTransport({ tripId, mode })` e `setSegmentTransport({ fromActivityId, mode })`.
+### A. Tornar os tempos visíveis automaticamente (sem precisar clicar "Calcular rotas")
+- No `RouteConnector`, quando `route` for `null` mas ambas atividades tiverem coordenadas, disparar `computeDayRoutes` em background uma vez por dia (debounce/lock por `dayId` em memória) e atualizar via `refetch`.
+- Para o admin: manter o botão manual "Calcular rotas" (refresh forçado) e adicionar tooltip explicando o cache.
+- Quando um trecho não puder ser calculado (sem coords), exibir mensagem clara: "Adicionar endereço para calcular" em vez de "—".
 
-Endereços sem coordenadas: geocodar no momento do save da atividade (já existe `geocodeAddress` em `mapbox.functions.ts`) — adicionar trigger no admin para preencher lat/lon ao criar/editar.
+### B. Melhorar geocodificação (resolver o caso Santiago)
+1. **Filtros mais inteligentes** em `geocodeAddress`:
+   - Aceitar parâmetros opcionais `country` (ISO, ex. `cl`) e `proximity` (`lng,lat`).
+   - Pedir `limit=5` e retornar todos os candidatos com `place_name`, `center`, `relevance`.
+2. **Viés automático por viagem**: no admin, ao geocodificar, passar como `proximity` a média das coordenadas já existentes da mesma viagem (se houver) — isso evita pular para outra cidade.
+3. **Seleção manual de candidato**: o botão "Geocodificar" abre um pequeno popover com a lista dos 5 melhores resultados (nome completo + país); o admin clica no certo. Se só houver 1 com alta relevância, auto-seleciona.
+4. **Ajuste fino opcional**: permitir que o admin edite `latitude`/`longitude` à mão (campos numéricos) e veja um mini-mapa Mapbox com pin arrastável para corrigir casos extremos.
+5. **Re-geocodificar em massa (admin)**: botão "Re-geocodificar viagem" que reprocessa todas as atividades aplicando o viés de proximidade — útil para corrigir os pontos já errados como o "Paseo Bandera".
 
-## 3. UI
+### C. Limpeza dos dados atuais
+- Após implementar B, rodar a re-geocodificação na viagem atual para corrigir Paseo Bandera e os outros pontos suspeitos, e completar lat/lng das atividades 9–15 do dia 1.
 
-`**use-my-trip` hook**: incluir `routes` no fetch (single query por trip) e o `default_transport_mode` da trip.
+## Arquivos afetados
 
-**Componente novo `RouteConnector**` renderizado entre cada par de `ActivityCard` no roteiro:
+- `src/lib/mapbox.functions.ts` — aceitar `country`/`proximity`, retornar lista de candidatos.
+- `src/routes/admin.viagens.$tripId.tsx` — popover de candidatos, mini-mapa com pin arrastável, botão "Re-geocodificar viagem", campos lat/lng editáveis.
+- `src/components/route-connector.tsx` — auto-compute em background + mensagem de "sem endereço".
+- `src/lib/routes.functions.ts` — sem mudanças funcionais (talvez aceitar `tripId` para auto-call sem checar admin? mantém RLS).
 
-- Linha tracejada vertical fina + chip horizontal: ícone do modo atual + "42 min • 24 km" + link "Direções".
-- Se não há rota calculada ainda: botão "Calcular rotas do dia" (chama `computeDayRoutes`).
-- Se modo do trecho = `hidden`: render mínimo "Ocultas".
-- Clique abre **Bottom Sheet** (Sheet `side="bottom"` do shadcn — já existe).
+## Decisões que preciso de você
 
-**Bottom Sheet "Modo de transporte"**:
-
-- Título centralizado.
-- Lista: Condução / Transporte / Caminhada — cada linha com ícone (`Car`, `Bus`, `Footprints` do lucide), nome, e à direita "tempo • km". Selecionar marca como padrão **deste trecho** (`setSegmentTransport`).
-- Linha "Ocultar direções" (`EyeOff`).
-- Divider + botão texto "Alterar padrão para todos os lugares" → chama `setTripDefaultTransport` com o modo selecionado e limpa overrides do trecho.
-
-**Admin (`admin.viagens.$tripId`)**: botão "Recalcular rotas" por dia (chama `computeDayRoutes` ignorando cache).
-
-## 4. Custos / performance
-
-- Cache em `activity_routes` evita chamadas repetidas; só recalcula quando atividades são adicionadas/movidas (invalidar via trigger ou botão admin).
-- 3 chamadas Mapbox por par de pontos. Dia com 5 pontos = 4 pares × 3 = 12 requests, ~1s total.
-
-## Decisões necessárias antes de implementar
-
-1. **Transporte público**: estimativa via Mapbox driving × fator, **ou** adicionar conector Google Maps (Routes API suporta `TRANSIT`)?  
-  
-via mapbox  
-
-2. **Quando recalcular**: automático ao salvar atividade (admin) ou só botão manual?  
-  
-Só manual
-
-Posso seguir com (1) estimativa Mapbox + (2) botão manual + auto na criação, se você não responder — mas confirme.
+1. **Auto-cálculo de rotas**: ok disparar automaticamente quando o usuário abrir o dia (gasta tokens Mapbox mas evita o "—"), ou prefere manter só manual no admin?
+2. **Re-geocodificação em massa**: pode rodar agora na viagem atual para corrigir os pontos errados, ou prefere revisar um a um?

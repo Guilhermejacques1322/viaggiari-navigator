@@ -9,7 +9,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
 import { TripMap } from "@/components/map/trip-map";
-import { geocodeAddress } from "@/lib/mapbox.functions";
+import { geocodeAddress, regeocodeTripActivities } from "@/lib/mapbox.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -272,14 +272,18 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-sm text-muted-foreground">
           {preroteiroMode
             ? "Pré-roteiro ativo — cliente pode marcar Quero/Pulo nas atividades."
             : "Pré-roteiro desativado — cliente verá apenas o que estiver fechado."}
         </p>
-        <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
+        <div className="flex gap-2">
+          <RegeocodeButton tripId={tripId} onDone={invalidate} />
+          <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
+        </div>
       </div>
+
       {!days?.length ? (
         <Card className="p-12 text-center text-muted-foreground border-dashed">
           Comece adicionando o primeiro dia do roteiro.
@@ -364,6 +368,37 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
   );
 });
 
+function RegeocodeButton({ tripId, onDone }: { tripId: string; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const fn = useServerFn(regeocodeTripActivities);
+  const run = async (onlyMissing: boolean) => {
+    const label = onlyMissing ? "atividades sem coordenadas" : "TODAS as atividades (sobrescreve coordenadas existentes)";
+    if (!(await confirmAction(`Re-geocodificar ${label}?`, { confirmLabel: "Re-geocodificar" }))) return;
+    setLoading(true);
+    try {
+      const res = await fn({ data: { tripId, onlyMissing } });
+      toast.success(`${res.updated} atualizadas, ${res.skipped} sem resultado de ${res.total}`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message ?? "Falha ao re-geocodificar");
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="flex gap-1">
+      <Button size="sm" variant="outline" disabled={loading} onClick={() => run(true)} title="Geocodifica apenas atividades sem latitude/longitude">
+        <MapPin className="size-4" />{loading ? "..." : "Geo faltantes"}
+      </Button>
+      <Button size="sm" variant="ghost" disabled={loading} onClick={() => run(false)} title="Re-geocodifica todas as atividades aplicando viés por proximidade">
+        Re-geo todas
+      </Button>
+    </div>
+  );
+}
+
+type GeocodeCandidate = { latitude: number; longitude: number; place_name: string | null; relevance: number; country: string | null };
+
 const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -372,24 +407,50 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
   const [libCountry, setLibCountry] = useState("");
   const [libCity, setLibCity] = useState("");
   const [geocoding, setGeocoding] = useState(false);
+  const [candidates, setCandidates] = useState<GeocodeCandidate[]>([]);
   const geocodeFn = useServerFn(geocodeAddress);
 
-  const openEdit = () => { setForm(a); setEditOpen(true); };
+  const openEdit = () => { setForm(a); setEditOpen(true); setCandidates([]); };
 
   const handleGeocode = async () => {
     if (!form.address) return toast.error("Informe o endereço primeiro");
     setGeocoding(true);
+    setCandidates([]);
     try {
-      const res = await geocodeFn({ data: { address: form.address } });
-      if (res.latitude == null) return toast.error("Endereço não encontrado");
-      setForm((f) => ({ ...f, latitude: res.latitude, longitude: res.longitude }));
-      toast.success("Coordenadas encontradas");
+      // viés por proximidade: usa coords já existentes desta atividade ou da viagem
+      let proximity: [number, number] | undefined;
+      if (form.latitude != null && form.longitude != null) {
+        proximity = [Number(form.longitude), Number(form.latitude)];
+      } else {
+        const { data: sibs } = await supabase
+          .from("itinerary_activities")
+          .select("latitude, longitude, itinerary_days!inner(trip_id)")
+          .eq("itinerary_days.trip_id", tripId)
+          .not("latitude", "is", null)
+          .limit(50);
+        if (sibs && sibs.length) {
+          const lng = sibs.reduce((s, x: any) => s + Number(x.longitude), 0) / sibs.length;
+          const lat = sibs.reduce((s, x: any) => s + Number(x.latitude), 0) / sibs.length;
+          proximity = [lng, lat];
+        }
+      }
+      const res = await geocodeFn({ data: { address: form.address, proximity } });
+      if (!res.candidates.length) return toast.error("Endereço não encontrado");
+      if (res.candidates.length === 1) {
+        const c = res.candidates[0];
+        setForm((f) => ({ ...f, latitude: c.latitude, longitude: c.longitude }));
+        toast.success("Coordenadas encontradas");
+      } else {
+        setCandidates(res.candidates);
+        toast.info(`${res.candidates.length} resultados — escolha o correto`);
+      }
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao buscar coordenadas");
     } finally {
       setGeocoding(false);
     }
   };
+
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_activities").update({
@@ -504,9 +565,53 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
                 <MapPin className="size-4" />{geocoding ? "..." : "Buscar"}
               </Button>
             </div>
-            {form.latitude != null && form.longitude != null && (
-              <p className="text-[11px] text-emerald-600">📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} — pronto para o mapa</p>
+            {candidates.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/30 p-2 space-y-1 max-h-48 overflow-y-auto">
+                <p className="text-[11px] font-medium text-muted-foreground px-1">Escolha o local correto:</p>
+                {candidates.map((c, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setForm((f) => ({ ...f, latitude: c.latitude, longitude: c.longitude }));
+                      setCandidates([]);
+                      toast.success("Coordenadas atualizadas");
+                    }}
+                    className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-accent flex items-start gap-2"
+                  >
+                    <MapPin className="size-3 mt-0.5 shrink-0 text-primary" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{c.place_name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {c.country?.toUpperCase()} · {c.latitude.toFixed(4)}, {c.longitude.toFixed(4)} · rel {Math.round(c.relevance * 100)}%
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Latitude</Label>
+                <Input type="number" step="0.000001" placeholder="-33.4378" value={form.latitude ?? ""}
+                  onChange={(e) => setForm({ ...form, latitude: e.target.value ? Number(e.target.value) : null })} />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Longitude</Label>
+                <Input type="number" step="0.000001" placeholder="-70.6504" value={form.longitude ?? ""}
+                  onChange={(e) => setForm({ ...form, longitude: e.target.value ? Number(e.target.value) : null })} />
+              </div>
+            </div>
+            {form.latitude != null && form.longitude != null && (
+              <p className="text-[11px] text-emerald-600">
+                📍 {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)} —{" "}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`}
+                  target="_blank" rel="noreferrer" className="underline"
+                >conferir no mapa</a>
+              </p>
+            )}
+
             <Textarea rows={3} placeholder="Descrição" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
             <div>
