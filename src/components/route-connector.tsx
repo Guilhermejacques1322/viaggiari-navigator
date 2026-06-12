@@ -104,6 +104,7 @@ export function RouteConnector(props: Props) {
 
   const Icon = ICON[currentMode];
   const stats = getStats(route, currentMode);
+  const noRoute = !route;
 
   return (
     <div className="flex items-center gap-2 pl-5 py-1.5">
@@ -118,11 +119,12 @@ export function RouteConnector(props: Props) {
             {stats.duration} • {stats.distance}
           </span>
         ) : (
-          <span className="italic">Rota não calculada</span>
+          <span className="italic">{noRoute ? "Calculando rota…" : "Sem coordenadas"}</span>
         )}
         <ChevronDown className="size-3 opacity-60" />
         <span className="text-primary group-hover:underline">Direções</span>
       </button>
+
       <ModeSheet
         open={open}
         onOpenChange={setOpen}
