@@ -37,6 +37,7 @@ export const computeDayRoutes = createServerFn({ method: "POST" })
     if (!token) throw new Error("Mapbox não configurado");
     const { supabase } = context;
 
+    // RLS valida que o caller (admin ou cliente dono da viagem) pode ler o dia/atividades
     const { data: activities, error } = await supabase
       .from("itinerary_activities")
       .select("id, position, latitude, longitude, name")
@@ -47,7 +48,11 @@ export const computeDayRoutes = createServerFn({ method: "POST" })
     const points = (activities ?? []).filter(
       (a) => a.latitude !== null && a.longitude !== null,
     );
-    if (points.length < 2) return { computed: 0, skipped: 0 };
+    if (points.length < 2) return { computed: 0, skipped: 0, totalPairs: 0, withoutCoords: (activities?.length ?? 0) - points.length };
+
+    // Para escrever em activity_routes (RLS permite só admin) usamos o admin client
+    // após termos confirmado que o caller tem acesso de leitura ao dia acima.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     let computed = 0;
     let skipped = 0;
@@ -67,7 +72,6 @@ export const computeDayRoutes = createServerFn({ method: "POST" })
         continue;
       }
 
-      // Transit: estimativa baseada em driving (~1.6x duração)
       const transit = drive
         ? {
             duration_sec: Math.round(drive.duration_sec * 1.6),
@@ -75,7 +79,7 @@ export const computeDayRoutes = createServerFn({ method: "POST" })
           }
         : null;
 
-      const { error: upErr } = await supabase
+      const { error: upErr } = await supabaseAdmin
         .from("activity_routes")
         .upsert(
           {
@@ -98,6 +102,7 @@ export const computeDayRoutes = createServerFn({ method: "POST" })
 
     return { computed, skipped, totalPairs: points.length - 1, withoutCoords: (activities?.length ?? 0) - points.length };
   });
+
 
 export const setSegmentTransport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
