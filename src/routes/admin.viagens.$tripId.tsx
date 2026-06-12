@@ -368,6 +368,37 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
   );
 });
 
+function RegeocodeButton({ tripId, onDone }: { tripId: string; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const fn = useServerFn(regeocodeTripActivities);
+  const run = async (onlyMissing: boolean) => {
+    const label = onlyMissing ? "atividades sem coordenadas" : "TODAS as atividades (sobrescreve coordenadas existentes)";
+    if (!(await confirmAction(`Re-geocodificar ${label}?`, { confirmLabel: "Re-geocodificar" }))) return;
+    setLoading(true);
+    try {
+      const res = await fn({ data: { tripId, onlyMissing } });
+      toast.success(`${res.updated} atualizadas, ${res.skipped} sem resultado de ${res.total}`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message ?? "Falha ao re-geocodificar");
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="flex gap-1">
+      <Button size="sm" variant="outline" disabled={loading} onClick={() => run(true)} title="Geocodifica apenas atividades sem latitude/longitude">
+        <MapPin className="size-4" />{loading ? "..." : "Geo faltantes"}
+      </Button>
+      <Button size="sm" variant="ghost" disabled={loading} onClick={() => run(false)} title="Re-geocodifica todas as atividades aplicando viés por proximidade">
+        Re-geo todas
+      </Button>
+    </div>
+  );
+}
+
+type GeocodeCandidate = { latitude: number; longitude: number; place_name: string | null; relevance: number; country: string | null };
+
 const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -376,24 +407,50 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
   const [libCountry, setLibCountry] = useState("");
   const [libCity, setLibCity] = useState("");
   const [geocoding, setGeocoding] = useState(false);
+  const [candidates, setCandidates] = useState<GeocodeCandidate[]>([]);
   const geocodeFn = useServerFn(geocodeAddress);
 
-  const openEdit = () => { setForm(a); setEditOpen(true); };
+  const openEdit = () => { setForm(a); setEditOpen(true); setCandidates([]); };
 
   const handleGeocode = async () => {
     if (!form.address) return toast.error("Informe o endereço primeiro");
     setGeocoding(true);
+    setCandidates([]);
     try {
-      const res = await geocodeFn({ data: { address: form.address } });
-      if (res.latitude == null) return toast.error("Endereço não encontrado");
-      setForm((f) => ({ ...f, latitude: res.latitude, longitude: res.longitude }));
-      toast.success("Coordenadas encontradas");
+      // viés por proximidade: usa coords já existentes desta atividade ou da viagem
+      let proximity: [number, number] | undefined;
+      if (form.latitude != null && form.longitude != null) {
+        proximity = [Number(form.longitude), Number(form.latitude)];
+      } else {
+        const { data: sibs } = await supabase
+          .from("itinerary_activities")
+          .select("latitude, longitude, itinerary_days!inner(trip_id)")
+          .eq("itinerary_days.trip_id", tripId)
+          .not("latitude", "is", null)
+          .limit(50);
+        if (sibs && sibs.length) {
+          const lng = sibs.reduce((s, x: any) => s + Number(x.longitude), 0) / sibs.length;
+          const lat = sibs.reduce((s, x: any) => s + Number(x.latitude), 0) / sibs.length;
+          proximity = [lng, lat];
+        }
+      }
+      const res = await geocodeFn({ data: { address: form.address, proximity } });
+      if (!res.candidates.length) return toast.error("Endereço não encontrado");
+      if (res.candidates.length === 1) {
+        const c = res.candidates[0];
+        setForm((f) => ({ ...f, latitude: c.latitude, longitude: c.longitude }));
+        toast.success("Coordenadas encontradas");
+      } else {
+        setCandidates(res.candidates);
+        toast.info(`${res.candidates.length} resultados — escolha o correto`);
+      }
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao buscar coordenadas");
     } finally {
       setGeocoding(false);
     }
   };
+
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_activities").update({
