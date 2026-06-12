@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronDown, MapPin, Clock, Ticket, ExternalLink, Star, Paperclip, Download, Plane, Train, Hotel, File, Sparkles, Users as UsersIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -28,6 +28,7 @@ function Roteiro() {
   const [reviewing, setReviewing] = useState<Activity | null>(null);
   const [computing, setComputing] = useState<string | null>(null);
   const compute = useServerFn(computeDayRoutes);
+  const autoTriedRef = useRef<Set<string>>(new Set());
 
   async function handleCompute(dayId: string) {
     setComputing(dayId);
@@ -44,6 +45,27 @@ function Roteiro() {
       setComputing(null);
     }
   }
+
+  // Auto-cálculo silencioso quando um dia é aberto e há pares com coords sem rota cacheada
+  useEffect(() => {
+    if (!openDay || !data) return;
+    if (autoTriedRef.current.has(openDay)) return;
+    const day = data.days.find((d) => d.id === openDay);
+    if (!day) return;
+    const visible = day.activities.filter((a) => !a.in_preroteiro || a.client_response === "want");
+    const pairs = visible.slice(0, -1).map((a, i) => [a, visible[i + 1]] as const);
+    const hasMissing = pairs.some(([from, to]) => {
+      if (from.latitude == null || from.longitude == null || to.latitude == null || to.longitude == null) return false;
+      const existing = (data.routes ?? []).find((r) => r.from_activity_id === from.id && r.to_activity_id === to.id);
+      return !existing;
+    });
+    if (!hasMissing) return;
+    autoTriedRef.current.add(openDay);
+    compute({ data: { dayId: openDay } })
+      .then((res) => { if (res.computed > 0) refetch(); })
+      .catch(() => { /* silencioso */ });
+  }, [openDay, data, compute, refetch]);
+
 
   if (loading) {
     return (
