@@ -1,52 +1,61 @@
-## Diagnóstico
+# Drag-and-drop de atividades no admin
 
-### 1) Por que os tempos aparecem como "—" no roteiro
+Sim, é totalmente possível. Hoje o ícone à esquerda (`GripVertical`) é apenas decorativo. Vou transformá-lo num **handle real de arrastar**, permitindo:
 
-Confirmei no banco: a tabela `activity_routes` tem **0 linhas**. Ou seja, nenhuma rota foi calculada ainda. O componente `RouteConnector` renderiza "—" quando não encontra o registro de rota para aquele par de atividades.
+- Reordenar atividades dentro do mesmo dia (subir/descer).
+- Mover uma atividade para outro dia, soltando sobre o card de outro dia.
+- Feedback visual durante o arraste (sombra, cursor, item "fantasma").
+- Persistência imediata no banco (atualiza `position` e, se mudou de dia, `day_id`).
 
-**Como funciona hoje, na prática:**
-1. Cada atividade precisa ter `latitude`/`longitude` (geocodificadas pelo botão "Geocodificar" no admin).
-2. O admin abre o roteiro do dia → clica no botão **"Calcular rotas"** (canto direito, só visível para admin).
-3. O servidor chama o Mapbox Directions para cada par consecutivo (driving + walking) e estima transit como `driving × 1.6`.
-4. Só depois disso o `RouteConnector` mostra tempo/km.
+## Escopo
 
-Atividades **sem coordenadas são ignoradas** com aviso. No dia 1 da viagem atual, da atividade 9 em diante (Almoço, Apart Hotel, etc.) faltam lat/lng — esses trechos nunca terão rota até serem geocodificados.
+Apenas a tela **Admin → Viagens → Roteiro** (`src/routes/admin.viagens.$tripId.tsx`). Não mexo no app do cliente.
 
-### 2) Por que o Mapbox manda para o lugar errado (dia 1, atividade "Paseo Bandera")
+## Como vai funcionar (UX)
 
-No banco, o endereço `Bandera 100, 8320297 401, Santiago, Región Metropolitana, Chile` foi geocodificado para `-36.81, -73.05` — isso é **Concepción**, ~500 km ao sul de Santiago.
+1. Usuário segura o quadradinho `⋮⋮` à esquerda da atividade.
+2. O card "flutua" seguindo o cursor/dedo (suporte mouse + touch).
+3. Áreas de soltar válidas:
+   - Outras posições **dentro do mesmo dia** → reordena.
+   - **Cabeçalho de outro dia** (e qualquer área da lista daquele dia) → move para o final daquele dia, ou entre atividades se soltar entre dois cards.
+4. Ao soltar, o estado da UI atualiza otimisticamente e a persistência roda em background. Se falhar, faz rollback e exibe toast de erro.
 
-Causas:
-- A função `geocodeAddress` faz uma chamada crua com `limit=1` e **sem filtro de país nem viés de proximidade**. O endereço tem um "401" estranho no meio que confunde o ranqueador do Mapbox e ele escolhe outra cidade.
-- Não há revisão visual: o admin clica "Geocodificar" e o primeiro resultado é salvo cegamente.
+## Implementação técnica
 
-## Plano de correção
+### Biblioteca
+- Adicionar `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` (leve, acessível, com suporte a teclado e touch — padrão React moderno).
 
-### A. Tornar os tempos visíveis automaticamente (sem precisar clicar "Calcular rotas")
-- No `RouteConnector`, quando `route` for `null` mas ambas atividades tiverem coordenadas, disparar `computeDayRoutes` em background uma vez por dia (debounce/lock por `dayId` em memória) e atualizar via `refetch`.
-- Para o admin: manter o botão manual "Calcular rotas" (refresh forçado) e adicionar tooltip explicando o cache.
-- Quando um trecho não puder ser calculado (sem coords), exibir mensagem clara: "Adicionar endereço para calcular" em vez de "—".
+### Estrutura
+- Envolver a lista de dias num único `<DndContext>` no componente raiz do tab Roteiro, para permitir cross-day drag.
+- Cada dia vira um `SortableContext` com `verticalListSortingStrategy`, recebendo os IDs das suas atividades.
+- Cada atividade vira um `useSortable` item; o `listeners` é aplicado **apenas no `GripVertical`** (handle), para que cliques nos botões Editar/Lixeira/Maps continuem funcionando.
+- O cabeçalho/dropzone do dia também vira um `useDroppable` para aceitar drop em dia vazio ou ao final.
 
-### B. Melhorar geocodificação (resolver o caso Santiago)
-1. **Filtros mais inteligentes** em `geocodeAddress`:
-   - Aceitar parâmetros opcionais `country` (ISO, ex. `cl`) e `proximity` (`lng,lat`).
-   - Pedir `limit=5` e retornar todos os candidatos com `place_name`, `center`, `relevance`.
-2. **Viés automático por viagem**: no admin, ao geocodificar, passar como `proximity` a média das coordenadas já existentes da mesma viagem (se houver) — isso evita pular para outra cidade.
-3. **Seleção manual de candidato**: o botão "Geocodificar" abre um pequeno popover com a lista dos 5 melhores resultados (nome completo + país); o admin clica no certo. Se só houver 1 com alta relevância, auto-seleciona.
-4. **Ajuste fino opcional**: permitir que o admin edite `latitude`/`longitude` à mão (campos numéricos) e veja um mini-mapa Mapbox com pin arrastável para corrigir casos extremos.
-5. **Re-geocodificar em massa (admin)**: botão "Re-geocodificar viagem" que reprocessa todas as atividades aplicando o viés de proximidade — útil para corrigir os pontos já errados como o "Paseo Bandera".
+### Persistência
+Novo server function `reorderActivities` em `src/lib/routes.functions.ts` (ou novo `src/lib/itinerary.functions.ts`):
+- Input: `{ tripId, updates: Array<{ id, day_id, position }> }`.
+- Usa `requireSupabaseAuth` + checagem de admin (`has_role`).
+- Faz `update` em lote em `itinerary_activities` numa transação (loop com `Promise.all`, ou uma função SQL `reorder_activities` para garantir atomicidade).
+- Recalcula `position` sequencialmente (0,1,2,...) nos dias afetados para evitar colisão com a constraint única `(day_id, position)` se existir.
 
-### C. Limpeza dos dados atuais
-- Após implementar B, rodar a re-geocodificação na viagem atual para corrigir Paseo Bandera e os outros pontos suspeitos, e completar lat/lng das atividades 9–15 do dia 1.
+Estratégia anti-colisão (caso haja unique constraint):
+1. Primeiro `UPDATE` move tudo do(s) dia(s) afetado(s) para `position = position + 1000` (offset temporário).
+2. Depois aplica as posições finais. Vai como uma migration que cria a função RPC `reorder_activities(payload jsonb)`.
 
-## Arquivos afetados
+### UI/estado
+- Estado local `days` já existe; após reorder otimista, dispara o server fn e em caso de erro chama `refetch`/rollback.
+- Feedback: `DragOverlay` mostra um clone do card com sombra; cursor `grab`/`grabbing` no handle; opacidade reduzida no item original.
+- Acessibilidade: dnd-kit já fornece navegação por teclado (Space para pegar, setas para mover, Space para soltar).
 
-- `src/lib/mapbox.functions.ts` — aceitar `country`/`proximity`, retornar lista de candidatos.
-- `src/routes/admin.viagens.$tripId.tsx` — popover de candidatos, mini-mapa com pin arrastável, botão "Re-geocodificar viagem", campos lat/lng editáveis.
-- `src/components/route-connector.tsx` — auto-compute em background + mensagem de "sem endereço".
-- `src/lib/routes.functions.ts` — sem mudanças funcionais (talvez aceitar `tripId` para auto-call sem checar admin? mantém RLS).
+### Arquivos afetados
+- `src/routes/admin.viagens.$tripId.tsx` — DndContext, SortableContext, handle, DragOverlay, otimismo.
+- `src/lib/itinerary.functions.ts` (novo) — `reorderActivities` server fn.
+- `supabase/migrations/*.sql` (novo, se necessário) — função RPC `reorder_activities` e/ou ajuste de constraint para `DEFERRABLE`.
+- `package.json` — `@dnd-kit/*`.
 
-## Decisões que preciso de você
+## Fora de escopo
+- Drag-and-drop de **dias inteiros** (só atividades).
+- Mudar o app do cliente (`minha-viagem.roteiro.tsx`) — continua read-only.
+- Auto-recálculo de horário ao mover (mantém o `time` original; usuário ajusta via Editar se quiser).
 
-1. **Auto-cálculo de rotas**: ok disparar automaticamente quando o usuário abrir o dia (gasta tokens Mapbox mas evita o "—"), ou prefere manter só manual no admin?
-2. **Re-geocodificação em massa**: pode rodar agora na viagem atual para corrigir os pontos errados, ou prefere revisar um a um?
+Posso seguir?
