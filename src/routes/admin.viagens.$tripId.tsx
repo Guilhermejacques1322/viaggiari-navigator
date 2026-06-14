@@ -101,12 +101,14 @@ function TripDetail() {
         <TabsList>
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
+          <TabsTrigger value="ai">Criação por IA</TabsTrigger>
           <TabsTrigger value="mapa">Mapa</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
         <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
+        <TabsContent value="ai" className="mt-4"><AiCreationTab tripId={tripId} onApplied={invalidate} /></TabsContent>
         <TabsContent value="mapa" className="mt-4"><MapaTab tripId={tripId} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
         <TabsContent value="checklist" className="mt-4"><TripChecklistAdmin tripId={tripId} /></TabsContent>
@@ -1299,5 +1301,246 @@ function ActivityPartnersEditor({ activityId }: { activityId: string }) {
     </div>
   );
 }
+
+// ============= AI Creation Tab =============
+
+import { Checkbox } from "@/components/ui/checkbox";
+import { Sparkles, Wand2 } from "lucide-react";
+import {
+  generateItinerarySuggestions,
+  applyItinerarySuggestions,
+  type ItinerarySuggestions,
+} from "@/lib/itinerary-ai.functions";
+
+type SuggestionItem = {
+  selected: boolean;
+  title: string;
+  time: string;
+  address: string;
+  description: string;
+  day_id: string;
+};
+
+type SuggestionGroup = {
+  day_label: string;
+  suggested_day_number: number;
+  items: SuggestionItem[];
+};
+
+function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () => void }) {
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [groups, setGroups] = useState<SuggestionGroup[] | null>(null);
+
+  const generate = useServerFn(generateItinerarySuggestions);
+  const apply = useServerFn(applyItinerarySuggestions);
+
+  const { data: days } = useQuery({
+    queryKey: ["trip-days-ai", tripId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("itinerary_days")
+        .select("id, day_number, title, date")
+        .eq("trip_id", tripId)
+        .order("day_number");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function onGenerate() {
+    if (prompt.trim().length < 5) {
+      toast.error("Descreva o que você quer no prompt");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = (await generate({ data: { tripId, prompt } })) as ItinerarySuggestions;
+      const mapped: SuggestionGroup[] = result.days.map((d) => {
+        const matchedDay = days?.find((dd) => dd.day_number === d.suggested_day_number);
+        return {
+          day_label: d.day_label,
+          suggested_day_number: d.suggested_day_number,
+          items: d.activities.map((a) => ({
+            selected: true,
+            title: a.title,
+            time: a.time ?? "",
+            address: a.address ?? "",
+            description: a.description ?? "",
+            day_id: matchedDay?.id ?? "",
+          })),
+        };
+      });
+      setGroups(mapped);
+      toast.success(`IA sugeriu ${mapped.reduce((n, g) => n + g.items.length, 0)} atividades`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Falha ao gerar");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onApply() {
+    if (!groups) return;
+    const items = groups.flatMap((g) =>
+      g.items
+        .filter((i) => i.selected && i.day_id && i.title.trim())
+        .map((i) => ({
+          day_id: i.day_id,
+          title: i.title.trim(),
+          time: i.time || null,
+          address: i.address || null,
+          description: i.description || null,
+        })),
+    );
+    if (items.length === 0) {
+      toast.error("Selecione ao menos uma atividade com dia definido");
+      return;
+    }
+    setApplying(true);
+    try {
+      const res = (await apply({ data: { tripId, items } })) as { inserted: number };
+      toast.success(`${res.inserted} atividades adicionadas ao roteiro`);
+      setGroups(null);
+      setPrompt("");
+      onApplied();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Falha ao aplicar");
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  function updateItem(gi: number, ii: number, patch: Partial<SuggestionItem>) {
+    setGroups((prev) => {
+      if (!prev) return prev;
+      const next = prev.map((g) => ({ ...g, items: g.items.map((i) => ({ ...i })) }));
+      next[gi].items[ii] = { ...next[gi].items[ii], ...patch };
+      return next;
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-4 text-primary" />
+          <h3 className="font-medium">Gerar roteiro com IA</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          A viagem tem <strong>{days?.length ?? 0}</strong> dia(s) criados. Descreva o estilo, ritmo, interesses, restrições etc.
+        </p>
+        <Textarea
+          rows={5}
+          placeholder="Ex: 5 dias em Roma para um casal apaixonado por arte renascentista. Gostam de jantar tarde, querem evitar caminhar demais. Incluir Vaticano e dia em Tivoli."
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          disabled={loading}
+        />
+        <div className="flex gap-2">
+          <Button onClick={onGenerate} disabled={loading}>
+            <Wand2 className="size-4" />
+            {loading ? "Gerando..." : "Gerar sugestões"}
+          </Button>
+          {groups && (
+            <Button variant="ghost" onClick={() => setGroups(null)} disabled={loading || applying}>
+              Descartar
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      {loading && <Skeleton className="h-64" />}
+
+      {groups && groups.length > 0 && (
+        <div className="space-y-4">
+          {groups.map((g, gi) => {
+            const hasMatch = !!days?.find((dd) => dd.day_number === g.suggested_day_number);
+            return (
+              <Card key={gi} className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-medium">{g.day_label}</h4>
+                  {!hasMatch && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                      Sem dia correspondente — escolha manualmente
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  {g.items.map((item, ii) => (
+                    <div key={ii} className="border rounded-md p-3 space-y-2 bg-muted/30">
+                      <div className="flex items-start gap-2">
+                        <Checkbox
+                          checked={item.selected}
+                          onCheckedChange={(v) => updateItem(gi, ii, { selected: !!v })}
+                          className="mt-1"
+                        />
+                        <Input
+                          value={item.title}
+                          onChange={(e) => updateItem(gi, ii, { title: e.target.value })}
+                          className="font-medium"
+                          placeholder="Título"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pl-7">
+                        <Input
+                          type="time"
+                          value={item.time}
+                          onChange={(e) => updateItem(gi, ii, { time: e.target.value })}
+                          placeholder="Horário"
+                        />
+                        <Input
+                          value={item.address}
+                          onChange={(e) => updateItem(gi, ii, { address: e.target.value })}
+                          placeholder="Endereço"
+                          className="md:col-span-2"
+                        />
+                      </div>
+                      <div className="pl-7">
+                        <Textarea
+                          rows={2}
+                          value={item.description}
+                          onChange={(e) => updateItem(gi, ii, { description: e.target.value })}
+                          placeholder="Descrição"
+                        />
+                      </div>
+                      <div className="pl-7">
+                        <Label className="text-xs text-muted-foreground">Adicionar ao dia</Label>
+                        <Select
+                          value={item.day_id || "none"}
+                          onValueChange={(v) => updateItem(gi, ii, { day_id: v === "none" ? "" : v })}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione um dia" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">— sem dia —</SelectItem>
+                            {(days ?? []).map((d) => (
+                              <SelectItem key={d.id} value={d.id}>
+                                Dia {d.day_number}{d.title ? ` — ${d.title}` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+
+          <div className="flex justify-end gap-2 sticky bottom-2">
+            <Button onClick={onApply} disabled={applying}>
+              {applying ? "Adicionando..." : "Adicionar selecionadas ao roteiro"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 
