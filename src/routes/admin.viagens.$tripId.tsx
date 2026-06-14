@@ -6,6 +6,15 @@ import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
   CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus, MapPin,
 } from "lucide-react";
+import {
+  DndContext, DragOverlay, PointerSensor, TouchSensor, KeyboardSensor,
+  useSensor, useSensors, closestCenter, useDroppable,
+  type DragEndEvent, type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
 import { TripMap } from "@/components/map/trip-map";
