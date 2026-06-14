@@ -6,6 +6,15 @@ import {
   ArrowLeft, Save, Eye, EyeOff, ListChecks, Trash2, Plus, Upload, FileText,
   CalendarDays, GripVertical, ExternalLink, UserCheck, Paperclip, BookmarkPlus, MapPin,
 } from "lucide-react";
+import {
+  DndContext, DragOverlay, PointerSensor, TouchSensor, KeyboardSensor,
+  useSensor, useSensors, closestCenter, useDroppable,
+  type DragEndEvent, type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
 import { TripMap } from "@/components/map/trip-map";
@@ -233,10 +242,13 @@ function InfoTab({ trip, onSaved }: { trip: any; onSaved: () => void }) {
 }
 
 /* ============================== ROTEIRO TAB ============================== */
+type DayWithActs = Day & { activities: (Activity & { doc_count?: number })[] };
+
 function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode: boolean }) {
   const qc = useQueryClient();
+  const queryKey = ["trip-days", tripId];
   const { data: days, isLoading } = useQuery({
-    queryKey: ["trip-days", tripId],
+    queryKey,
     queryFn: async () => {
       const { data: ds, error } = await supabase.from("itinerary_days").select("*").eq("trip_id", tripId).order("day_number");
       if (error) throw error;
@@ -251,13 +263,13 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
           ...a,
           doc_count: (docs ?? []).filter((doc) => doc.activity_id === a.id).length,
         })),
-      }));
+      })) as DayWithActs[];
     },
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+  const invalidate = () => qc.invalidateQueries({ queryKey });
 
   const addDay = async () => {
     const nextNum = (days?.length ?? 0) + 1;
@@ -267,6 +279,86 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
     if (error) return toast.error(error.message);
     invalidate();
   };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const [activeAct, setActiveAct] = useState<Activity | null>(null);
+
+  function findContainer(id: string, current: DayWithActs[]) {
+    if (id.startsWith("day:")) return id.slice(4);
+    for (const d of current) if (d.activities.some((a) => a.id === id)) return d.id;
+    return null;
+  }
+
+  async function persistDay(dayId: string, activities: (Activity & { doc_count?: number })[]) {
+    const results = await Promise.all(
+      activities.map((a, idx) =>
+        supabase.from("itinerary_activities")
+          .update({ day_id: dayId, position: idx })
+          .eq("id", a.id),
+      ),
+    );
+    const err = results.map((r) => r.error).find(Boolean);
+    if (err) throw new Error(err.message);
+  }
+
+  function handleDragStart(e: DragStartEvent) {
+    const id = String(e.active.id);
+    const a = (days ?? []).flatMap((d) => d.activities).find((x) => x.id === id);
+    setActiveAct(a ?? null);
+  }
+
+  async function handleDragEnd(e: DragEndEvent) {
+    setActiveAct(null);
+    const { active, over } = e;
+    if (!over || !days) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    const fromDayId = findContainer(activeId, days);
+    const toDayId = findContainer(overId, days);
+    if (!fromDayId || !toDayId) return;
+
+    const fromDay = days.find((d) => d.id === fromDayId)!;
+    const toDay = days.find((d) => d.id === toDayId)!;
+    const fromIdx = fromDay.activities.findIndex((a) => a.id === activeId);
+    if (fromIdx === -1) return;
+
+    let toIdx: number;
+    if (overId.startsWith("day:")) {
+      toIdx = toDay.activities.length;
+    } else {
+      toIdx = toDay.activities.findIndex((a) => a.id === overId);
+      if (toIdx === -1) toIdx = toDay.activities.length;
+    }
+
+    const prev = days;
+    const next = days.map((d) => ({ ...d, activities: [...d.activities] }));
+    const nFromDay = next.find((d) => d.id === fromDayId)!;
+    const nToDay = next.find((d) => d.id === toDayId)!;
+    const [moved] = nFromDay.activities.splice(fromIdx, 1);
+    if (fromDayId !== toDayId) moved.day_id = toDayId;
+    nToDay.activities.splice(toIdx, 0, moved);
+    qc.setQueryData(queryKey, next);
+
+    try {
+      if (fromDayId === toDayId) {
+        await persistDay(toDayId, nToDay.activities);
+      } else {
+        await Promise.all([
+          persistDay(fromDayId, nFromDay.activities),
+          persistDay(toDayId, nToDay.activities),
+        ]);
+      }
+    } catch (err) {
+      qc.setQueryData(queryKey, prev);
+      toast.error("Não foi possível reordenar: " + (err as Error).message);
+    }
+  }
 
   if (isLoading) return <Skeleton className="h-64" />;
 
@@ -289,18 +381,34 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
           Comece adicionando o primeiro dia do roteiro.
         </Card>
       ) : (
-        <div className="space-y-3">
-          {days.map((d) => <DayEditor key={d.id} day={d} tripId={tripId} onChanged={invalidate} />)}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="space-y-3">
+            {days.map((d) => <DayEditor key={d.id} day={d} tripId={tripId} onChanged={invalidate} />)}
+          </div>
+          <DragOverlay>
+            {activeAct ? (
+              <div className="rounded-md border border-primary/40 bg-background shadow-lg p-3 text-sm max-w-md">
+                <div className="flex items-center gap-2">
+                  {activeAct.time && <span className="text-xs text-primary font-medium">{activeAct.time.slice(0, 5)}</span>}
+                  <span className="font-medium truncate">{activeAct.name}</span>
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
     </div>
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day & { activities: (Activity & { doc_count?: number })[] }; tripId: string; onChanged: () => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: DayWithActs; tripId: string; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
-  const [addingAct, setAddingAct] = useState(false);
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_days").update(form).eq("id", day.id);
@@ -313,6 +421,9 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
     if (error) return toast.error(error.message);
     onChanged();
   };
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `day:${day.id}` });
+  const activityIds = day.activities.map((a) => a.id);
 
   return (
     <Card className="p-4">
@@ -358,15 +469,39 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
         </div>
       )}
 
-      <div className="mt-4 space-y-2">
-        {day.activities.map((a) => (
-          <ActivityRow key={a.id} a={a} tripId={tripId} dayId={day.id} onChanged={onChanged} />
-        ))}
-        <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
-      </div>
+      <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
+        <div
+          ref={setDropRef}
+          className={`mt-4 space-y-2 min-h-[48px] rounded-md transition-colors ${isOver ? "bg-primary/5 ring-2 ring-primary/30" : ""}`}
+        >
+          {day.activities.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-3 italic">
+              {isOver ? "Solte aqui para mover" : "Sem atividades — arraste uma para cá ou adicione abaixo"}
+            </p>
+          )}
+          {day.activities.map((a) => (
+            <SortableActivityRow key={a.id} a={a} tripId={tripId} dayId={day.id} onChanged={onChanged} />
+          ))}
+          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
+        </div>
+      </SortableContext>
     </Card>
   );
 });
+
+function SortableActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: a.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ActivityRow a={a} tripId={tripId} dayId={dayId} onChanged={onChanged} dragHandle={{ ...attributes, ...listeners }} />
+    </div>
+  );
+}
 
 function RegeocodeButton({ tripId, onDone }: { tripId: string; onDone: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -399,7 +534,7 @@ function RegeocodeButton({ tripId, onDone }: { tripId: string; onDone: () => voi
 
 type GeocodeCandidate = { latitude: number; longitude: number; place_name: string | null; relevance: number; country: string | null };
 
-const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
+const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged, dragHandle }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void; dragHandle?: Record<string, unknown> }) {
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<Partial<Activity>>(a);
@@ -508,7 +643,14 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: {
   return (
     <>
       <div className="rounded-md border border-border p-3 flex items-start gap-2">
-        <GripVertical className="size-4 text-muted-foreground/40 mt-0.5" />
+        <button
+          type="button"
+          {...(dragHandle ?? {})}
+          aria-label="Arrastar atividade"
+          className="touch-none cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mt-0.5"
+        >
+          <GripVertical className="size-4" />
+        </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {a.time && <span className="text-xs text-primary font-medium">{a.time.slice(0, 5)}</span>}
