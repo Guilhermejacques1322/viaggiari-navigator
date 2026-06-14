@@ -1328,13 +1328,16 @@ type SuggestionGroup = {
 };
 
 function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () => void }) {
+  const storageKey = `ai-itinerary-draft:${tripId}`;
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [groups, setGroups] = useState<SuggestionGroup[] | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const generate = useServerFn(generateItinerarySuggestions);
   const apply = useServerFn(applyItinerarySuggestions);
+  const queryClient = useQueryClient();
 
   const { data: days } = useQuery({
     queryKey: ["trip-days-ai", tripId],
@@ -1347,7 +1350,42 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
       if (error) throw error;
       return data ?? [];
     },
+    // Sempre refazer ao montar — número de dias pode ter mudado em outra aba
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+
+  // Hidrata rascunho salvo (prompt + sugestões) para esta viagem
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { prompt?: string; groups?: SuggestionGroup[] | null };
+        if (parsed.prompt) setPrompt(parsed.prompt);
+        if (parsed.groups) setGroups(parsed.groups);
+      }
+    } catch {}
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId]);
+
+  // Persiste rascunho a cada mudança
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (groups || prompt) {
+        localStorage.setItem(storageKey, JSON.stringify({ prompt, groups }));
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    } catch {}
+  }, [prompt, groups, hydrated, storageKey]);
+
+  function clearDraft() {
+    setGroups(null);
+    setPrompt("");
+    try { localStorage.removeItem(storageKey); } catch {}
+  }
 
   async function onGenerate() {
     if (prompt.trim().length < 5) {
@@ -1356,9 +1394,22 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
     }
     setLoading(true);
     try {
+      // Garante contagem de dias atualizada antes de mapear
+      const freshDays = await queryClient.fetchQuery({
+        queryKey: ["trip-days-ai", tripId],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from("itinerary_days")
+            .select("id, day_number, title, date")
+            .eq("trip_id", tripId)
+            .order("day_number");
+          if (error) throw error;
+          return data ?? [];
+        },
+      });
       const result = (await generate({ data: { tripId, prompt } })) as ItinerarySuggestions;
       const mapped: SuggestionGroup[] = result.days.map((d) => {
-        const matchedDay = days?.find((dd) => dd.day_number === d.suggested_day_number);
+        const matchedDay = freshDays?.find((dd) => dd.day_number === d.suggested_day_number);
         return {
           day_label: d.day_label,
           suggested_day_number: d.suggested_day_number,
@@ -1402,8 +1453,7 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
     try {
       const res = (await apply({ data: { tripId, items } })) as { inserted: number };
       toast.success(`${res.inserted} atividades adicionadas ao roteiro`);
-      setGroups(null);
-      setPrompt("");
+      clearDraft();
       onApplied();
     } catch (err: any) {
       toast.error(err?.message ?? "Falha ao aplicar");
@@ -1438,15 +1488,20 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
           onChange={(e) => setPrompt(e.target.value)}
           disabled={loading}
         />
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button onClick={onGenerate} disabled={loading}>
             <Wand2 className="size-4" />
-            {loading ? "Gerando..." : "Gerar sugestões"}
+            {loading ? "Gerando..." : groups ? "Regenerar sugestões" : "Gerar sugestões"}
           </Button>
-          {groups && (
-            <Button variant="ghost" onClick={() => setGroups(null)} disabled={loading || applying}>
-              Descartar
+          {(groups || prompt) && (
+            <Button variant="outline" onClick={clearDraft} disabled={loading || applying}>
+              Limpar rascunho
             </Button>
+          )}
+          {groups && (
+            <span className="text-xs text-muted-foreground self-center">
+              Rascunho salvo automaticamente — fica disponível ao voltar nesta aba.
+            </span>
           )}
         </div>
       </Card>
