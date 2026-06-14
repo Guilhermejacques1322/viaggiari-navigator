@@ -48,7 +48,7 @@ export const generateItinerarySuggestions = createServerFn({ method: "POST" })
 
     const { data: trip } = await supabase
       .from("trips")
-      .select("id, title, destination, start_date, end_date")
+      .select("id, title, destinations, start_date, end_date")
       .eq("id", data.tripId)
       .maybeSingle();
     if (!trip) throw new Error("Viagem não encontrada");
@@ -60,6 +60,9 @@ export const generateItinerarySuggestions = createServerFn({ method: "POST" })
       .order("day_number");
 
     const dayCount = days?.length ?? 0;
+    const destination = Array.isArray(trip.destinations) && trip.destinations.length
+      ? trip.destinations.join(", ")
+      : "não informado";
 
     const system = `Você é um especialista em planejamento de viagens. Gere um roteiro detalhado em português com base no pedido do usuário.
 
