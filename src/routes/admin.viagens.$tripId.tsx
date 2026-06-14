@@ -643,7 +643,14 @@ const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged, dra
   return (
     <>
       <div className="rounded-md border border-border p-3 flex items-start gap-2">
-        <GripVertical className="size-4 text-muted-foreground/40 mt-0.5" />
+        <button
+          type="button"
+          {...(dragHandle ?? {})}
+          aria-label="Arrastar atividade"
+          className="touch-none cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mt-0.5"
+        >
+          <GripVertical className="size-4" />
+        </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {a.time && <span className="text-xs text-primary font-medium">{a.time.slice(0, 5)}</span>}
