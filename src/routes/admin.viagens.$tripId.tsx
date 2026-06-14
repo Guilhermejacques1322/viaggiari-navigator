@@ -534,7 +534,7 @@ function RegeocodeButton({ tripId, onDone }: { tripId: string; onDone: () => voi
 
 type GeocodeCandidate = { latitude: number; longitude: number; place_name: string | null; relevance: number; country: string | null };
 
-const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void }) {
+const ActivityRow = memo(function ActivityRow({ a, tripId, dayId, onChanged, dragHandle }: { a: Activity & { doc_count?: number }; tripId: string; dayId: string; onChanged: () => void; dragHandle?: Record<string, unknown> }) {
   const [editOpen, setEditOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<Partial<Activity>>(a);
