@@ -67,7 +67,7 @@ export const generateItinerarySuggestions = createServerFn({ method: "POST" })
     const system = `Você é um especialista em planejamento de viagens. Gere um roteiro detalhado em português com base no pedido do usuário.
 
 Contexto da viagem:
-- Destino: ${trip.destination ?? "não informado"}
+- Destino: ${destination}
 - Datas: ${trip.start_date ?? "?"} a ${trip.end_date ?? "?"}
 - Dias disponíveis no roteiro: ${dayCount}
 
