@@ -1461,15 +1461,9 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
     setApplying(true);
     try {
       const res = (await apply({ data: { tripId, items } })) as { inserted: number };
-      toast.success(`${res.inserted} atividades adicionadas ao roteiro — abra a aba Roteiro para ver`);
+      toast.success(`${res.inserted} atividades adicionadas ao roteiro`);
       clearDraft();
-      // Invalida todas as queries relacionadas a esta viagem para o Roteiro recarregar
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["trip", tripId] }),
-        queryClient.invalidateQueries({ queryKey: ["trip-days", tripId] }),
-        queryClient.invalidateQueries({ queryKey: ["trip-days-ai", tripId] }),
-        queryClient.invalidateQueries({ queryKey: ["trip-docs", tripId] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ["trip-days-ai", tripId] });
       onApplied();
     } catch (err: any) {
       console.error("[apply itinerary] erro:", err);
