@@ -66,9 +66,18 @@ function TripDetail() {
     staleTime: Infinity,
   });
 
+  const [tab, setTab] = useState("info");
+
   if (isLoading || !trip) return <Skeleton className="h-96" />;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["trip", tripId] });
+  const handleAiApplied = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["trip", tripId] }),
+      qc.invalidateQueries({ queryKey: ["trip-days", tripId], refetchType: "all" }),
+    ]);
+    setTab("roteiro");
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -97,7 +106,7 @@ function TripDetail() {
         </Card>
       )}
 
-      <Tabs defaultValue="info">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
@@ -108,7 +117,7 @@ function TripDetail() {
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
         <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
-        <TabsContent value="ai" className="mt-4"><AiCreationTab tripId={tripId} onApplied={invalidate} /></TabsContent>
+        <TabsContent value="ai" className="mt-4"><AiCreationTab tripId={tripId} onApplied={handleAiApplied} /></TabsContent>
         <TabsContent value="mapa" className="mt-4"><MapaTab tripId={tripId} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
         <TabsContent value="checklist" className="mt-4"><TripChecklistAdmin tripId={tripId} /></TabsContent>
@@ -268,7 +277,7 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
       })) as DayWithActs[];
     },
     refetchOnWindowFocus: false,
-    staleTime: Infinity,
+    staleTime: 0,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey });
@@ -1452,15 +1461,9 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
     setApplying(true);
     try {
       const res = (await apply({ data: { tripId, items } })) as { inserted: number };
-      toast.success(`${res.inserted} atividades adicionadas ao roteiro — abra a aba Roteiro para ver`);
+      toast.success(`${res.inserted} atividades adicionadas ao roteiro`);
       clearDraft();
-      // Invalida todas as queries relacionadas a esta viagem para o Roteiro recarregar
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["trip", tripId] }),
-        queryClient.invalidateQueries({ queryKey: ["trip-days", tripId] }),
-        queryClient.invalidateQueries({ queryKey: ["trip-days-ai", tripId] }),
-        queryClient.invalidateQueries({ queryKey: ["trip-docs", tripId] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ["trip-days-ai", tripId] });
       onApplied();
     } catch (err: any) {
       console.error("[apply itinerary] erro:", err);
