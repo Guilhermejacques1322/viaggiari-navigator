@@ -66,9 +66,18 @@ function TripDetail() {
     staleTime: Infinity,
   });
 
+  const [tab, setTab] = useState("info");
+
   if (isLoading || !trip) return <Skeleton className="h-96" />;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["trip", tripId] });
+  const handleAiApplied = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["trip", tripId] }),
+      qc.invalidateQueries({ queryKey: ["trip-days", tripId], refetchType: "all" }),
+    ]);
+    setTab("roteiro");
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
