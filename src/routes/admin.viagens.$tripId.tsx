@@ -277,7 +277,7 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
       })) as DayWithActs[];
     },
     refetchOnWindowFocus: false,
-    staleTime: Infinity,
+    staleTime: 0,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey });
