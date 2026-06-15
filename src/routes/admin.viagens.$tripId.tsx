@@ -106,7 +106,7 @@ function TripDetail() {
         </Card>
       )}
 
-      <Tabs defaultValue="info">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
@@ -117,7 +117,7 @@ function TripDetail() {
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
         <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
-        <TabsContent value="ai" className="mt-4"><AiCreationTab tripId={tripId} onApplied={invalidate} /></TabsContent>
+        <TabsContent value="ai" className="mt-4"><AiCreationTab tripId={tripId} onApplied={handleAiApplied} /></TabsContent>
         <TabsContent value="mapa" className="mt-4"><MapaTab tripId={tripId} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
         <TabsContent value="checklist" className="mt-4"><TripChecklistAdmin tripId={tripId} /></TabsContent>
