@@ -470,7 +470,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: DayWithActs; tripId: string; onChanged: () => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
 
