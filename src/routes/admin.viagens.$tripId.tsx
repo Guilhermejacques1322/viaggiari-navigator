@@ -49,6 +49,19 @@ type DocCategory = Database["public"]["Enums"]["document_category"];
 
 export const Route = createFileRoute("/admin/viagens/$tripId")({
   component: TripDetail,
+  errorComponent: ({ error, reset }) => {
+    console.error("[admin/viagens/$tripId]", error);
+    return (
+      <div className="max-w-lg mx-auto p-6 text-center space-y-3">
+        <h2 className="font-display text-lg">Não conseguimos carregar esta viagem</h2>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <div className="flex justify-center gap-2">
+          <Button variant="outline" onClick={reset}>Tentar novamente</Button>
+          <Button variant="ghost" asChild><Link to="/admin/viagens">Voltar</Link></Button>
+        </div>
+      </div>
+    );
+  },
 });
 
 function TripDetail() {
