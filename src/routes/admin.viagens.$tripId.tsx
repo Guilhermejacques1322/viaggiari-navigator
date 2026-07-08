@@ -1687,3 +1687,137 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
 
 
 
+
+/* ============================== UTILITIES TAB ============================== */
+type TripUtility = Database["public"]["Tables"]["trip_utilities"]["Row"];
+
+function UtilitiesTab({ tripId }: { tripId: string }) {
+  const qc = useQueryClient();
+  const queryKey = ["trip-utilities", tripId];
+  const { data: items, isLoading } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_utilities")
+        .select("*")
+        .eq("trip_id", tripId)
+        .order("position")
+        .order("created_at");
+      if (error) throw error;
+      return data as TripUtility[];
+    },
+    staleTime: 0,
+  });
+  const invalidate = () => qc.invalidateQueries({ queryKey });
+
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<TripUtility | null>(null);
+  const [form, setForm] = useState({ kind: "", name: "", address: "", maps_url: "" });
+
+  const startNew = () => { setEditing(null); setForm({ kind: "", name: "", address: "", maps_url: "" }); setOpen(true); };
+  const startEdit = (u: TripUtility) => {
+    setEditing(u);
+    setForm({ kind: u.kind, name: u.name, address: u.address ?? "", maps_url: u.maps_url ?? "" });
+    setOpen(true);
+  };
+
+  const save = async () => {
+    if (!form.kind.trim() || !form.name.trim()) return toast.error("Informe o tipo e o nome");
+    const payload = {
+      trip_id: tripId,
+      kind: form.kind.trim(),
+      name: form.name.trim(),
+      address: form.address.trim() || null,
+      maps_url: form.maps_url.trim() || null,
+    };
+    const { error } = editing
+      ? await supabase.from("trip_utilities").update(payload).eq("id", editing.id)
+      : await supabase.from("trip_utilities").insert({ ...payload, position: (items?.length ?? 0) });
+    if (error) return toast.error(error.message);
+    setOpen(false);
+    invalidate();
+  };
+
+  const remove = async (u: TripUtility) => {
+    if (!(await confirmAction(`Excluir "${u.name}"?`, { confirmLabel: "Excluir" }))) return;
+    const { error } = await supabase.from("trip_utilities").delete().eq("id", u.id);
+    if (error) return toast.error(error.message);
+    invalidate();
+  };
+
+  if (isLoading) return <Skeleton className="h-64" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          Conveniências para caso o viajante precisar (farmácias, mercados, correios…). Não entram no mapa nem no roteiro.
+        </p>
+        <Button size="sm" onClick={startNew}><Plus className="size-4" />Nova utilidade</Button>
+      </div>
+
+      {(items?.length ?? 0) === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground border-dashed">
+          Nenhuma utilidade cadastrada ainda.
+        </Card>
+      ) : (
+        <ul className="space-y-2">
+          {items!.map((u) => (
+            <li key={u.id}>
+              <Card className="p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                    {u.kind}
+                  </span>
+                  <p className="font-medium text-sm mt-1">{u.name}</p>
+                  {u.address && <p className="text-xs text-muted-foreground mt-0.5">{u.address}</p>}
+                  {u.maps_url && (
+                    <a href={u.maps_url} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 mt-1">
+                      <ExternalLink className="size-3" />Maps
+                    </a>
+                  )}
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => startEdit(u)}>Editar</Button>
+                <Button size="sm" variant="ghost" onClick={() => remove(u)} className="text-destructive">
+                  <Trash2 className="size-4" />
+                </Button>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar utilidade" : "Nova utilidade"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <div>
+              <Label className="text-xs">Tipo de utilidade</Label>
+              <Input placeholder="Ex.: Farmácia, Mercado, Correios" value={form.kind}
+                onChange={(e) => setForm({ ...form, kind: e.target.value })} autoFocus />
+            </div>
+            <div>
+              <Label className="text-xs">Nome do lugar</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Endereço</Label>
+              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Link do Maps</Label>
+              <Input placeholder="https://maps.google.com/…" value={form.maps_url}
+                onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={save}><Save className="size-4" />Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
