@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
 import { TripMap } from "@/components/map/trip-map";
 import { geocodeAddress, regeocodeTripActivities } from "@/lib/mapbox.functions";
+import { computeDayRoutes } from "@/lib/routes.functions";
+import { RouteConnector } from "@/components/route-connector";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
