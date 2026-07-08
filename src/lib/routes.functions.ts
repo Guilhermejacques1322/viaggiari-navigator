@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type TransportMode = "driving" | "transit" | "walking" | "hidden";
 
-const dayIdSchema = z.object({ dayId: z.string().uuid() });
+const dayIdSchema = z.object({ dayId: z.string().uuid(), onlyMissing: z.boolean().optional() });
 const setSegmentSchema = z.object({
   fromActivityId: z.string().uuid(),
   mode: z.enum(["driving", "transit", "walking", "hidden"]),
