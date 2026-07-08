@@ -516,6 +516,9 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
           </>
         ) : (
           <>
+            <Button size="sm" variant="ghost" onClick={onRecomputeRoutes} title="Recalcular tempos entre atividades">
+              <MapPin className="size-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
             <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
           </>
