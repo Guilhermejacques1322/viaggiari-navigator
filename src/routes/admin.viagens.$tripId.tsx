@@ -270,9 +270,11 @@ function InfoTab({ trip, onSaved }: { trip: any; onSaved: () => void }) {
 }
 
 /* ============================== ROTEIRO TAB ============================== */
-type DayWithActs = Day & { activities: (Activity & { doc_count?: number })[] };
+type ActivityRoute = Database["public"]["Tables"]["activity_routes"]["Row"];
+type TransportMode = "driving" | "transit" | "walking" | "hidden";
+type DayWithActs = Day & { activities: (Activity & { doc_count?: number })[]; routes: ActivityRoute[] };
 
-function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode: boolean }) {
+function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: string; preroteiroMode: boolean; defaultTransport: TransportMode }) {
   const qc = useQueryClient();
   const queryKey = ["trip-days", tripId];
   const { data: days, isLoading } = useQuery({
@@ -284,14 +286,25 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
       const { data: acts } = ids.length
         ? await supabase.from("itinerary_activities").select("*").in("day_id", ids).order("position")
         : { data: [] as Activity[] };
-      const { data: docs } = await supabase.from("documents").select("id, activity_id").eq("trip_id", tripId);
-      return (ds ?? []).map((d) => ({
-        ...d,
-        activities: (acts ?? []).filter((a) => a.day_id === d.id).map((a) => ({
-          ...a,
-          doc_count: (docs ?? []).filter((doc) => doc.activity_id === a.id).length,
-        })),
-      })) as DayWithActs[];
+      const actIds = (acts ?? []).map((a) => a.id);
+      const [{ data: docs }, { data: routes }] = await Promise.all([
+        supabase.from("documents").select("id, activity_id").eq("trip_id", tripId),
+        actIds.length
+          ? supabase.from("activity_routes").select("*").in("from_activity_id", actIds)
+          : Promise.resolve({ data: [] as ActivityRoute[] }),
+      ]);
+      return (ds ?? []).map((d) => {
+        const dayActs = (acts ?? []).filter((a) => a.day_id === d.id);
+        const dayActIds = new Set(dayActs.map((a) => a.id));
+        return {
+          ...d,
+          activities: dayActs.map((a) => ({
+            ...a,
+            doc_count: (docs ?? []).filter((doc) => doc.activity_id === a.id).length,
+          })),
+          routes: (routes ?? []).filter((r) => dayActIds.has(r.from_activity_id)),
+        };
+      }) as DayWithActs[];
     },
     refetchOnWindowFocus: false,
     staleTime: 0,
