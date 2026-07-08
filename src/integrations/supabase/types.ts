@@ -1129,6 +1129,50 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_utilities: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          kind: string
+          maps_url: string | null
+          name: string
+          position: number
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          maps_url?: string | null
+          name: string
+          position?: number
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          maps_url?: string | null
+          name?: string
+          position?: number
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_utilities_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           contact_id: string
