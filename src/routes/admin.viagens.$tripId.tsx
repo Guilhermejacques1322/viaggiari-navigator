@@ -408,10 +408,11 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   }
 
   const compute = useServerFn(computeDayRoutes);
-  function recomputeRoutes(dayId: string) {
-    // Fire-and-forget: recalcula rotas do dia; refetch silencioso no fim.
-    void compute({ data: { dayId } })
-      .then(() => qc.invalidateQueries({ queryKey }))
+  function recomputeRoutes(dayId: string, opts?: { force?: boolean }) {
+    // Fire-and-forget: por padrão só calcula pares SEM rota cacheada (rápido).
+    // `force: true` recalcula tudo (botão manual).
+    void compute({ data: { dayId, onlyMissing: !opts?.force } })
+      .then((res) => { if (res.computed > 0) qc.invalidateQueries({ queryKey }); })
       .catch((e) => console.warn("[computeDayRoutes]", (e as Error).message));
   }
 
@@ -450,7 +451,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                 tripId={tripId}
                 defaultTransport={defaultTransport}
                 onChanged={invalidate}
-                onRecomputeRoutes={() => recomputeRoutes(d.id)}
+                onRecomputeRoutes={(opts) => recomputeRoutes(d.id, opts)}
               />
             ))}
           </div>
@@ -470,7 +471,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: () => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
 
@@ -516,7 +517,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
           </>
         ) : (
           <>
-            <Button size="sm" variant="ghost" onClick={onRecomputeRoutes} title="Recalcular tempos entre atividades">
+            <Button size="sm" variant="ghost" onClick={() => onRecomputeRoutes({ force: true })} title="Recalcular tempos entre atividades">
               <MapPin className="size-4" />
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
