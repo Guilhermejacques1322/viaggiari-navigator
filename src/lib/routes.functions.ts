@@ -54,53 +54,72 @@ export const computeDayRoutes = createServerFn({ method: "POST" })
     // após termos confirmado que o caller tem acesso de leitura ao dia acima.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    let computed = 0;
-    let skipped = 0;
-    for (let i = 0; i < points.length - 1; i++) {
-      const from = points[i];
-      const to = points[i + 1];
-      const fp = { lat: Number(from.latitude), lon: Number(from.longitude) };
-      const tp = { lat: Number(to.latitude), lon: Number(to.longitude) };
+    // Monta pares
+    const pairs = [] as Array<{ from: typeof points[number]; to: typeof points[number] }>;
+    for (let i = 0; i < points.length - 1; i++) pairs.push({ from: points[i], to: points[i + 1] });
 
-      const [drive, walk] = await Promise.all([
-        mapboxDirections("driving-traffic", fp, tp, token),
-        mapboxDirections("walking", fp, tp, token),
-      ]);
-
-      if (!drive && !walk) {
-        skipped++;
-        continue;
-      }
-
-      const transit = drive
-        ? {
-            duration_sec: Math.round(drive.duration_sec * 1.6),
-            distance_m: drive.distance_m,
-          }
-        : null;
-
-      const { error: upErr } = await supabaseAdmin
+    // Se onlyMissing, busca rotas já existentes e filtra
+    let toCompute = pairs;
+    if (data.onlyMissing) {
+      const fromIds = pairs.map((p) => p.from.id);
+      const { data: existing } = await supabaseAdmin
         .from("activity_routes")
-        .upsert(
-          {
-            from_activity_id: from.id,
-            to_activity_id: to.id,
-            driving_duration_sec: drive?.duration_sec ?? null,
-            driving_distance_m: drive?.distance_m ?? null,
-            transit_duration_sec: transit?.duration_sec ?? null,
-            transit_distance_m: transit?.distance_m ?? null,
-            transit_is_estimate: true,
-            walking_duration_sec: walk?.duration_sec ?? null,
-            walking_distance_m: walk?.distance_m ?? null,
-            computed_at: new Date().toISOString(),
-          },
-          { onConflict: "from_activity_id,to_activity_id" },
-        );
-      if (upErr) throw new Error(upErr.message);
-      computed++;
+        .select("from_activity_id, to_activity_id, driving_duration_sec, walking_duration_sec")
+        .in("from_activity_id", fromIds);
+      const have = new Set(
+        (existing ?? [])
+          .filter((r) => r.driving_duration_sec != null || r.walking_duration_sec != null)
+          .map((r) => `${r.from_activity_id}:${r.to_activity_id}`),
+      );
+      toCompute = pairs.filter((p) => !have.has(`${p.from.id}:${p.to.id}`));
     }
 
-    return { computed, skipped, totalPairs: points.length - 1, withoutCoords: (activities?.length ?? 0) - points.length };
+    if (toCompute.length === 0) {
+      return { computed: 0, skipped: 0, totalPairs: pairs.length, withoutCoords: (activities?.length ?? 0) - points.length };
+    }
+
+    // Paraleliza TODOS os pares e ambos os modos (driving + walking)
+    const results = await Promise.all(
+      toCompute.map(async ({ from, to }) => {
+        const fp = { lat: Number(from.latitude), lon: Number(from.longitude) };
+        const tp = { lat: Number(to.latitude), lon: Number(to.longitude) };
+        const [drive, walk] = await Promise.all([
+          mapboxDirections("driving-traffic", fp, tp, token),
+          mapboxDirections("walking", fp, tp, token),
+        ]);
+        return { from, to, drive, walk };
+      }),
+    );
+
+    const rows = results
+      .filter((r) => r.drive || r.walk)
+      .map(({ from, to, drive, walk }) => {
+        const transit = drive
+          ? { duration_sec: Math.round(drive.duration_sec * 1.6), distance_m: drive.distance_m }
+          : null;
+        return {
+          from_activity_id: from.id,
+          to_activity_id: to.id,
+          driving_duration_sec: drive?.duration_sec ?? null,
+          driving_distance_m: drive?.distance_m ?? null,
+          transit_duration_sec: transit?.duration_sec ?? null,
+          transit_distance_m: transit?.distance_m ?? null,
+          transit_is_estimate: true,
+          walking_duration_sec: walk?.duration_sec ?? null,
+          walking_distance_m: walk?.distance_m ?? null,
+          computed_at: new Date().toISOString(),
+        };
+      });
+
+    const skipped = results.length - rows.length;
+    if (rows.length) {
+      const { error: upErr } = await supabaseAdmin
+        .from("activity_routes")
+        .upsert(rows, { onConflict: "from_activity_id,to_activity_id" });
+      if (upErr) throw new Error(upErr.message);
+    }
+
+    return { computed: rows.length, skipped, totalPairs: pairs.length, withoutCoords: (activities?.length ?? 0) - points.length };
   });
 
 
