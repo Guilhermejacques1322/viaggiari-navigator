@@ -204,6 +204,24 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
   }, [selectedDay, daysWithCoords, mapReady]);
 
   if (tokenLoading) return <Skeleton className="h-96 w-full" />;
+  if (tokenError || mapError) {
+    return (
+      <Card className="p-8 text-center border-dashed">
+        <MapPin className="size-8 mx-auto mb-3 opacity-40" />
+        <p className="font-medium text-foreground mb-1">Não foi possível carregar o mapa</p>
+        <p className="text-sm text-muted-foreground mb-4">
+          {mapError ?? "Falha ao obter o token do mapa. Verifique a conexão e tente novamente."}
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => { setMapError(null); refetchToken(); }}
+        >
+          Tentar novamente
+        </Button>
+      </Card>
+    );
+  }
 
   const totalWithCoords = daysWithCoords.reduce((s, d) => s + d.activities.length, 0);
   if (totalWithCoords === 0) {
