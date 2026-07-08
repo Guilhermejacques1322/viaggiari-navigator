@@ -377,7 +377,10 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
       if (toIdx === -1) toIdx = toDay.activities.length;
     }
 
-    const prev = days;
+    // Snapshot profundo antes de mutar — evita cache inconsistente em rollback.
+    const prev: DayWithActs[] = typeof structuredClone === "function"
+      ? structuredClone(days)
+      : JSON.parse(JSON.stringify(days));
     const next = days.map((d) => ({ ...d, activities: [...d.activities] }));
     const nFromDay = next.find((d) => d.id === fromDayId)!;
     const nToDay = next.find((d) => d.id === toDayId)!;
@@ -389,16 +392,27 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
     try {
       if (fromDayId === toDayId) {
         await persistDay(toDayId, nToDay.activities);
+        recomputeRoutes(toDayId);
       } else {
         await Promise.all([
           persistDay(fromDayId, nFromDay.activities),
           persistDay(toDayId, nToDay.activities),
         ]);
+        recomputeRoutes(fromDayId);
+        recomputeRoutes(toDayId);
       }
     } catch (err) {
       qc.setQueryData(queryKey, prev);
       toast.error("Não foi possível reordenar: " + (err as Error).message);
     }
+  }
+
+  const compute = useServerFn(computeDayRoutes);
+  function recomputeRoutes(dayId: string) {
+    // Fire-and-forget: recalcula rotas do dia; refetch silencioso no fim.
+    void compute({ data: { dayId } })
+      .then(() => qc.invalidateQueries({ queryKey }))
+      .catch((e) => console.warn("[computeDayRoutes]", (e as Error).message));
   }
 
   if (isLoading) return <Skeleton className="h-64" />;
