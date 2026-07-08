@@ -59,8 +59,9 @@ const NAV: NavItem[] = [
   { to: "/minha-viagem", label: "Início", icon: Home, exact: true },
   { to: "/minha-viagem/roteiro", label: "Roteiro", icon: MapIcon },
   { to: "/minha-viagem/mapa", label: "Mapa", icon: MapIcon },
+  { to: "/minha-viagem/utilidades", label: "Utilidades", icon: Wrench },
   { to: "/minha-viagem/documentos", label: "Docs", icon: FileText },
-  { to: "/minha-viagem/preroteiro", label: "Pré-roteiro", icon: ListChecks },
+  { to: "/minha-viagem/preroteiro", label: "Pré", icon: ListChecks },
   { to: "/minha-viagem/parceiros", label: "Parceiros", icon: ShoppingBag },
 ];
 
