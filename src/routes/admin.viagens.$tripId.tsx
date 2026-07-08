@@ -546,10 +546,31 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
               {isOver ? "Solte aqui para mover" : "Sem atividades — arraste uma para cá ou adicione abaixo"}
             </p>
           )}
-          {day.activities.map((a) => (
-            <SortableActivityRow key={a.id} a={a} tripId={tripId} dayId={day.id} onChanged={onChanged} />
-          ))}
-          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
+          {day.activities.map((a, idx) => {
+            const next = day.activities[idx + 1];
+            const route = next
+              ? day.routes.find((r) => r.from_activity_id === a.id && r.to_activity_id === next.id) ?? null
+              : null;
+            const segMode = ((a as Activity).transport_mode_to_next ?? defaultTransport) as TransportMode;
+            return (
+              <div key={a.id} className="space-y-1">
+                <SortableActivityRow a={a} tripId={tripId} dayId={day.id} onChanged={onChanged} />
+                {next && (
+                  <RouteConnector
+                    fromActivityId={a.id}
+                    fromName={a.name}
+                    toName={next.name}
+                    route={route}
+                    currentMode={segMode}
+                    tripId={tripId}
+                    isAdmin
+                    onChanged={onChanged}
+                  />
+                )}
+              </div>
+            );
+          })}
+          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={() => { onChanged(); onRecomputeRoutes(); }} />
         </div>
       </SortableContext>
     </Card>
