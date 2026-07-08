@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateAccessButton } from "./admin.crm.$contactId";
 import { TripMap } from "@/components/map/trip-map";
 import { geocodeAddress, regeocodeTripActivities } from "@/lib/mapbox.functions";
+import { computeDayRoutes } from "@/lib/routes.functions";
+import { RouteConnector } from "@/components/route-connector";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,19 @@ type DocCategory = Database["public"]["Enums"]["document_category"];
 
 export const Route = createFileRoute("/admin/viagens/$tripId")({
   component: TripDetail,
+  errorComponent: ({ error, reset }) => {
+    console.error("[admin/viagens/$tripId]", error);
+    return (
+      <div className="max-w-lg mx-auto p-6 text-center space-y-3">
+        <h2 className="font-display text-lg">Não conseguimos carregar esta viagem</h2>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <div className="flex justify-center gap-2">
+          <Button variant="outline" onClick={reset}>Tentar novamente</Button>
+          <Button variant="ghost" asChild><Link to="/admin/viagens">Voltar</Link></Button>
+        </div>
+      </div>
+    );
+  },
 });
 
 function TripDetail() {
@@ -114,13 +129,15 @@ function TripDetail() {
           <TabsTrigger value="mapa">Mapa</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
+          <TabsTrigger value="utilidades">Utilidades</TabsTrigger>
         </TabsList>
         <TabsContent value="info" className="mt-4"><InfoTab trip={trip} onSaved={invalidate} /></TabsContent>
-        <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} /></TabsContent>
+        <TabsContent value="roteiro" className="mt-4"><RoteiroTab tripId={tripId} preroteiroMode={!!trip.preroteiro_mode} defaultTransport={(trip.default_transport_mode ?? "driving") as "driving" | "transit" | "walking" | "hidden"} /></TabsContent>
         <TabsContent value="ai" className="mt-4"><AiCreationTab tripId={tripId} onApplied={handleAiApplied} /></TabsContent>
         <TabsContent value="mapa" className="mt-4"><MapaTab tripId={tripId} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><DocsTab tripId={tripId} /></TabsContent>
         <TabsContent value="checklist" className="mt-4"><TripChecklistAdmin tripId={tripId} /></TabsContent>
+        <TabsContent value="utilidades" className="mt-4"><UtilitiesTab tripId={tripId} /></TabsContent>
       </Tabs>
     </div>
   );
@@ -253,9 +270,11 @@ function InfoTab({ trip, onSaved }: { trip: any; onSaved: () => void }) {
 }
 
 /* ============================== ROTEIRO TAB ============================== */
-type DayWithActs = Day & { activities: (Activity & { doc_count?: number })[] };
+type ActivityRoute = Database["public"]["Tables"]["activity_routes"]["Row"];
+type TransportMode = "driving" | "transit" | "walking" | "hidden";
+type DayWithActs = Day & { activities: (Activity & { doc_count?: number })[]; routes: ActivityRoute[] };
 
-function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode: boolean }) {
+function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: string; preroteiroMode: boolean; defaultTransport: TransportMode }) {
   const qc = useQueryClient();
   const queryKey = ["trip-days", tripId];
   const { data: days, isLoading } = useQuery({
@@ -267,14 +286,25 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
       const { data: acts } = ids.length
         ? await supabase.from("itinerary_activities").select("*").in("day_id", ids).order("position")
         : { data: [] as Activity[] };
-      const { data: docs } = await supabase.from("documents").select("id, activity_id").eq("trip_id", tripId);
-      return (ds ?? []).map((d) => ({
-        ...d,
-        activities: (acts ?? []).filter((a) => a.day_id === d.id).map((a) => ({
-          ...a,
-          doc_count: (docs ?? []).filter((doc) => doc.activity_id === a.id).length,
-        })),
-      })) as DayWithActs[];
+      const actIds = (acts ?? []).map((a) => a.id);
+      const [{ data: docs }, { data: routes }] = await Promise.all([
+        supabase.from("documents").select("id, activity_id").eq("trip_id", tripId),
+        actIds.length
+          ? supabase.from("activity_routes").select("*").in("from_activity_id", actIds)
+          : Promise.resolve({ data: [] as ActivityRoute[] }),
+      ]);
+      return (ds ?? []).map((d) => {
+        const dayActs = (acts ?? []).filter((a) => a.day_id === d.id);
+        const dayActIds = new Set(dayActs.map((a) => a.id));
+        return {
+          ...d,
+          activities: dayActs.map((a) => ({
+            ...a,
+            doc_count: (docs ?? []).filter((doc) => doc.activity_id === a.id).length,
+          })),
+          routes: (routes ?? []).filter((r) => dayActIds.has(r.from_activity_id)),
+        };
+      }) as DayWithActs[];
     },
     refetchOnWindowFocus: false,
     staleTime: 0,
@@ -347,7 +377,10 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
       if (toIdx === -1) toIdx = toDay.activities.length;
     }
 
-    const prev = days;
+    // Snapshot profundo antes de mutar — evita cache inconsistente em rollback.
+    const prev: DayWithActs[] = typeof structuredClone === "function"
+      ? structuredClone(days)
+      : JSON.parse(JSON.stringify(days));
     const next = days.map((d) => ({ ...d, activities: [...d.activities] }));
     const nFromDay = next.find((d) => d.id === fromDayId)!;
     const nToDay = next.find((d) => d.id === toDayId)!;
@@ -359,16 +392,27 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
     try {
       if (fromDayId === toDayId) {
         await persistDay(toDayId, nToDay.activities);
+        recomputeRoutes(toDayId);
       } else {
         await Promise.all([
           persistDay(fromDayId, nFromDay.activities),
           persistDay(toDayId, nToDay.activities),
         ]);
+        recomputeRoutes(fromDayId);
+        recomputeRoutes(toDayId);
       }
     } catch (err) {
       qc.setQueryData(queryKey, prev);
       toast.error("Não foi possível reordenar: " + (err as Error).message);
     }
+  }
+
+  const compute = useServerFn(computeDayRoutes);
+  function recomputeRoutes(dayId: string) {
+    // Fire-and-forget: recalcula rotas do dia; refetch silencioso no fim.
+    void compute({ data: { dayId } })
+      .then(() => qc.invalidateQueries({ queryKey }))
+      .catch((e) => console.warn("[computeDayRoutes]", (e as Error).message));
   }
 
   if (isLoading) return <Skeleton className="h-64" />;
@@ -399,7 +443,16 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
           onDragEnd={handleDragEnd}
         >
           <div className="space-y-3">
-            {days.map((d) => <DayEditor key={d.id} day={d} tripId={tripId} onChanged={invalidate} />)}
+            {days.map((d) => (
+              <DayEditor
+                key={d.id}
+                day={d}
+                tripId={tripId}
+                defaultTransport={defaultTransport}
+                onChanged={invalidate}
+                onRecomputeRoutes={() => recomputeRoutes(d.id)}
+              />
+            ))}
           </div>
           <DragOverlay>
             {activeAct ? (
@@ -417,7 +470,7 @@ function RoteiroTab({ tripId, preroteiroMode }: { tripId: string; preroteiroMode
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: DayWithActs; tripId: string; onChanged: () => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
 
@@ -463,6 +516,9 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
           </>
         ) : (
           <>
+            <Button size="sm" variant="ghost" onClick={onRecomputeRoutes} title="Recalcular tempos entre atividades">
+              <MapPin className="size-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
             <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
           </>
@@ -490,10 +546,31 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged }: { day: Day
               {isOver ? "Solte aqui para mover" : "Sem atividades — arraste uma para cá ou adicione abaixo"}
             </p>
           )}
-          {day.activities.map((a) => (
-            <SortableActivityRow key={a.id} a={a} tripId={tripId} dayId={day.id} onChanged={onChanged} />
-          ))}
-          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
+          {day.activities.map((a, idx) => {
+            const next = day.activities[idx + 1];
+            const route = next
+              ? day.routes.find((r) => r.from_activity_id === a.id && r.to_activity_id === next.id) ?? null
+              : null;
+            const segMode = ((a as Activity).transport_mode_to_next ?? defaultTransport) as TransportMode;
+            return (
+              <div key={a.id} className="space-y-1">
+                <SortableActivityRow a={a} tripId={tripId} dayId={day.id} onChanged={onChanged} />
+                {next && (
+                  <RouteConnector
+                    fromActivityId={a.id}
+                    fromName={a.name}
+                    toName={next.name}
+                    route={route}
+                    currentMode={segMode}
+                    tripId={tripId}
+                    isAdmin
+                    onChanged={onChanged}
+                  />
+                )}
+              </div>
+            );
+          })}
+          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={() => { onChanged(); onRecomputeRoutes(); }} />
         </div>
       </SortableContext>
     </Card>
@@ -1610,3 +1687,137 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
 
 
 
+
+/* ============================== UTILITIES TAB ============================== */
+type TripUtility = Database["public"]["Tables"]["trip_utilities"]["Row"];
+
+function UtilitiesTab({ tripId }: { tripId: string }) {
+  const qc = useQueryClient();
+  const queryKey = ["trip-utilities", tripId];
+  const { data: items, isLoading } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_utilities")
+        .select("*")
+        .eq("trip_id", tripId)
+        .order("position")
+        .order("created_at");
+      if (error) throw error;
+      return data as TripUtility[];
+    },
+    staleTime: 0,
+  });
+  const invalidate = () => qc.invalidateQueries({ queryKey });
+
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<TripUtility | null>(null);
+  const [form, setForm] = useState({ kind: "", name: "", address: "", maps_url: "" });
+
+  const startNew = () => { setEditing(null); setForm({ kind: "", name: "", address: "", maps_url: "" }); setOpen(true); };
+  const startEdit = (u: TripUtility) => {
+    setEditing(u);
+    setForm({ kind: u.kind, name: u.name, address: u.address ?? "", maps_url: u.maps_url ?? "" });
+    setOpen(true);
+  };
+
+  const save = async () => {
+    if (!form.kind.trim() || !form.name.trim()) return toast.error("Informe o tipo e o nome");
+    const payload = {
+      trip_id: tripId,
+      kind: form.kind.trim(),
+      name: form.name.trim(),
+      address: form.address.trim() || null,
+      maps_url: form.maps_url.trim() || null,
+    };
+    const { error } = editing
+      ? await supabase.from("trip_utilities").update(payload).eq("id", editing.id)
+      : await supabase.from("trip_utilities").insert({ ...payload, position: (items?.length ?? 0) });
+    if (error) return toast.error(error.message);
+    setOpen(false);
+    invalidate();
+  };
+
+  const remove = async (u: TripUtility) => {
+    if (!(await confirmAction(`Excluir "${u.name}"?`, { confirmLabel: "Excluir" }))) return;
+    const { error } = await supabase.from("trip_utilities").delete().eq("id", u.id);
+    if (error) return toast.error(error.message);
+    invalidate();
+  };
+
+  if (isLoading) return <Skeleton className="h-64" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          Conveniências para caso o viajante precisar (farmácias, mercados, correios…). Não entram no mapa nem no roteiro.
+        </p>
+        <Button size="sm" onClick={startNew}><Plus className="size-4" />Nova utilidade</Button>
+      </div>
+
+      {(items?.length ?? 0) === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground border-dashed">
+          Nenhuma utilidade cadastrada ainda.
+        </Card>
+      ) : (
+        <ul className="space-y-2">
+          {items!.map((u) => (
+            <li key={u.id}>
+              <Card className="p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                    {u.kind}
+                  </span>
+                  <p className="font-medium text-sm mt-1">{u.name}</p>
+                  {u.address && <p className="text-xs text-muted-foreground mt-0.5">{u.address}</p>}
+                  {u.maps_url && (
+                    <a href={u.maps_url} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 mt-1">
+                      <ExternalLink className="size-3" />Maps
+                    </a>
+                  )}
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => startEdit(u)}>Editar</Button>
+                <Button size="sm" variant="ghost" onClick={() => remove(u)} className="text-destructive">
+                  <Trash2 className="size-4" />
+                </Button>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar utilidade" : "Nova utilidade"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <div>
+              <Label className="text-xs">Tipo de utilidade</Label>
+              <Input placeholder="Ex.: Farmácia, Mercado, Correios" value={form.kind}
+                onChange={(e) => setForm({ ...form, kind: e.target.value })} autoFocus />
+            </div>
+            <div>
+              <Label className="text-xs">Nome do lugar</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Endereço</Label>
+              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Link do Maps</Label>
+              <Input placeholder="https://maps.google.com/…" value={form.maps_url}
+                onChange={(e) => setForm({ ...form, maps_url: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={save}><Save className="size-4" />Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

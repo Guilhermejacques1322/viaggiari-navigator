@@ -12,6 +12,7 @@ export type Payment = Database["public"]["Tables"]["payments"]["Row"];
 export type ActivityPartner = Database["public"]["Tables"]["activity_partners"]["Row"];
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type ActivityRoute = Database["public"]["Tables"]["activity_routes"]["Row"];
+export type TripUtility = Database["public"]["Tables"]["trip_utilities"]["Row"];
 
 export interface MyTripData {
   trip: Trip | null;
@@ -20,19 +21,18 @@ export interface MyTripData {
   payments: Payment[];
   notifications: Notification[];
   routes: ActivityRoute[];
+  utilities: TripUtility[];
 }
 
 async function fetchMyTrip(userId: string): Promise<MyTripData> {
-  // Find contact linked to this user
   const { data: contact } = await supabase
     .from("contacts")
     .select("id")
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!contact) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [] };
+  if (!contact) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [], utilities: [] };
 
-  // Most recent visible trip
   const { data: trip } = await supabase
     .from("trips")
     .select("*")
@@ -42,13 +42,14 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     .limit(1)
     .maybeSingle();
 
-  if (!trip) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [] };
+  if (!trip) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [], utilities: [] };
 
-  const [{ data: days }, { data: documents }, { data: payments }, { data: notifications }] = await Promise.all([
+  const [{ data: days }, { data: documents }, { data: payments }, { data: notifications }, { data: utilities }] = await Promise.all([
     supabase.from("itinerary_days").select("*").eq("trip_id", trip.id).order("day_number"),
     supabase.from("documents").select("*").eq("trip_id", trip.id).order("event_date", { nullsFirst: false }),
     supabase.from("payments").select("*").eq("trip_id", trip.id).order("installment"),
     supabase.from("notifications").select("*").eq("trip_id", trip.id).order("scheduled_for", { ascending: false }).limit(20),
+    supabase.from("trip_utilities").select("*").eq("trip_id", trip.id).order("position").order("created_at"),
   ]);
 
   const dayIds = (days ?? []).map((d) => d.id);
@@ -87,6 +88,7 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     payments: payments ?? [],
     notifications: notifications ?? [],
     routes: routes ?? [],
+    utilities: utilities ?? [],
   };
 }
 
@@ -102,15 +104,11 @@ export function MyTripProvider({ children }: { children: ReactNode }) {
     queryKey: ["my-trip", user?.id],
     queryFn: () => fetchMyTrip(user!.id),
     enabled: !!user,
-    // Dados de roteiro mudam raramente — vale cache longo para evitar refetch
-    // sempre que o usuário troca entre /minha-viagem/*
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
   });
 
-  // Sem useMemo, o objeto value vira referência nova a cada render do
-  // Provider — todos os consumidores re-renderizam por nada.
   const value = useMemo(
     () => ({ data: query.data, loading: query.isLoading, refetch: query.refetch }),
     [query.data, query.isLoading, query.refetch],

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Home, Map as MapIcon, FileText, ListChecks, LogOut, ShoppingBag } from "lucide-react";
+import { Home, Map as MapIcon, FileText, ListChecks, LogOut, ShoppingBag, Wrench } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { MyTripProvider, useMyTrip } from "@/hooks/use-my-trip";
 import { Logo } from "@/components/brand/logo";
@@ -59,8 +59,9 @@ const NAV: NavItem[] = [
   { to: "/minha-viagem", label: "Início", icon: Home, exact: true },
   { to: "/minha-viagem/roteiro", label: "Roteiro", icon: MapIcon },
   { to: "/minha-viagem/mapa", label: "Mapa", icon: MapIcon },
+  { to: "/minha-viagem/utilidades", label: "Utilidades", icon: Wrench },
   { to: "/minha-viagem/documentos", label: "Docs", icon: FileText },
-  { to: "/minha-viagem/preroteiro", label: "Pré-roteiro", icon: ListChecks },
+  { to: "/minha-viagem/preroteiro", label: "Pré", icon: ListChecks },
   { to: "/minha-viagem/parceiros", label: "Parceiros", icon: ShoppingBag },
 ];
 
@@ -68,7 +69,7 @@ function MobileBottomNav() {
   const { pathname } = useLocation();
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur">
-      <ul className="grid grid-cols-6">
+      <ul className="grid grid-cols-7">
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
           const Icon = item.icon;

@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MinhaViagemIndexRouteImport } from './routes/minha-viagem.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as OrcamentoTokenRouteImport } from './routes/orcamento.$token'
+import { Route as MinhaViagemUtilidadesRouteImport } from './routes/minha-viagem.utilidades'
 import { Route as MinhaViagemRoteiroRouteImport } from './routes/minha-viagem.roteiro'
 import { Route as MinhaViagemPreroteiroRouteImport } from './routes/minha-viagem.preroteiro'
 import { Route as MinhaViagemParceirosRouteImport } from './routes/minha-viagem.parceiros'
@@ -80,6 +81,11 @@ const OrcamentoTokenRoute = OrcamentoTokenRouteImport.update({
   id: '/orcamento/$token',
   path: '/orcamento/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MinhaViagemUtilidadesRoute = MinhaViagemUtilidadesRouteImport.update({
+  id: '/utilidades',
+  path: '/utilidades',
+  getParentRoute: () => MinhaViagemRoute,
 } as any)
 const MinhaViagemRoteiroRoute = MinhaViagemRoteiroRouteImport.update({
   id: '/roteiro',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/minha-viagem/utilidades': typeof MinhaViagemUtilidadesRoute
   '/orcamento/$token': typeof OrcamentoTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/minha-viagem/': typeof MinhaViagemIndexRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/minha-viagem/utilidades': typeof MinhaViagemUtilidadesRoute
   '/orcamento/$token': typeof OrcamentoTokenRoute
   '/admin': typeof AdminIndexRoute
   '/minha-viagem': typeof MinhaViagemIndexRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/minha-viagem/parceiros': typeof MinhaViagemParceirosRoute
   '/minha-viagem/preroteiro': typeof MinhaViagemPreroteiroRoute
   '/minha-viagem/roteiro': typeof MinhaViagemRoteiroRoute
+  '/minha-viagem/utilidades': typeof MinhaViagemUtilidadesRoute
   '/orcamento/$token': typeof OrcamentoTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/minha-viagem/': typeof MinhaViagemIndexRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
+    | '/minha-viagem/utilidades'
     | '/orcamento/$token'
     | '/admin/'
     | '/minha-viagem/'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
+    | '/minha-viagem/utilidades'
     | '/orcamento/$token'
     | '/admin'
     | '/minha-viagem'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/minha-viagem/parceiros'
     | '/minha-viagem/preroteiro'
     | '/minha-viagem/roteiro'
+    | '/minha-viagem/utilidades'
     | '/orcamento/$token'
     | '/admin/'
     | '/minha-viagem/'
@@ -413,6 +425,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/orcamento/$token'
       preLoaderRoute: typeof OrcamentoTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/minha-viagem/utilidades': {
+      id: '/minha-viagem/utilidades'
+      path: '/utilidades'
+      fullPath: '/minha-viagem/utilidades'
+      preLoaderRoute: typeof MinhaViagemUtilidadesRouteImport
+      parentRoute: typeof MinhaViagemRoute
     }
     '/minha-viagem/roteiro': {
       id: '/minha-viagem/roteiro'
@@ -592,6 +611,7 @@ interface MinhaViagemRouteChildren {
   MinhaViagemParceirosRoute: typeof MinhaViagemParceirosRoute
   MinhaViagemPreroteiroRoute: typeof MinhaViagemPreroteiroRoute
   MinhaViagemRoteiroRoute: typeof MinhaViagemRoteiroRoute
+  MinhaViagemUtilidadesRoute: typeof MinhaViagemUtilidadesRoute
   MinhaViagemIndexRoute: typeof MinhaViagemIndexRoute
 }
 
@@ -601,6 +621,7 @@ const MinhaViagemRouteChildren: MinhaViagemRouteChildren = {
   MinhaViagemParceirosRoute: MinhaViagemParceirosRoute,
   MinhaViagemPreroteiroRoute: MinhaViagemPreroteiroRoute,
   MinhaViagemRoteiroRoute: MinhaViagemRoteiroRoute,
+  MinhaViagemUtilidadesRoute: MinhaViagemUtilidadesRoute,
   MinhaViagemIndexRoute: MinhaViagemIndexRoute,
 }
 
@@ -623,13 +644,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
