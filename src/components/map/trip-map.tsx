@@ -39,10 +39,11 @@ const DAY_COLORS = [
 
 export const TripMap = memo(function TripMap({ days, className }: Props) {
   const tokenFn = useServerFn(getMapboxToken);
-  const { data: tokenData, isLoading: tokenLoading } = useQuery({
+  const { data: tokenData, isLoading: tokenLoading, isError: tokenError, refetch: refetchToken } = useQuery({
     queryKey: ["mapbox-token"],
     queryFn: () => tokenFn(),
-    staleTime: Infinity,
+    staleTime: 10 * 60_000,
+    retry: 2,
   });
 
   const daysWithCoords = useMemo(
@@ -67,26 +68,34 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<MapboxNS.Marker[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Init map (lazy import to avoid SSR window errors)
   useEffect(() => {
     if (!tokenData?.token || !containerRef.current || mapRef.current) return;
     let disposed = false;
     (async () => {
-      const mod = await import("mapbox-gl");
-      if (disposed || !containerRef.current) return;
-      const mapboxgl = mod.default;
-      mapboxRef.current = mapboxgl as unknown as typeof MapboxNS;
-      mapboxgl.accessToken = tokenData.token;
-      const map = new mapboxgl.Map({
-        container: containerRef.current,
-        style: "mapbox://styles/mapbox/streets-v12",
-        center: [-46.6333, -23.5505],
-        zoom: 10,
-      });
-      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
-      mapRef.current = map;
-      setMapReady(true);
+      try {
+        const mod = await import("mapbox-gl");
+        if (disposed || !containerRef.current) return;
+        const mapboxgl = mod.default;
+        mapboxRef.current = mapboxgl as unknown as typeof MapboxNS;
+        mapboxgl.accessToken = tokenData.token;
+        const map = new mapboxgl.Map({
+          container: containerRef.current,
+          style: "mapbox://styles/mapbox/streets-v12",
+          center: [-46.6333, -23.5505],
+          zoom: 10,
+        });
+        map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+        mapRef.current = map;
+        setMapReady(true);
+      } catch (err) {
+        if (!disposed) {
+          console.error("[TripMap] failed to load mapbox", err);
+          setMapError((err as Error).message ?? "Falha ao carregar mapa");
+        }
+      }
     })();
     return () => {
       disposed = true;
@@ -95,6 +104,20 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
       setMapReady(false);
     };
   }, [tokenData?.token]);
+
+  // Resize map when container size changes (tabs, sidebars, window resize).
+  useEffect(() => {
+    const map = mapRef.current;
+    const el = containerRef.current;
+    if (!map || !el || !mapReady) return;
+    const ro = new ResizeObserver(() => {
+      try { map.resize(); } catch { /* noop */ }
+    });
+    ro.observe(el);
+    // Also resize once right after ready, for late layout.
+    const raf = requestAnimationFrame(() => { try { map.resize(); } catch { /* noop */ } });
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); };
+  }, [mapReady]);
 
   // Render markers + route line for selected day(s)
   useEffect(() => {
