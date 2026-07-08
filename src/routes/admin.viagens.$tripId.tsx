@@ -443,7 +443,16 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
           onDragEnd={handleDragEnd}
         >
           <div className="space-y-3">
-            {days.map((d) => <DayEditor key={d.id} day={d} tripId={tripId} onChanged={invalidate} />)}
+            {days.map((d) => (
+              <DayEditor
+                key={d.id}
+                day={d}
+                tripId={tripId}
+                defaultTransport={defaultTransport}
+                onChanged={invalidate}
+                onRecomputeRoutes={() => recomputeRoutes(d.id)}
+              />
+            ))}
           </div>
           <DragOverlay>
             {activeAct ? (
