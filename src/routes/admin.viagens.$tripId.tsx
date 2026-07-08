@@ -408,10 +408,11 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   }
 
   const compute = useServerFn(computeDayRoutes);
-  function recomputeRoutes(dayId: string) {
-    // Fire-and-forget: recalcula rotas do dia; refetch silencioso no fim.
-    void compute({ data: { dayId } })
-      .then(() => qc.invalidateQueries({ queryKey }))
+  function recomputeRoutes(dayId: string, opts?: { force?: boolean }) {
+    // Fire-and-forget: por padrão só calcula pares SEM rota cacheada (rápido).
+    // `force: true` recalcula tudo (botão manual).
+    void compute({ data: { dayId, onlyMissing: !opts?.force } })
+      .then((res) => { if (res.computed > 0) qc.invalidateQueries({ queryKey }); })
       .catch((e) => console.warn("[computeDayRoutes]", (e as Error).message));
   }
 
