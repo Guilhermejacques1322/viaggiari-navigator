@@ -451,7 +451,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                 tripId={tripId}
                 defaultTransport={defaultTransport}
                 onChanged={invalidate}
-                onRecomputeRoutes={() => recomputeRoutes(d.id)}
+                onRecomputeRoutes={(opts) => recomputeRoutes(d.id, opts)}
               />
             ))}
           </div>
