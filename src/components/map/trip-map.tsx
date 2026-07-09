@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type * as MapboxNS from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMapboxToken } from "@/lib/mapbox.functions";
@@ -9,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MapPin, ExternalLink } from "lucide-react";
+
 
 export interface MapActivity {
   id: string;
