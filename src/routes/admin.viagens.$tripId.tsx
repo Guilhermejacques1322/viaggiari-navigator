@@ -539,7 +539,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
 
@@ -549,11 +549,17 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
     setEditing(false); onChanged();
   };
   const remove = async () => {
-    if (!(await confirmAction(`Excluir Dia ${day.day_number}?`, { confirmLabel: "Excluir" }))) return;
+    if (!(await confirmAction(`Excluir Dia ${day.day_number}? Todas as atividades desse dia também serão removidas.`, { confirmLabel: "Excluir" }))) return;
+    // O cascade FK apaga atividades e activity_routes. Se falhar, mostra o erro real.
     const { error } = await supabase.from("itinerary_days").delete().eq("id", day.id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[delete day]", error);
+      return toast.error(`Não foi possível excluir: ${error.message}`);
+    }
+    toast.success("Dia excluído");
     onChanged();
   };
+
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `day:${day.id}` });
   const activityIds = day.activities.map((a) => a.id);
