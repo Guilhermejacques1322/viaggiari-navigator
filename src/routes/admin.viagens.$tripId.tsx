@@ -502,7 +502,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{day.title ?? `Dia ${day.day_number}`}</p>
             <p className="text-xs text-muted-foreground">
-              {day.date ? new Date(day.date).toLocaleDateString("pt-BR") : "sem data"} · {day.activities.length} atividades
+              {day.date ? formatDateBR(day.date) : "sem data"} · {day.activities.length} atividades
               {(() => {
                 const tot = day.activities.reduce((s, a) => s + Number(a.estimated_cost ?? 0), 0);
                 return tot > 0 ? <> · <span className="text-emerald-700 font-medium">{tot.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></> : null;
