@@ -477,7 +477,21 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
             ? "Pré-roteiro ativo — cliente pode marcar Quero/Pulo nas atividades."
             : "Pré-roteiro desativado — cliente verá apenas o que estiver fechado."}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {totalPending > 0 && (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={recomputeAllPending}
+              disabled={!!bulkProgress}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              <MapPin className="size-4" />
+              {bulkProgress
+                ? `Calculando ${bulkProgress.current}/${bulkProgress.total}...`
+                : `Calcular rotas pendentes (${totalPending})`}
+            </Button>
+          )}
           <RegeocodeButton tripId={tripId} onDone={invalidate} />
           <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
         </div>
@@ -503,8 +517,11 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                 defaultTransport={defaultTransport}
                 onChanged={invalidate}
                 onRecomputeRoutes={(opts) => recomputeRoutes(d.id, opts)}
+                pendingRoutes={countPendingPairs(d)}
+                isComputing={computingDayId === d.id}
               />
             ))}
+
           </div>
           <DragOverlay>
             {activeAct ? (
