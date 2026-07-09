@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type * as MapboxNS from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMapboxToken } from "@/lib/mapbox.functions";
@@ -9,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MapPin, ExternalLink } from "lucide-react";
+
 
 export interface MapActivity {
   id: string;
@@ -39,12 +39,14 @@ const DAY_COLORS = [
 
 export const TripMap = memo(function TripMap({ days, className }: Props) {
   const tokenFn = useServerFn(getMapboxToken);
-  const { data: tokenData, isLoading: tokenLoading, isError: tokenError, refetch: refetchToken } = useQuery({
+  const { data: tokenData, isLoading: tokenLoading, isError: tokenError, error: tokenErr, refetch: refetchToken } = useQuery({
     queryKey: ["mapbox-token"],
     queryFn: () => tokenFn(),
     staleTime: 10 * 60_000,
-    retry: 2,
+    retry: 1,
   });
+  useEffect(() => { if (tokenErr) console.error("[TripMap] token error", tokenErr); }, [tokenErr]);
+
 
   const daysWithCoords = useMemo(
     () => days.map((d) => ({
@@ -74,8 +76,27 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
   useEffect(() => {
     if (!tokenData?.token || !containerRef.current || mapRef.current) return;
     let disposed = false;
-    (async () => {
+
+    const initWhenSized = async () => {
+      const el = containerRef.current;
+      if (!el) return;
+      // Aguarda o container ter tamanho > 0 (evita init em aba oculta).
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 10 || rect.height < 10) {
+        await new Promise<void>((resolve) => {
+          const ro = new ResizeObserver(() => {
+            const r = el.getBoundingClientRect();
+            if (r.width >= 10 && r.height >= 10) { ro.disconnect(); resolve(); }
+          });
+          ro.observe(el);
+          // Timeout de segurança
+          setTimeout(() => { ro.disconnect(); resolve(); }, 3000);
+        });
+      }
+      if (disposed || !containerRef.current) return;
       try {
+        // CSS + JS lazy juntos — evita SSR quebrar e garante ordem.
+        await import("mapbox-gl/dist/mapbox-gl.css");
         const mod = await import("mapbox-gl");
         if (disposed || !containerRef.current) return;
         const mapboxgl = mod.default;
@@ -93,10 +114,13 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
       } catch (err) {
         if (!disposed) {
           console.error("[TripMap] failed to load mapbox", err);
-          setMapError((err as Error).message ?? "Falha ao carregar mapa");
+          setMapError((err as Error)?.message ?? "Falha ao carregar biblioteca do mapa");
         }
       }
-    })();
+    };
+
+    void initWhenSized();
+
     return () => {
       disposed = true;
       mapRef.current?.remove();
@@ -104,6 +128,7 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
       setMapReady(false);
     };
   }, [tokenData?.token]);
+
 
   // Resize map when container size changes (tabs, sidebars, window resize).
   useEffect(() => {
@@ -210,8 +235,9 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
         <MapPin className="size-8 mx-auto mb-3 opacity-40" />
         <p className="font-medium text-foreground mb-1">Não foi possível carregar o mapa</p>
         <p className="text-sm text-muted-foreground mb-4">
-          {mapError ?? "Falha ao obter o token do mapa. Verifique a conexão e tente novamente."}
+          {mapError ?? (tokenErr as Error | undefined)?.message ?? "Falha ao obter o token do mapa. Verifique a conexão e tente novamente."}
         </p>
+
         <Button
           size="sm"
           variant="outline"

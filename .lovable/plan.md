@@ -1,66 +1,45 @@
 
-# Plano: estabilidade + tempo no admin + mapa + aba Utilidades
+## 1. Delete de dias no roteiro
 
-Quatro frentes, todas na mesma rodada. Nada muda no fluxo de IA nem em schema existente além do necessário para Utilidades.
+O que já existe está correto no nível de banco (cascade em `itinerary_activities` e `activity_routes`) e nas políticas RLS (admin tem `ALL`). Então o problema mais provável é UI: hoje `remove()` chama apenas `supabase.from("itinerary_days").delete()` e depois `onChanged()`, sem tratar dois pontos que costumam causar "não deletou":
 
-## 1) Bug do "This page didn't load / Try again"
+- Se ocorre um erro no `toast.error`, o usuário vê a mensagem mas nada mais acontece — vou logar `error` completo no console pra facilitar diagnóstico.
+- O botão de excluir fica dentro do `SortableActivityRow` de arrasto — em alguns casos o `pointerdown` inicia um drag e o clique nunca dispara. Vou envolver o `Trash2` num `button` com `onPointerDown={(e) => e.stopPropagation()}` (mesmo padrão já usado nas linhas de atividade) e adicionar `type="button"`.
+- Adicionar `await` explícito e invalidar a query do trip (`queryClient.invalidateQueries({ queryKey: ["admin-trip", tripId] })`) logo após o delete pra garantir refresh imediato mesmo se o `onChanged` do pai estiver com estado stale.
+- Como fallback defensivo, apagar em ordem `activity_routes` → `itinerary_activities` → `itinerary_days` (o cascade já faz, mas se por acaso alguém desativar o cascade em migração futura, isso segura). Só se a primeira tentativa direta retornar erro.
 
-Sintoma: depois de um tempo montando dias/atividades, cai no `errorComponent` do root. Causas prováveis observadas no código:
+## 2. Mapa não abre
 
-- Várias queries do admin usam `staleTime: Infinity` + `refetchOnWindowFocus: false`. Se um `useQuery` lança (ex.: token do Mapbox falha, RLS estoura, rede oscila), o erro sobe até o boundary raiz porque não há `errorComponent` nas rotas.
-- `RoteiroTab` faz `Promise.all` de N updates ao reordenar; um único erro rejeita a promise e vai pro boundary sem `try/catch` visível (hoje há try/catch, mas o rollback usa `qc.setQueryData` com snapshot já mutado por referência — pode deixar cache inconsistente).
-- `TripMap` importa `mapbox-gl` dinamicamente dentro de `useEffect`. Se o import falha (rede/cache), a Promise não tratada dispara o listener `unhandledrejection` do `error-capture` e a próxima resposta SSR pode ser normalizada como 500.
-- Toda a árvore do admin (`admin.tsx` e filhos) não tem `errorComponent` nem `notFoundComponent`, então qualquer throw em loader/render sobe pro raiz.
+Vou investigar e corrigir os pontos mais prováveis de quebra:
 
-Ações:
-- Adicionar `errorComponent` local em `src/routes/admin.tsx`, `src/routes/admin.viagens.$tripId.tsx` e `src/routes/minha-viagem.tsx` mostrando uma mensagem contextual com botão "Tentar novamente" que faz `router.invalidate() + reset()` sem derrubar a viagem inteira.
-- Em `RoteiroTab.handleDragEnd`, capturar `prev` como snapshot profundo (`structuredClone`) antes de mutar, para que o rollback restaure de verdade.
-- `TripMap`: envolver o import dinâmico em `try/catch`, exibir card de erro com "Recarregar mapa" e evitar `setState` após unmount (já tem `disposed`, adicionar guarda no catch).
-- Query do token do Mapbox: `retry: 2`, `staleTime: 10min`, e `throwOnError: false` — em caso de falha renderizar o mesmo card de erro do mapa.
+- O `import "mapbox-gl/dist/mapbox-gl.css"` no topo do arquivo é avaliado no SSR e pode explodir dependendo do bundler — mover pra dentro do `useEffect` de init junto com o `import("mapbox-gl")` dinâmico.
+- Adicionar `console.error` visível quando `getMapboxToken` falhar (hoje só marca `tokenError` genérico), pra sabermos se é ausência do secret `MAPBOX_PUBLIC_TOKEN` em produção vs erro de rede.
+- Garantir que o container tenha altura antes do `new mapboxgl.Map(...)` — se o div estiver com `h-[60vh]` mas dentro de uma aba `hidden`, o Mapbox inicializa em 0×0 e nunca renderiza. Detectar via `getBoundingClientRect()` e adiar init até `ResizeObserver` reportar altura > 0.
+- Se `mapError` continuar acontecendo, exibir o texto exato do erro no card "Tentar novamente" (hoje mostramos a mensagem, mas se for o import falhar, é `undefined`).
+- Testar via Playwright headless em `/minha-viagem/roteiro` e em `admin.viagens.$tripId?tab=roteiro` pra reproduzir e confirmar a correção.
 
-## 2) Tempo entre atividades no admin (igual ao viajante)
+## 3. Cálculo manual de rotas (admin)
 
-Hoje o `RouteConnector` só aparece em `src/routes/minha-viagem.roteiro.tsx`. Vamos reutilizá-lo em `DayEditor` do admin, entre linhas de atividade.
+Confirmação: **sim, é isso que você descreveu, e é a abordagem correta**. Hoje, mesmo com o modo `onlyMissing`, sempre que uma atividade é criada/movida o admin dispara `computeDayRoutes` em background, o que:
 
-- Estender a query `["trip-days", tripId]` do admin para trazer também `activity_routes` das atividades do dia e o `default_transport_mode` da viagem (já disponível em `trip`).
-- Renderizar `<RouteConnector … isAdmin />` entre cada par consecutivo de atividades dentro do `SortableContext`, fora dos itens sorteáveis (para não interferir no DnD).
-- Após persistir reordenação/edição/criação de atividade, disparar `computeDayRoutes({ dayId })` (server fn já existe) e invalidar `["trip-days", tripId]`. Chamada disparada com `void` (fire-and-forget) + toast discreto em erro; nunca bloqueia UI.
-- Botão manual "Recalcular tempos" no cabeçalho do dia, útil quando coordenadas mudarem.
+- Consome API Mapbox Directions em cascata a cada edição.
+- Bloqueia a UI enquanto revalida queries.
+- Piora quando o dia tem muitas atividades (N-1 chamadas paralelas por dia).
 
-## 3) Mapa que não carrega em alguns desktops
+Proposta:
 
-Além do try/catch do item 1:
-- Quando o mapa vive dentro de uma `Tabs` que começa oculta (`display:none`), o Mapbox inicializa com container 0×0 e não desenha. Corrigir chamando `map.resize()` em um `ResizeObserver` do container e também em um `requestAnimationFrame` após a tab virar visível (detectar via `IntersectionObserver` ou hook simples que observa `offsetParent`).
-- Pré-carregar `mapbox-gl` com `import(/* webpackPrefetch: true */ 'mapbox-gl')` — no Vite basta um `import('mapbox-gl')` disparado assim que a rota da viagem monta, para o chunk já estar em cache quando a aba abrir.
-- Estilo `streets-v12` já é leve; garantir `preserveDrawingBuffer: false` (default) e não recriar o mapa em cada troca de aba (o `useEffect` atual só cria se `mapRef.current` for null — ok).
-- Card de fallback com botão "Tentar novamente" quando `tokenData` falhar ou o import quebrar.
+- **Remover todos os `recomputeRoutes` automáticos** disparados após criar / mover / editar atividade. As rotas ficam "desatualizadas" até o admin clicar em calcular.
+- No cabeçalho de cada dia, trocar o ícone `MapPin` atual por um botão claro **"Calcular rotas"** que fica em destaque quando existir pelo menos um par sem rota calculada (badge amarelo com o número de trechos pendentes, ex: "Calcular rotas (3)").
+- Ao clicar, calcula **só aquele dia** e mostra `Calculando…` com spinner no próprio botão. Usa `onlyMissing: true` por padrão; um menu "…" oferece "Forçar recálculo total" quando quiser refazer tudo do dia.
+- No topo da aba Roteiro, adicionar um botão global **"Calcular rotas pendentes"** que roda todos os dias com pendências em sequência (não em paralelo entre dias, pra não estourar rate-limit da Mapbox), com barra de progresso "Dia 2 de 5".
+- Para o cliente (view `/minha-viagem`) nada muda: continua rápido porque só lê `activity_routes` já persistidas.
 
-## 4) Nova aba "Utilidades" (admin + cliente)
+### Detalhes técnicos
+- Adicionar coluna virtual "pendências" no admin: contar pares `(atividade[i], atividade[i+1])` com coords válidas que não existem em `day.routes`. Isso já pode ser derivado no cliente sem query nova.
+- O botão dispara `computeDayRoutes({ data: { dayId, onlyMissing: true } })` e invalida `["admin-trip", tripId]` no `onSuccess`.
+- Manter o `RouteConnector` renderizando o placeholder ("— calcular —") quando não há rota persistida, ao invés de esconder o segmento.
 
-Campos por item: `kind` (texto livre — tipo de utilidade), `name`, `address`, `maps_url`. Nada de coordenadas, nada de mapa.
-
-Schema (migration nova):
-- Tabela `public.trip_utilities` com colunas: `id uuid pk default gen_random_uuid()`, `trip_id uuid fk trips on delete cascade`, `kind text not null`, `name text not null`, `address text`, `maps_url text`, `position int default 0`, `created_at timestamptz default now()`, `updated_at timestamptz default now()`.
-- `GRANT SELECT, INSERT, UPDATE, DELETE ON public.trip_utilities TO authenticated;` + `GRANT ALL … TO service_role;`.
-- RLS: `SELECT` para admin (via `has_role`) ou dono da viagem (mesmo padrão de `itinerary_days`); `INSERT/UPDATE/DELETE` só admin.
-- Trigger `touch_updated_at`.
-
-Admin (`admin.viagens.$tripId.tsx`):
-- Nova aba "Utilidades" após "Checklist" no `TabsList`.
-- Componente `UtilitiesTab` com lista simples, botão "Adicionar utilidade", diálogo com os 4 campos, ações editar/excluir.
-
-Cliente:
-- Nova rota `src/routes/minha-viagem.utilidades.tsx` listando utilidades da viagem atual (via `useMyTrip` estendido para trazer `utilities`).
-- Incluir `utilities` no `MyTripProvider` (`src/hooks/use-my-trip.tsx`): novo fetch em paralelo, tipo `TripUtility[]`.
-- Adicionar item "Utilidades" no `NAV` de `src/routes/minha-viagem.tsx` (mobile + desktop). No mobile a grid vira `grid-cols-7` (ou reduzir texto/ícones para caber).
-- UI cliente: cards com `kind` como chip, nome em destaque, endereço e link "Abrir no Maps" (usa `maps_url` ou fallback `https://www.google.com/maps/search/?api=1&query=<address>`).
-
-## Fora do escopo
-- Nenhuma alteração na criação por IA.
-- Nenhuma alteração em schema de `itinerary_*` ou `activity_routes`.
-- Sem otimizações de performance além das descritas (mapa e drag-and-drop).
-
-## Detalhes técnicos rápidos
-- `computeDayRoutes` já existe em `src/lib/routes.functions.ts` e escreve em `activity_routes` via admin client.
-- `RouteConnector` já aceita `isAdmin` — reutilização direta.
-- `structuredClone` está disponível no runtime moderno usado pelo TanStack Start; se não, `JSON.parse(JSON.stringify(prev))` como fallback.
+## Arquivos a alterar
+- `src/routes/admin.viagens.$tripId.tsx` — delete de dia, remover auto-recompute, novo botão por dia + botão global.
+- `src/components/map/trip-map.tsx` — CSS lazy, guard de altura, logs claros.
+- `src/lib/routes.functions.ts` — nenhuma mudança de schema, só será chamado sob demanda.

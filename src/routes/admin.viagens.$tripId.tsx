@@ -393,15 +393,13 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
     try {
       if (fromDayId === toDayId) {
         await persistDay(toDayId, nToDay.activities);
-        recomputeRoutes(toDayId);
       } else {
         await Promise.all([
           persistDay(fromDayId, nFromDay.activities),
           persistDay(toDayId, nToDay.activities),
         ]);
-        recomputeRoutes(fromDayId);
-        recomputeRoutes(toDayId);
       }
+      // Não recalcula rotas automaticamente — usar botão "Calcular rotas" no dia.
     } catch (err) {
       qc.setQueryData(queryKey, prev);
       toast.error("Não foi possível reordenar: " + (err as Error).message);
@@ -409,13 +407,65 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   }
 
   const compute = useServerFn(computeDayRoutes);
-  function recomputeRoutes(dayId: string, opts?: { force?: boolean }) {
-    // Fire-and-forget: por padrão só calcula pares SEM rota cacheada (rápido).
-    // `force: true` recalcula tudo (botão manual).
-    void compute({ data: { dayId, onlyMissing: !opts?.force } })
-      .then((res) => { if (res.computed > 0) qc.invalidateQueries({ queryKey }); })
-      .catch((e) => console.warn("[computeDayRoutes]", (e as Error).message));
+  const [computingDayId, setComputingDayId] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // Pares (a[i], a[i+1]) com coords válidas em ambos e sem rota persistida.
+  function countPendingPairs(day: DayWithActs) {
+    let pending = 0;
+    for (let i = 0; i < day.activities.length - 1; i++) {
+      const a = day.activities[i];
+      const b = day.activities[i + 1];
+      const hasCoords = a.latitude != null && a.longitude != null && b.latitude != null && b.longitude != null;
+      if (!hasCoords) continue;
+      const exists = day.routes.some((r) => r.from_activity_id === a.id && r.to_activity_id === b.id);
+      if (!exists) pending++;
+    }
+    return pending;
   }
+
+  async function recomputeRoutes(dayId: string, opts?: { force?: boolean }) {
+    setComputingDayId(dayId);
+    try {
+      const res = await compute({ data: { dayId, onlyMissing: !opts?.force } });
+      if (res.computed > 0) await qc.invalidateQueries({ queryKey });
+      toast.success(`${res.computed} rota(s) calculada(s)${res.skipped ? ` · ${res.skipped} já em cache` : ""}${res.withoutCoords ? ` · ${res.withoutCoords} sem coordenadas` : ""}`);
+    } catch (e) {
+      console.error("[computeDayRoutes]", e);
+      toast.error("Falha ao calcular rotas: " + (e as Error).message);
+    } finally {
+      setComputingDayId(null);
+    }
+  }
+
+  async function recomputeAllPending() {
+    if (!days) return;
+    const pendingDays = days.filter((d) => countPendingPairs(d) > 0);
+    if (pendingDays.length === 0) {
+      toast.info("Nenhuma rota pendente para calcular.");
+      return;
+    }
+    setBulkProgress({ current: 0, total: pendingDays.length });
+    let totalComputed = 0;
+    try {
+      for (let i = 0; i < pendingDays.length; i++) {
+        setBulkProgress({ current: i + 1, total: pendingDays.length });
+        try {
+          const res = await compute({ data: { dayId: pendingDays[i].id, onlyMissing: true } });
+          totalComputed += res.computed;
+        } catch (e) {
+          console.warn("[computeDayRoutes bulk]", (e as Error).message);
+        }
+      }
+      if (totalComputed > 0) await qc.invalidateQueries({ queryKey });
+      toast.success(`${totalComputed} rota(s) calculada(s) em ${pendingDays.length} dia(s)`);
+    } finally {
+      setBulkProgress(null);
+    }
+  }
+
+  const totalPending = (days ?? []).reduce((s, d) => s + countPendingPairs(d), 0);
+
 
   if (isLoading) return <Skeleton className="h-64" />;
 
@@ -427,7 +477,21 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
             ? "Pré-roteiro ativo — cliente pode marcar Quero/Pulo nas atividades."
             : "Pré-roteiro desativado — cliente verá apenas o que estiver fechado."}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {totalPending > 0 && (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={recomputeAllPending}
+              disabled={!!bulkProgress}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              <MapPin className="size-4" />
+              {bulkProgress
+                ? `Calculando ${bulkProgress.current}/${bulkProgress.total}...`
+                : `Calcular rotas pendentes (${totalPending})`}
+            </Button>
+          )}
           <RegeocodeButton tripId={tripId} onDone={invalidate} />
           <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
         </div>
@@ -453,8 +517,11 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                 defaultTransport={defaultTransport}
                 onChanged={invalidate}
                 onRecomputeRoutes={(opts) => recomputeRoutes(d.id, opts)}
+                pendingRoutes={countPendingPairs(d)}
+                isComputing={computingDayId === d.id}
               />
             ))}
+
           </div>
           <DragOverlay>
             {activeAct ? (
@@ -472,7 +539,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
 
@@ -482,11 +549,17 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
     setEditing(false); onChanged();
   };
   const remove = async () => {
-    if (!(await confirmAction(`Excluir Dia ${day.day_number}?`, { confirmLabel: "Excluir" }))) return;
+    if (!(await confirmAction(`Excluir Dia ${day.day_number}? Todas as atividades desse dia também serão removidas.`, { confirmLabel: "Excluir" }))) return;
+    // O cascade FK apaga atividades e activity_routes. Se falhar, mostra o erro real.
     const { error } = await supabase.from("itinerary_days").delete().eq("id", day.id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[delete day]", error);
+      return toast.error(`Não foi possível excluir: ${error.message}`);
+    }
+    toast.success("Dia excluído");
     onChanged();
   };
+
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `day:${day.id}` });
   const activityIds = day.activities.map((a) => a.id);
@@ -518,14 +591,35 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
           </>
         ) : (
           <>
-            <Button size="sm" variant="ghost" onClick={() => onRecomputeRoutes({ force: true })} title="Recalcular tempos entre atividades">
-              <MapPin className="size-4" />
-            </Button>
+            {pendingRoutes > 0 ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => onRecomputeRoutes()}
+                disabled={isComputing}
+                className="bg-amber-600 hover:bg-amber-700 gap-1"
+                title="Calcular rotas pendentes deste dia"
+              >
+                <MapPin className="size-4" />
+                {isComputing ? "Calculando..." : `Calcular rotas (${pendingRoutes})`}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onRecomputeRoutes({ force: true })}
+                disabled={isComputing}
+                title="Forçar recálculo de todas as rotas do dia"
+              >
+                <MapPin className="size-4" />
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
             <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
           </>
         )}
       </div>
+
 
       {editing && (
         <div className="mt-3 grid md:grid-cols-2 gap-3">
@@ -572,7 +666,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
               </div>
             );
           })}
-          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={() => { onChanged(); onRecomputeRoutes(); }} />
+          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
         </div>
       </SortableContext>
     </Card>
