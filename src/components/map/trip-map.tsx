@@ -235,8 +235,9 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
         <MapPin className="size-8 mx-auto mb-3 opacity-40" />
         <p className="font-medium text-foreground mb-1">Não foi possível carregar o mapa</p>
         <p className="text-sm text-muted-foreground mb-4">
-          {mapError ?? "Falha ao obter o token do mapa. Verifique a conexão e tente novamente."}
+          {mapError ?? (tokenErr as Error | undefined)?.message ?? "Falha ao obter o token do mapa. Verifique a conexão e tente novamente."}
         </p>
+
         <Button
           size="sm"
           variant="outline"
