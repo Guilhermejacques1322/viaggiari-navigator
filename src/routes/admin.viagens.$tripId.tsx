@@ -666,7 +666,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
               </div>
             );
           })}
-          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={() => { onChanged(); onRecomputeRoutes(); }} />
+          <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
         </div>
       </SortableContext>
     </Card>
