@@ -159,6 +159,7 @@ function DashboardSkeleton() {
   );
 }
 
+import { formatDateBR } from "@/lib/date-utils";
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  return formatDateBR(iso, { day: "2-digit", month: "short", year: "numeric" });
 }
