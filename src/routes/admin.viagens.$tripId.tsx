@@ -393,15 +393,13 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
     try {
       if (fromDayId === toDayId) {
         await persistDay(toDayId, nToDay.activities);
-        recomputeRoutes(toDayId);
       } else {
         await Promise.all([
           persistDay(fromDayId, nFromDay.activities),
           persistDay(toDayId, nToDay.activities),
         ]);
-        recomputeRoutes(fromDayId);
-        recomputeRoutes(toDayId);
       }
+      // Não recalcula rotas automaticamente — usar botão "Calcular rotas" no dia.
     } catch (err) {
       qc.setQueryData(queryKey, prev);
       toast.error("Não foi possível reordenar: " + (err as Error).message);
@@ -409,13 +407,65 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   }
 
   const compute = useServerFn(computeDayRoutes);
-  function recomputeRoutes(dayId: string, opts?: { force?: boolean }) {
-    // Fire-and-forget: por padrão só calcula pares SEM rota cacheada (rápido).
-    // `force: true` recalcula tudo (botão manual).
-    void compute({ data: { dayId, onlyMissing: !opts?.force } })
-      .then((res) => { if (res.computed > 0) qc.invalidateQueries({ queryKey }); })
-      .catch((e) => console.warn("[computeDayRoutes]", (e as Error).message));
+  const [computingDayId, setComputingDayId] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // Pares (a[i], a[i+1]) com coords válidas em ambos e sem rota persistida.
+  function countPendingPairs(day: DayWithActs) {
+    let pending = 0;
+    for (let i = 0; i < day.activities.length - 1; i++) {
+      const a = day.activities[i];
+      const b = day.activities[i + 1];
+      const hasCoords = a.latitude != null && a.longitude != null && b.latitude != null && b.longitude != null;
+      if (!hasCoords) continue;
+      const exists = day.routes.some((r) => r.from_activity_id === a.id && r.to_activity_id === b.id);
+      if (!exists) pending++;
+    }
+    return pending;
   }
+
+  async function recomputeRoutes(dayId: string, opts?: { force?: boolean }) {
+    setComputingDayId(dayId);
+    try {
+      const res = await compute({ data: { dayId, onlyMissing: !opts?.force } });
+      if (res.computed > 0) await qc.invalidateQueries({ queryKey });
+      toast.success(`${res.computed} rota(s) calculada(s)${res.skipped ? ` · ${res.skipped} já em cache` : ""}${res.withoutCoords ? ` · ${res.withoutCoords} sem coordenadas` : ""}`);
+    } catch (e) {
+      console.error("[computeDayRoutes]", e);
+      toast.error("Falha ao calcular rotas: " + (e as Error).message);
+    } finally {
+      setComputingDayId(null);
+    }
+  }
+
+  async function recomputeAllPending() {
+    if (!days) return;
+    const pendingDays = days.filter((d) => countPendingPairs(d) > 0);
+    if (pendingDays.length === 0) {
+      toast.info("Nenhuma rota pendente para calcular.");
+      return;
+    }
+    setBulkProgress({ current: 0, total: pendingDays.length });
+    let totalComputed = 0;
+    try {
+      for (let i = 0; i < pendingDays.length; i++) {
+        setBulkProgress({ current: i + 1, total: pendingDays.length });
+        try {
+          const res = await compute({ data: { dayId: pendingDays[i].id, onlyMissing: true } });
+          totalComputed += res.computed;
+        } catch (e) {
+          console.warn("[computeDayRoutes bulk]", (e as Error).message);
+        }
+      }
+      if (totalComputed > 0) await qc.invalidateQueries({ queryKey });
+      toast.success(`${totalComputed} rota(s) calculada(s) em ${pendingDays.length} dia(s)`);
+    } finally {
+      setBulkProgress(null);
+    }
+  }
+
+  const totalPending = (days ?? []).reduce((s, d) => s + countPendingPairs(d), 0);
+
 
   if (isLoading) return <Skeleton className="h-64" />;
 
