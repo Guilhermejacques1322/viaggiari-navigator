@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { formatDateBR } from "@/lib/date-utils";
 
 type TripStatus = Database["public"]["Enums"]["trip_status"];
 
