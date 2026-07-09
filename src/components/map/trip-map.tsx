@@ -74,8 +74,27 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
   useEffect(() => {
     if (!tokenData?.token || !containerRef.current || mapRef.current) return;
     let disposed = false;
-    (async () => {
+
+    const initWhenSized = async () => {
+      const el = containerRef.current;
+      if (!el) return;
+      // Aguarda o container ter tamanho > 0 (evita init em aba oculta).
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 10 || rect.height < 10) {
+        await new Promise<void>((resolve) => {
+          const ro = new ResizeObserver(() => {
+            const r = el.getBoundingClientRect();
+            if (r.width >= 10 && r.height >= 10) { ro.disconnect(); resolve(); }
+          });
+          ro.observe(el);
+          // Timeout de segurança
+          setTimeout(() => { ro.disconnect(); resolve(); }, 3000);
+        });
+      }
+      if (disposed || !containerRef.current) return;
       try {
+        // CSS + JS lazy juntos — evita SSR quebrar e garante ordem.
+        await import("mapbox-gl/dist/mapbox-gl.css");
         const mod = await import("mapbox-gl");
         if (disposed || !containerRef.current) return;
         const mapboxgl = mod.default;
@@ -93,10 +112,13 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
       } catch (err) {
         if (!disposed) {
           console.error("[TripMap] failed to load mapbox", err);
-          setMapError((err as Error).message ?? "Falha ao carregar mapa");
+          setMapError((err as Error)?.message ?? "Falha ao carregar biblioteca do mapa");
         }
       }
-    })();
+    };
+
+    void initWhenSized();
+
     return () => {
       disposed = true;
       mapRef.current?.remove();
@@ -104,6 +126,7 @@ export const TripMap = memo(function TripMap({ days, className }: Props) {
       setMapReady(false);
     };
   }, [tokenData?.token]);
+
 
   // Resize map when container size changes (tabs, sidebars, window resize).
   useEffect(() => {
