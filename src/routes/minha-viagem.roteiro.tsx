@@ -404,6 +404,7 @@ function ReviewDialog({
   );
 }
 
+import { formatDateBR } from "@/lib/date-utils";
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
+  return formatDateBR(iso, { weekday: "short", day: "2-digit", month: "short" });
 }
