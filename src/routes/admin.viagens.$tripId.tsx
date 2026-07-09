@@ -591,14 +591,35 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
           </>
         ) : (
           <>
-            <Button size="sm" variant="ghost" onClick={() => onRecomputeRoutes({ force: true })} title="Recalcular tempos entre atividades">
-              <MapPin className="size-4" />
-            </Button>
+            {pendingRoutes > 0 ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => onRecomputeRoutes()}
+                disabled={isComputing}
+                className="bg-amber-600 hover:bg-amber-700 gap-1"
+                title="Calcular rotas pendentes deste dia"
+              >
+                <MapPin className="size-4" />
+                {isComputing ? "Calculando..." : `Calcular rotas (${pendingRoutes})`}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onRecomputeRoutes({ force: true })}
+                disabled={isComputing}
+                title="Forçar recálculo de todas as rotas do dia"
+              >
+                <MapPin className="size-4" />
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
             <Button size="sm" variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /></Button>
           </>
         )}
       </div>
+
 
       {editing && (
         <div className="mt-3 grid md:grid-cols-2 gap-3">
