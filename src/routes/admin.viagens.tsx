@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { formatDateBR } from "@/lib/date-utils";
 
 type TripStatus = Database["public"]["Enums"]["trip_status"];
 
@@ -109,7 +110,7 @@ function TripsList() {
                 </div>
                 {t.start_date && (
                   <span className="hidden md:inline text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(t.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                    {formatDateBR(t.start_date, { day: "2-digit", month: "short", year: "2-digit" })}
                   </span>
                 )}
                 {!t.visible_to_client && (

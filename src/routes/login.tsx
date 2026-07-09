@@ -23,6 +23,7 @@ function LoginPage() {
   const { user, isAdmin, roles, loading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
 
+  // Se o usuário já estava logado ao abrir /login, redireciona.
   useEffect(() => {
     if (loading || !user) return;
     if (roles.length === 0) return;
@@ -38,14 +39,29 @@ function LoginPage() {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword(parsed.data);
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message === "Invalid login credentials" ? "E-mail ou senha incorretos" : error.message);
+    const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+    if (error || !data.session) {
+      setSubmitting(false);
+      toast.error(error?.message === "Invalid login credentials" ? "E-mail ou senha incorretos" : (error?.message ?? "Falha ao entrar"));
       return;
     }
-    toast.success("Bem-vindo de volta!");
+    // Navega imediatamente — não esperamos onAuthStateChange → loadRoles →
+    // re-render → useEffect. Buscamos roles direto com o user recém logado.
+    try {
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.session.user.id);
+      const admin = (rolesData ?? []).some((r) => r.role === "admin");
+      toast.success("Bem-vindo de volta!");
+      navigate({ to: admin ? "/admin" : "/minha-viagem", replace: true });
+    } catch {
+      navigate({ to: "/minha-viagem", replace: true });
+    } finally {
+      setSubmitting(false);
+    }
   }
+
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
