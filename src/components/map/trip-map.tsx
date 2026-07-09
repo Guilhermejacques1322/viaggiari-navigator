@@ -39,12 +39,14 @@ const DAY_COLORS = [
 
 export const TripMap = memo(function TripMap({ days, className }: Props) {
   const tokenFn = useServerFn(getMapboxToken);
-  const { data: tokenData, isLoading: tokenLoading, isError: tokenError, refetch: refetchToken } = useQuery({
+  const { data: tokenData, isLoading: tokenLoading, isError: tokenError, error: tokenErr, refetch: refetchToken } = useQuery({
     queryKey: ["mapbox-token"],
     queryFn: () => tokenFn(),
     staleTime: 10 * 60_000,
-    retry: 2,
+    retry: 1,
   });
+  useEffect(() => { if (tokenErr) console.error("[TripMap] token error", tokenErr); }, [tokenErr]);
+
 
   const daysWithCoords = useMemo(
     () => days.map((d) => ({
