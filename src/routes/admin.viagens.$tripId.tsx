@@ -544,10 +544,12 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "", cover_image_url: day.cover_image_url ?? "" });
 
   const save = async () => {
-    const { error } = await supabase.from("itinerary_days").update(form).eq("id", day.id);
+    const payload = { ...form, cover_image_url: form.cover_image_url.trim() || null };
+    const { error } = await supabase.from("itinerary_days").update(payload).eq("id", day.id);
     if (error) return toast.error(error.message);
     setEditing(false); onChanged();
   };
+
   const remove = async () => {
     if (!(await confirmAction(`Excluir Dia ${day.day_number}? Todas as atividades desse dia também serão removidas.`, { confirmLabel: "Excluir" }))) return;
     // O cascade FK apaga atividades e activity_routes. Se falhar, mostra o erro real.
