@@ -492,10 +492,12 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                 : `Calcular rotas pendentes (${totalPending})`}
             </Button>
           )}
+          <ExportRoteiroButton tripId={tripId} days={days ?? []} defaultTransport={defaultTransport} />
           <RegeocodeButton tripId={tripId} onDone={invalidate} />
           <Button size="sm" onClick={addDay}><Plus className="size-4" />Novo dia</Button>
         </div>
       </div>
+
 
       {!days?.length ? (
         <Card className="p-12 text-center text-muted-foreground border-dashed">
