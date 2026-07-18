@@ -1,0 +1,1 @@
+ALTER TABLE public.itinerary_days ADD COLUMN IF NOT EXISTS cover_image_url text;

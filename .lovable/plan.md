@@ -1,45 +1,62 @@
 
-## 1. Delete de dias no roteiro
+## 1. Capa do dia (URL manual)
 
-O que já existe está correto no nível de banco (cascade em `itinerary_activities` e `activity_routes`) e nas políticas RLS (admin tem `ALL`). Então o problema mais provável é UI: hoje `remove()` chama apenas `supabase.from("itinerary_days").delete()` e depois `onChanged()`, sem tratar dois pontos que costumam causar "não deletou":
+**Banco** — migration adiciona coluna à tabela `itinerary_days`:
+- `cover_image_url text null`
 
-- Se ocorre um erro no `toast.error`, o usuário vê a mensagem mas nada mais acontece — vou logar `error` completo no console pra facilitar diagnóstico.
-- O botão de excluir fica dentro do `SortableActivityRow` de arrasto — em alguns casos o `pointerdown` inicia um drag e o clique nunca dispara. Vou envolver o `Trash2` num `button` com `onPointerDown={(e) => e.stopPropagation()}` (mesmo padrão já usado nas linhas de atividade) e adicionar `type="button"`.
-- Adicionar `await` explícito e invalidar a query do trip (`queryClient.invalidateQueries({ queryKey: ["admin-trip", tripId] })`) logo após o delete pra garantir refresh imediato mesmo se o `onChanged` do pai estiver com estado stale.
-- Como fallback defensivo, apagar em ordem `activity_routes` → `itinerary_activities` → `itinerary_days` (o cascade já faz, mas se por acaso alguém desativar o cascade em migração futura, isso segura). Só se a primeira tentativa direta retornar erro.
+**Admin — editor do dia** (`admin.viagens.$tripId.tsx`, `DayEditor`):
+- Novo campo "Imagem de capa (URL)" no cabeçalho de cada dia, ao lado do título/data.
+- Preview 16:9 pequeno abaixo do input quando há URL válida; botão "Remover".
+- Salva no blur (mesmo padrão dos outros campos do dia).
+- Validação leve: aceita `http(s)://…`; se a imagem falhar em carregar, mostra badge "Não foi possível carregar" sem quebrar o layout.
 
-## 2. Mapa não abre
+**Cliente — roteiro** (`minha-viagem.roteiro.tsx`):
+- Cada dia vira um **hero grande** (largura total do container, aspect ~21:9 no desktop, 16:9 no mobile), com a imagem em `object-cover`, gradiente escuro embaixo, e por cima:
+  - "Dia N" pequeno em cima
+  - Título do dia em texto grande branco
+  - Data formatada em BR (menor, opacidade 80%)
+  - Chevron de collapse no canto
+- Se não houver `cover_image_url`, fallback elegante: bloco com gradiente da marca (terracota→oliva) + mesma tipografia (nada de placeholder cinza).
+- Abaixo do hero, as atividades continuam como estão hoje (mesmos cards + `RouteConnector`).
+- Hero é o próprio toggle (clicável) para expandir/recolher — mantém o comportamento atual.
+- No admin também mostro o mesmo hero (menor, ~16:9) no topo do dia para paridade visual.
 
-Vou investigar e corrigir os pontos mais prováveis de quebra:
+## 2. Exportar PDF do roteiro (admin)
 
-- O `import "mapbox-gl/dist/mapbox-gl.css"` no topo do arquivo é avaliado no SSR e pode explodir dependendo do bundler — mover pra dentro do `useEffect` de init junto com o `import("mapbox-gl")` dinâmico.
-- Adicionar `console.error` visível quando `getMapboxToken` falhar (hoje só marca `tokenError` genérico), pra sabermos se é ausência do secret `MAPBOX_PUBLIC_TOKEN` em produção vs erro de rede.
-- Garantir que o container tenha altura antes do `new mapboxgl.Map(...)` — se o div estiver com `h-[60vh]` mas dentro de uma aba `hidden`, o Mapbox inicializa em 0×0 e nunca renderiza. Detectar via `getBoundingClientRect()` e adiar init até `ResizeObserver` reportar altura > 0.
-- Se `mapError` continuar acontecendo, exibir o texto exato do erro no card "Tentar novamente" (hoje mostramos a mensagem, mas se for o import falhar, é `undefined`).
-- Testar via Playwright headless em `/minha-viagem/roteiro` e em `admin.viagens.$tripId?tab=roteiro` pra reproduzir e confirmar a correção.
+**Onde**: botão "Exportar PDF" no header da aba **Roteiro** em `admin.viagens.$tripId.tsx`, ao lado de "Calcular rotas pendentes".
 
-## 3. Cálculo manual de rotas (admin)
+**Como**: gerado no cliente com `jspdf` + `jspdf-autotable` (já é padrão do projeto em `quote-pdf.ts`) — sem server function, sem custo extra. Fontes já registradas no util existente serão reaproveitadas/estendidas.
 
-Confirmação: **sim, é isso que você descreveu, e é a abordagem correta**. Hoje, mesmo com o modo `onlyMissing`, sempre que uma atividade é criada/movida o admin dispara `computeDayRoutes` em background, o que:
+**Conteúdo** (roteiro completo):
+1. **Capa**: logo Viaggiari, título da viagem, cliente, período (data início–fim), destino principal.
+2. **Índice**: lista de dias com data e título, número da página.
+3. **Um dia por seção** (page break entre dias):
+   - Cabeçalho: "Dia N — data — título"
+   - Imagem de capa do dia (se houver), largura ~metade da página
+   - Para cada atividade em ordem:
+     - Horário (se houver) + nome (bold)
+     - Endereço
+     - Descrição curta
+     - Parceiro vinculado (se houver)
+     - Foto principal da atividade (thumbnail, quando `image_url` existir)
+   - Entre atividades: linha com **modo de transporte selecionado + tempo + distância** vinda de `activity_routes` (mesmo dado do `RouteConnector`). Se não houver rota calculada, omite silenciosamente.
+4. **Página final — Parceiros da viagem**: lista consolidada de todos os `activity_partners` únicos do roteiro (nome, tipo, contato/link).
 
-- Consome API Mapbox Directions em cascata a cada edição.
-- Bloqueia a UI enquanto revalida queries.
-- Piora quando o dia tem muitas atividades (N-1 chamadas paralelas por dia).
+**Detalhes técnicos**:
+- Imagens carregadas via `fetch → blob → dataURL` antes de montar o PDF (jsPDF exige base64). URLs que falharem são puladas com log.
+- Loading toast "Gerando PDF…" enquanto processa; nome do arquivo: `roteiro-{trip.title}-{yyyy-mm-dd}.pdf`.
+- Usa `parseISODateLocal`/`formatDateBR` (evita bug de timezone já resolvido).
+- Reutiliza cores/tipografia da marca definidas em `styles.css` (terracota + oliva).
 
-Proposta:
+## 3. Fora de escopo (para não inflar esta entrega)
+- Sugestão automática de foto (Unsplash/Mapbox).
+- Fallback da 1ª atividade.
+- PDF para o cliente (fica só admin).
+- Mescla com PDFs de documentos.
 
-- **Remover todos os `recomputeRoutes` automáticos** disparados após criar / mover / editar atividade. As rotas ficam "desatualizadas" até o admin clicar em calcular.
-- No cabeçalho de cada dia, trocar o ícone `MapPin` atual por um botão claro **"Calcular rotas"** que fica em destaque quando existir pelo menos um par sem rota calculada (badge amarelo com o número de trechos pendentes, ex: "Calcular rotas (3)").
-- Ao clicar, calcula **só aquele dia** e mostra `Calculando…` com spinner no próprio botão. Usa `onlyMissing: true` por padrão; um menu "…" oferece "Forçar recálculo total" quando quiser refazer tudo do dia.
-- No topo da aba Roteiro, adicionar um botão global **"Calcular rotas pendentes"** que roda todos os dias com pendências em sequência (não em paralelo entre dias, pra não estourar rate-limit da Mapbox), com barra de progresso "Dia 2 de 5".
-- Para o cliente (view `/minha-viagem`) nada muda: continua rápido porque só lê `activity_routes` já persistidas.
-
-### Detalhes técnicos
-- Adicionar coluna virtual "pendências" no admin: contar pares `(atividade[i], atividade[i+1])` com coords válidas que não existem em `day.routes`. Isso já pode ser derivado no cliente sem query nova.
-- O botão dispara `computeDayRoutes({ data: { dayId, onlyMissing: true } })` e invalida `["admin-trip", tripId]` no `onSuccess`.
-- Manter o `RouteConnector` renderizando o placeholder ("— calcular —") quando não há rota persistida, ao invés de esconder o segmento.
-
-## Arquivos a alterar
-- `src/routes/admin.viagens.$tripId.tsx` — delete de dia, remover auto-recompute, novo botão por dia + botão global.
-- `src/components/map/trip-map.tsx` — CSS lazy, guard de altura, logs claros.
-- `src/lib/routes.functions.ts` — nenhuma mudança de schema, só será chamado sob demanda.
+## Arquivos afetados
+- **Migration**: adicionar `cover_image_url` em `itinerary_days`.
+- `src/hooks/use-my-trip.tsx`: nada (tipo já vem do `Database`).
+- `src/routes/minha-viagem.roteiro.tsx`: novo hero por dia.
+- `src/routes/admin.viagens.$tripId.tsx`: input de capa no `DayEditor` + botão "Exportar PDF" no header do Roteiro.
+- `src/lib/roteiro-pdf.ts` (novo): função `exportRoteiroPDF(tripId)` que lê `trips` + `itinerary_days` + `itinerary_activities` + `activity_partners` + `activity_routes` e monta o documento.

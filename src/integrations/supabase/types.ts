@@ -600,6 +600,7 @@ export type Database = {
       }
       itinerary_days: {
         Row: {
+          cover_image_url: string | null
           created_at: string
           date: string | null
           day_number: number
@@ -609,6 +610,7 @@ export type Database = {
           trip_id: string
         }
         Insert: {
+          cover_image_url?: string | null
           created_at?: string
           date?: string | null
           day_number: number
@@ -618,6 +620,7 @@ export type Database = {
           trip_id: string
         }
         Update: {
+          cover_image_url?: string | null
           created_at?: string
           date?: string | null
           day_number?: number
