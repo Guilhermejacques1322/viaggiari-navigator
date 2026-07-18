@@ -541,7 +541,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
 
 const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "" });
+  const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "", cover_image_url: day.cover_image_url ?? "" });
 
   const save = async () => {
     const { error } = await supabase.from("itinerary_days").update(form).eq("id", day.id);
