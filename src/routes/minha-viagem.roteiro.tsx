@@ -98,32 +98,65 @@ function Roteiro() {
         </Card>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {data.days.map((day) => {
           const expanded = openDay === day.id;
           const visible = day.activities.filter((a) => !a.in_preroteiro || a.client_response === "want");
+          const cover = day.cover_image_url;
           return (
             <Card key={day.id} className="overflow-hidden">
               <button
                 onClick={() => setOpenDay(expanded ? null : day.id)}
-                className="w-full flex items-center gap-4 p-4 text-left hover:bg-accent/50 transition-colors"
+                className="w-full text-left group relative block"
+                aria-expanded={expanded}
               >
-                <div className="size-11 rounded-full bg-primary/10 grid place-items-center text-primary font-display font-medium">
-                  {day.day_number}
+                <div className={cn(
+                  "relative w-full overflow-hidden",
+                  "aspect-[16/9] md:aspect-[21/9]",
+                )}>
+                  {cover ? (
+                    <img
+                      src={cover}
+                      alt={day.title ?? `Dia ${day.day_number}`}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        el.style.display = "none";
+                        const fb = el.nextElementSibling as HTMLElement | null;
+                        if (fb) fb.style.display = "block";
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      display: cover ? "none" : "block",
+                      background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--sidebar-background)) 100%)",
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 flex items-end justify-between gap-3 text-white">
+                    <div className="min-w-0">
+                      <p className="brand-title text-[10px] md:text-xs opacity-85 mb-1">Dia {day.day_number}</p>
+                      <h2 className="font-display text-lg md:text-2xl font-light leading-tight truncate drop-shadow">
+                        {day.title ?? `Dia ${day.day_number}`}
+                      </h2>
+                      <p className="text-xs md:text-sm opacity-90 mt-1">
+                        {day.date && formatDate(day.date)}
+                        {day.date && visible.length > 0 && " • "}
+                        {visible.length > 0 && `${visible.length} atividades`}
+                      </p>
+                    </div>
+                    <div className="size-9 rounded-full bg-white/15 backdrop-blur-sm grid place-items-center shrink-0">
+                      <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-display font-medium truncate">{day.title ?? `Dia ${day.day_number}`}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {day.date && formatDate(day.date)}
-                    {day.date && visible.length > 0 && " • "}
-                    {visible.length > 0 && `${visible.length} atividades`}
-                  </p>
-                </div>
-                <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
               </button>
 
               {expanded && (
-                <div className="px-4 pb-4 space-y-1 border-t border-border pt-4">
+                <div className="px-4 pb-4 space-y-1 pt-4">
                   {day.description && (
                     <p className="text-sm text-muted-foreground italic mb-2">{day.description}</p>
                   )}
@@ -178,6 +211,7 @@ function Roteiro() {
           );
         })}
       </div>
+
 
       <ReviewDialog
         activity={reviewing}
