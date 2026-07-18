@@ -542,7 +542,75 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   );
 }
 
+function ExportRoteiroButton({ tripId, days, defaultTransport }: { tripId: string; days: DayWithActs[]; defaultTransport: TransportMode }) {
+  const [busy, setBusy] = useState(false);
+  const handle = async () => {
+    if (!days.length) return toast.info("Adicione dias antes de exportar.");
+    setBusy(true);
+    try {
+      const { data: trip, error } = await supabase
+        .from("trips")
+        .select("title, destinations, start_date, end_date, user_id")
+        .eq("id", tripId)
+        .maybeSingle();
+      if (error || !trip) throw new Error(error?.message ?? "Viagem não encontrada");
+      let clientName: string | null = null;
+      if (trip.user_id) {
+        const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", trip.user_id).maybeSingle();
+        clientName = prof?.full_name ?? null;
+      }
+      const actIds = days.flatMap((d) => d.activities.map((a) => a.id));
+      const { data: fullActs } = actIds.length
+        ? await supabase.from("itinerary_activities").select("id, description, address, image_url, transport_mode_to_next").in("id", actIds)
+        : { data: [] as { id: string; description: string | null; address: string | null; image_url: string | null; transport_mode_to_next: string | null }[] };
+      const actMap = new Map((fullActs ?? []).map((a) => [a.id, a]));
+      const { generateRoteiroPDF } = await import("@/lib/roteiro-pdf");
+      await generateRoteiroPDF({
+        tripTitle: trip.title,
+        destinations: trip.destinations ?? [],
+        startDate: trip.start_date,
+        endDate: trip.end_date,
+        clientName,
+        defaultTransport,
+        days: days.map((d) => ({
+          id: d.id,
+          day_number: d.day_number,
+          title: d.title,
+          date: d.date,
+          description: d.description,
+          cover_image_url: d.cover_image_url ?? null,
+          activities: d.activities.map((a) => {
+            const extra = actMap.get(a.id);
+            return {
+              id: a.id,
+              name: a.name,
+              time: a.time,
+              description: extra?.description ?? null,
+              address: extra?.address ?? null,
+              image_url: extra?.image_url ?? null,
+              transport_mode_to_next: (extra?.transport_mode_to_next ?? a.transport_mode_to_next ?? null) as "driving" | "transit" | "walking" | "hidden" | null,
+            };
+          }),
+          routes: d.routes,
+        })),
+      });
+      toast.success("PDF gerado");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={handle} disabled={busy}>
+      <FileDown className="size-4" />
+      {busy ? "Gerando..." : "Exportar PDF"}
+    </Button>
+  );
+}
+
 const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean }) {
+
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "", cover_image_url: day.cover_image_url ?? "" });
 
