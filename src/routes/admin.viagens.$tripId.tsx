@@ -550,15 +550,16 @@ function ExportRoteiroButton({ tripId, days, defaultTransport }: { tripId: strin
     try {
       const { data: trip, error } = await supabase
         .from("trips")
-        .select("title, destinations, start_date, end_date, user_id")
+        .select("title, destinations, start_date, end_date, contact_id")
         .eq("id", tripId)
         .maybeSingle();
       if (error || !trip) throw new Error(error?.message ?? "Viagem não encontrada");
       let clientName: string | null = null;
-      if (trip.user_id) {
-        const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", trip.user_id).maybeSingle();
-        clientName = prof?.full_name ?? null;
+      if (trip.contact_id) {
+        const { data: c } = await supabase.from("contacts").select("full_name").eq("id", trip.contact_id).maybeSingle();
+        clientName = c?.full_name ?? null;
       }
+
       const actIds = days.flatMap((d) => d.activities.map((a) => a.id));
       const { data: fullActs } = actIds.length
         ? await supabase.from("itinerary_activities").select("id, description, address, image_url, transport_mode_to_next").in("id", actIds)
