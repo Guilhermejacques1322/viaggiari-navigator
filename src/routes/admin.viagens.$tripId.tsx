@@ -1342,6 +1342,9 @@ function DocsTab({ tripId }: { tripId: string }) {
             {act && <> · {act.name}</>}
           </p>
         </div>
+        <Button size="sm" variant="ghost" onClick={() => downloadDoc(d)} title="Baixar">
+          <FileDown className="size-4" />
+        </Button>
         <Button size="sm" variant="ghost" onClick={() => remove(d)} className="text-destructive">
           <Trash2 className="size-4" />
         </Button>
