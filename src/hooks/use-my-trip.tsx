@@ -44,14 +44,15 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     .limit(1)
     .maybeSingle();
 
-  if (!trip) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [], utilities: [] };
+  if (!trip) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [], utilities: [], utilitySections: [] };
 
-  const [{ data: days }, { data: documents }, { data: payments }, { data: notifications }, { data: utilities }] = await Promise.all([
+  const [{ data: days }, { data: documents }, { data: payments }, { data: notifications }, { data: utilities }, { data: utilitySections }] = await Promise.all([
     supabase.from("itinerary_days").select("*").eq("trip_id", trip.id).order("day_number"),
     supabase.from("documents").select("*").eq("trip_id", trip.id).order("event_date", { nullsFirst: false }),
     supabase.from("payments").select("*").eq("trip_id", trip.id).order("installment"),
     supabase.from("notifications").select("*").eq("trip_id", trip.id).order("scheduled_for", { ascending: false }).limit(20),
     supabase.from("trip_utilities").select("*").eq("trip_id", trip.id).order("position").order("created_at"),
+    supabase.from("trip_utility_sections").select("*").eq("trip_id", trip.id).order("position"),
   ]);
 
   const dayIds = (days ?? []).map((d) => d.id);
