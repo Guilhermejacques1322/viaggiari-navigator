@@ -452,11 +452,12 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
         doc.rect(0, 0, W, H, "F");
         drawLogo(W / 2, 8, 18);
         setC(ORANGE, "fill");
-        doc.roundedRect(M, 12, badgeW, badgeH, 2, 2, "F");
+        const cbW = 40, cbH = 9;
+        doc.roundedRect(M, 14, cbW, cbH, 1.8, 1.8, "F");
         setC(WHITE, "text");
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.text(`DIA ${day.day_number} (cont.)`, M + badgeW / 2, 12 + badgeH / 2 + 1.5, { align: "center" });
+        doc.setFontSize(10);
+        doc.text(`DIA ${day.day_number} (cont.)`, M + cbW / 2, 14 + cbH / 2 + 1.4, { align: "center" });
         y = 32;
       }
 
