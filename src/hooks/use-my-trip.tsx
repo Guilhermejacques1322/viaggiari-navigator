@@ -13,6 +13,7 @@ export type ActivityPartner = Database["public"]["Tables"]["activity_partners"][
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type ActivityRoute = Database["public"]["Tables"]["activity_routes"]["Row"];
 export type TripUtility = Database["public"]["Tables"]["trip_utilities"]["Row"];
+export type TripUtilitySection = Database["public"]["Tables"]["trip_utility_sections"]["Row"];
 
 export interface MyTripData {
   trip: Trip | null;
@@ -22,6 +23,7 @@ export interface MyTripData {
   notifications: Notification[];
   routes: ActivityRoute[];
   utilities: TripUtility[];
+  utilitySections: TripUtilitySection[];
 }
 
 async function fetchMyTrip(userId: string): Promise<MyTripData> {
