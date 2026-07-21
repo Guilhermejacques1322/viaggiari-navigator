@@ -1897,34 +1897,93 @@ function AiCreationTab({ tripId, onApplied }: { tripId: string; onApplied: () =>
 
 /* ============================== UTILITIES TAB ============================== */
 type TripUtility = Database["public"]["Tables"]["trip_utilities"]["Row"];
+type TripUtilitySection = Database["public"]["Tables"]["trip_utility_sections"]["Row"];
+
+function SortableUtility({ u, onEdit, onRemove }: {
+  u: TripUtility; onEdit: (u: TripUtility) => void; onRemove: (u: TripUtility) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: u.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <li ref={setNodeRef} style={style}>
+      <Card className="p-3 flex items-start gap-2">
+        <button
+          className="mt-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+          {...attributes} {...listeners} aria-label="Arrastar"
+        >
+          <GripVertical className="size-4" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+            {u.kind}
+          </span>
+          <p className="font-medium text-sm mt-1">{u.name}</p>
+          {u.address && <p className="text-xs text-muted-foreground mt-0.5">{u.address}</p>}
+          {u.maps_url && (
+            <a href={u.maps_url} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 mt-1">
+              <ExternalLink className="size-3" />Maps
+            </a>
+          )}
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => onEdit(u)}>Editar</Button>
+        <Button size="sm" variant="ghost" onClick={() => onRemove(u)} className="text-destructive">
+          <Trash2 className="size-4" />
+        </Button>
+      </Card>
+    </li>
+  );
+}
 
 function UtilitiesTab({ tripId }: { tripId: string }) {
   const qc = useQueryClient();
   const queryKey = ["trip-utilities", tripId];
+  const sectionsKey = ["trip-utility-sections", tripId];
+
   const { data: items, isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("trip_utilities")
-        .select("*")
-        .eq("trip_id", tripId)
-        .order("position")
-        .order("created_at");
+        .from("trip_utilities").select("*").eq("trip_id", tripId)
+        .order("position").order("created_at");
       if (error) throw error;
       return data as TripUtility[];
     },
     staleTime: 0,
   });
-  const invalidate = () => qc.invalidateQueries({ queryKey });
+
+  const { data: sections } = useQuery({
+    queryKey: sectionsKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trip_utility_sections").select("*").eq("trip_id", tripId).order("position");
+      if (error) throw error;
+      return data as TripUtilitySection[];
+    },
+    staleTime: 0,
+  });
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey });
+    qc.invalidateQueries({ queryKey: sectionsKey });
+    qc.invalidateQueries({ queryKey: ["my-trip"] });
+  };
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TripUtility | null>(null);
-  const [form, setForm] = useState({ kind: "", name: "", address: "", maps_url: "" });
+  const [form, setForm] = useState({ kind: "", name: "", address: "", maps_url: "", section_id: "none" });
 
-  const startNew = () => { setEditing(null); setForm({ kind: "", name: "", address: "", maps_url: "" }); setOpen(true); };
+  const startNew = (sectionId?: string | null) => {
+    setEditing(null);
+    setForm({ kind: "", name: "", address: "", maps_url: "", section_id: sectionId ?? "none" });
+    setOpen(true);
+  };
   const startEdit = (u: TripUtility) => {
     setEditing(u);
-    setForm({ kind: u.kind, name: u.name, address: u.address ?? "", maps_url: u.maps_url ?? "" });
+    setForm({
+      kind: u.kind, name: u.name,
+      address: u.address ?? "", maps_url: u.maps_url ?? "",
+      section_id: u.section_id ?? "none",
+    });
     setOpen(true);
   };
 
@@ -1936,6 +1995,7 @@ function UtilitiesTab({ tripId }: { tripId: string }) {
       name: form.name.trim(),
       address: form.address.trim() || null,
       maps_url: form.maps_url.trim() || null,
+      section_id: form.section_id === "none" ? null : form.section_id,
     };
     const { error } = editing
       ? await supabase.from("trip_utilities").update(payload).eq("id", editing.id)
@@ -1952,54 +2012,143 @@ function UtilitiesTab({ tripId }: { tripId: string }) {
     invalidate();
   };
 
+  // Sections CRUD
+  const [secOpen, setSecOpen] = useState(false);
+  const [secEditing, setSecEditing] = useState<TripUtilitySection | null>(null);
+  const [secTitle, setSecTitle] = useState("");
+  const startNewSection = () => { setSecEditing(null); setSecTitle(""); setSecOpen(true); };
+  const startEditSection = (s: TripUtilitySection) => { setSecEditing(s); setSecTitle(s.title); setSecOpen(true); };
+  const saveSection = async () => {
+    if (!secTitle.trim()) return toast.error("Informe o título");
+    const { error } = secEditing
+      ? await supabase.from("trip_utility_sections").update({ title: secTitle.trim() }).eq("id", secEditing.id)
+      : await supabase.from("trip_utility_sections").insert({ trip_id: tripId, title: secTitle.trim(), position: (sections?.length ?? 0) });
+    if (error) return toast.error(error.message);
+    setSecOpen(false);
+    invalidate();
+  };
+  const removeSection = async (s: TripUtilitySection) => {
+    if (!(await confirmAction(`Excluir a seção "${s.title}"? As utilidades ficarão sem seção.`, { confirmLabel: "Excluir" }))) return;
+    const { error } = await supabase.from("trip_utility_sections").delete().eq("id", s.id);
+    if (error) return toast.error(error.message);
+    invalidate();
+  };
+
+  // DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const bySection = (sectionId: string | null) =>
+    (items ?? []).filter((u) => (u.section_id ?? null) === sectionId);
+
+  const handleDragEnd = async (e: DragEndEvent, sectionId: string | null) => {
+    if (!e.over || e.active.id === e.over.id) return;
+    const list = bySection(sectionId);
+    const oldIdx = list.findIndex((u) => u.id === e.active.id);
+    const newIdx = list.findIndex((u) => u.id === e.over!.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    const reordered = [...list];
+    const [moved] = reordered.splice(oldIdx, 1);
+    reordered.splice(newIdx, 0, moved);
+    // Optimistic
+    qc.setQueryData<TripUtility[]>(queryKey, (prev) => {
+      if (!prev) return prev;
+      const others = prev.filter((u) => (u.section_id ?? null) !== sectionId);
+      const updated = reordered.map((u, i) => ({ ...u, position: i }));
+      return [...others, ...updated];
+    });
+    await Promise.all(
+      reordered.map((u, i) =>
+        supabase.from("trip_utilities").update({ position: i }).eq("id", u.id),
+      ),
+    );
+    invalidate();
+  };
+
   if (isLoading) return <Skeleton className="h-64" />;
 
+  const unassigned = bySection(null);
+  const groups: { section: TripUtilitySection | null; items: TripUtility[] }[] = [
+    ...(sections ?? []).map((s) => ({ section: s, items: bySection(s.id) })),
+    ...(unassigned.length > 0 || (sections?.length ?? 0) === 0 ? [{ section: null, items: unassigned }] : []),
+  ];
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          Conveniências para caso o viajante precisar (farmácias, mercados, correios…). Não entram no mapa nem no roteiro.
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground max-w-xl">
+          Organize as utilidades em seções (ex.: "Chegada em Roma", "Compras"). Arraste pelo <GripVertical className="inline size-3" /> para reordenar.
         </p>
-        <Button size="sm" onClick={startNew}><Plus className="size-4" />Nova utilidade</Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={startNewSection}><Plus className="size-4" />Nova seção</Button>
+          <Button size="sm" onClick={() => startNew(null)}><Plus className="size-4" />Nova utilidade</Button>
+        </div>
       </div>
 
-      {(items?.length ?? 0) === 0 ? (
+      {groups.length === 0 || groups.every((g) => g.items.length === 0 && !g.section) ? (
         <Card className="p-12 text-center text-muted-foreground border-dashed">
           Nenhuma utilidade cadastrada ainda.
         </Card>
       ) : (
-        <ul className="space-y-2">
-          {items!.map((u) => (
-            <li key={u.id}>
-              <Card className="p-3 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
-                    {u.kind}
-                  </span>
-                  <p className="font-medium text-sm mt-1">{u.name}</p>
-                  {u.address && <p className="text-xs text-muted-foreground mt-0.5">{u.address}</p>}
-                  {u.maps_url && (
-                    <a href={u.maps_url} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 mt-1">
-                      <ExternalLink className="size-3" />Maps
-                    </a>
-                  )}
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => startEdit(u)}>Editar</Button>
-                <Button size="sm" variant="ghost" onClick={() => remove(u)} className="text-destructive">
-                  <Trash2 className="size-4" />
-                </Button>
-              </Card>
-            </li>
+        <div className="space-y-6">
+          {groups.map((g) => (
+            <div key={g.section?.id ?? "none"} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-medium">
+                  {g.section ? g.section.title : "Sem seção"}
+                </h3>
+                {g.section && (
+                  <>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => startEditSection(g.section!)}>Editar</Button>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive" onClick={() => removeSection(g.section!)}>
+                      <Trash2 className="size-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs ml-auto" onClick={() => startNew(g.section!.id)}>
+                      <Plus className="size-3" />Adicionar aqui
+                    </Button>
+                  </>
+                )}
+              </div>
+              {g.items.length === 0 ? (
+                <Card className="p-4 text-xs text-center text-muted-foreground border-dashed">Sem utilidades nesta seção.</Card>
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, g.section?.id ?? null)}>
+                  <SortableContext items={g.items.map((u) => u.id)} strategy={verticalListSortingStrategy}>
+                    <ul className="space-y-2">
+                      {g.items.map((u) => (
+                        <SortableUtility key={u.id} u={u} onEdit={startEdit} onRemove={remove} />
+                      ))}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
+      {/* Utility dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar utilidade" : "Nova utilidade"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
+            <div>
+              <Label className="text-xs">Seção</Label>
+              <Select value={form.section_id} onValueChange={(v) => setForm({ ...form, section_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Sem seção" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem seção</SelectItem>
+                  {(sections ?? []).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs">Tipo de utilidade</Label>
               <Input placeholder="Ex.: Farmácia, Mercado, Correios" value={form.kind}
@@ -2022,6 +2171,24 @@ function UtilitiesTab({ tripId }: { tripId: string }) {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={save}><Save className="size-4" />Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Section dialog */}
+      <Dialog open={secOpen} onOpenChange={setSecOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{secEditing ? "Editar seção" : "Nova seção"}</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Label className="text-xs">Título</Label>
+            <Input value={secTitle} onChange={(e) => setSecTitle(e.target.value)} autoFocus
+              placeholder="Ex.: Chegada em Roma, Compras, Emergências" />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSecOpen(false)}>Cancelar</Button>
+            <Button onClick={saveSection}><Save className="size-4" />Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
