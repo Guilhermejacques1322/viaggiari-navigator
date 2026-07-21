@@ -121,10 +121,16 @@ function DocCard({ doc, actName }: { doc: Document; actName: string | null | und
     setLoading(true);
     const { data, error } = await supabase.storage
       .from("trip-documents")
-      .createSignedUrl(doc.storage_path, 300);
+      .createSignedUrl(doc.storage_path, 300, { download: doc.name });
     setLoading(false);
     if (error || !data) { toast.error("Não foi possível abrir o documento"); return; }
-    window.open(data.signedUrl, "_blank");
+    const a = document.createElement("a");
+    a.href = data.signedUrl;
+    a.download = doc.name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   return (
