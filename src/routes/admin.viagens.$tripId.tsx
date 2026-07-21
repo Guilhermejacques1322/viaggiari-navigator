@@ -1237,6 +1237,7 @@ function UploadDocumentDialog({ open, onOpenChange, tripId, dayId, activityId, a
     onOpenChange(false);
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
     qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+    qc.invalidateQueries({ queryKey: ["my-trip"] });
     onUploaded();
   };
 
