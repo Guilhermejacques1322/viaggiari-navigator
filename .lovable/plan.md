@@ -1,62 +1,55 @@
 
-## 1. Capa do dia (URL manual)
+## 1. Download de documentos não funciona
 
-**Banco** — migration adiciona coluna à tabela `itinerary_days`:
-- `cover_image_url text null`
+**Causa provável (a confirmar na implementação):**
+- O botão de download chama `createSignedUrl(path, 300)` **sem** o parâmetro `{ download: filename }` e depois faz `window.open(url, "_blank")`.
+- Em PWA/mobile e navegadores modernos, `window.open` de outra origem (bucket Supabase) é frequentemente bloqueado como popup; o clique simplesmente "não faz nada". Além disso, sem `download:` na URL assinada, arquivos como PDF/imagem abrem inline (parece que "não baixou") e outros formatos ficam parados.
+- No admin, após o upload, o cache do cliente (`useMyTrip`, staleTime 5 min) não é invalidado — o viajante que já estava com o app aberto não vê o documento novo.
 
-**Admin — editor do dia** (`admin.viagens.$tripId.tsx`, `DayEditor`):
-- Novo campo "Imagem de capa (URL)" no cabeçalho de cada dia, ao lado do título/data.
-- Preview 16:9 pequeno abaixo do input quando há URL válida; botão "Remover".
-- Salva no blur (mesmo padrão dos outros campos do dia).
-- Validação leve: aceita `http(s)://…`; se a imagem falhar em carregar, mostra badge "Não foi possível carregar" sem quebrar o layout.
+**Correção:**
+- `src/routes/minha-viagem.documentos.tsx` (`DocCard.open`): pedir URL com forçar download (`createSignedUrl(path, 300, { download: doc.name })`) e disparar o download por `<a href download>` criado programaticamente + `.click()` em vez de `window.open`. Fallback: se `download` falhar, abrir em nova aba via `location.assign` no gesto do usuário.
+- Ajustar também o abrir/baixar no admin (`admin.viagens.$tripId.tsx`, funções que abrem documentos) para o mesmo padrão.
+- Após upload/remoção de documento no admin, invalidar `["my-trip"]` (via `queryClient.invalidateQueries`) para o app do cliente puxar de novo quando reabrir.
 
-**Cliente — roteiro** (`minha-viagem.roteiro.tsx`):
-- Cada dia vira um **hero grande** (largura total do container, aspect ~21:9 no desktop, 16:9 no mobile), com a imagem em `object-cover`, gradiente escuro embaixo, e por cima:
-  - "Dia N" pequeno em cima
-  - Título do dia em texto grande branco
-  - Data formatada em BR (menor, opacidade 80%)
-  - Chevron de collapse no canto
-- Se não houver `cover_image_url`, fallback elegante: bloco com gradiente da marca (terracota→oliva) + mesma tipografia (nada de placeholder cinza).
-- Abaixo do hero, as atividades continuam como estão hoje (mesmos cards + `RouteConnector`).
-- Hero é o próprio toggle (clicável) para expandir/recolher — mantém o comportamento atual.
-- No admin também mostro o mesmo hero (menor, ~16:9) no topo do dia para paridade visual.
+## 2. Utilidades: reordenar itens (admin) + entregar ordem ao cliente
 
-## 2. Exportar PDF do roteiro (admin)
+- `UtilitiesTab` em `admin.viagens.$tripId.tsx`: envolver a lista em `DndContext` + `SortableContext` (`@dnd-kit`, já instalado), usando `position` como ordem. Handle igual ao das atividades (grip à esquerda). Ao soltar, `UPDATE trip_utilities SET position = ...` em batch e invalidar a query.
+- Como alternativa/complemento para mobile: botões ↑/↓ ao lado do "Editar" para casos em que arrastar é ruim (mesmo padrão só como fallback discreto).
+- Cliente (`minha-viagem.utilidades.tsx`) já ordena por `position` no fetch; nada muda além da agrupagem da parte 3.
 
-**Onde**: botão "Exportar PDF" no header da aba **Roteiro** em `admin.viagens.$tripId.tsx`, ao lado de "Calcular rotas pendentes".
+## 3. Seções nas Utilidades
 
-**Como**: gerado no cliente com `jspdf` + `jspdf-autotable` (já é padrão do projeto em `quote-pdf.ts`) — sem server function, sem custo extra. Fontes já registradas no util existente serão reaproveitadas/estendidas.
+Objetivo: catalogar cada utilidade sob uma seção (ex.: "Chegada", "Emergências", "Compras", "Retorno") para indicar o momento certo — no admin e no cliente.
 
-**Conteúdo** (roteiro completo):
-1. **Capa**: logo Viaggiari, título da viagem, cliente, período (data início–fim), destino principal.
-2. **Índice**: lista de dias com data e título, número da página.
-3. **Um dia por seção** (page break entre dias):
-   - Cabeçalho: "Dia N — data — título"
-   - Imagem de capa do dia (se houver), largura ~metade da página
-   - Para cada atividade em ordem:
-     - Horário (se houver) + nome (bold)
-     - Endereço
-     - Descrição curta
-     - Parceiro vinculado (se houver)
-     - Foto principal da atividade (thumbnail, quando `image_url` existir)
-   - Entre atividades: linha com **modo de transporte selecionado + tempo + distância** vinda de `activity_routes` (mesmo dado do `RouteConnector`). Se não houver rota calculada, omite silenciosamente.
-4. **Página final — Parceiros da viagem**: lista consolidada de todos os `activity_partners` únicos do roteiro (nome, tipo, contato/link).
+**Banco (migration):**
+- Nova tabela `trip_utility_sections`:
+  - `trip_id` (fk trips), `title text not null`, `position int`, `created_at/updated_at`.
+  - RLS: admin CRUD; cliente lê seções da própria viagem (mesmo padrão de `trip_utilities`); GRANT + policies.
+- `trip_utilities`: adicionar `section_id uuid null references trip_utility_sections(id) on delete set null`.
 
-**Detalhes técnicos**:
-- Imagens carregadas via `fetch → blob → dataURL` antes de montar o PDF (jsPDF exige base64). URLs que falharem são puladas com log.
-- Loading toast "Gerando PDF…" enquanto processa; nome do arquivo: `roteiro-{trip.title}-{yyyy-mm-dd}.pdf`.
-- Usa `parseISODateLocal`/`formatDateBR` (evita bug de timezone já resolvido).
-- Reutiliza cores/tipografia da marca definidas em `styles.css` (terracota + oliva).
+**Admin (`UtilitiesTab`):**
+- Novo painel "Seções" no topo com input + botão "Adicionar seção", lista com editar/renomear/excluir e DnD para ordenar.
+- No form de utilidade, novo `Select` "Seção" (com opção "Sem seção").
+- Renderização agrupada por seção (na ordem de `position` da seção; "Sem seção" por último). DnD funciona dentro de cada seção. Arrastar uma utilidade de uma seção para outra atualiza `section_id` + `position`.
 
-## 3. Fora de escopo (para não inflar esta entrega)
-- Sugestão automática de foto (Unsplash/Mapbox).
-- Fallback da 1ª atividade.
-- PDF para o cliente (fica só admin).
-- Mescla com PDFs de documentos.
+**Cliente (`minha-viagem.utilidades.tsx`):**
+- Renderizar como grupos: título da seção (tipografia da marca, oliva/terracota, sutil) + lista de cards. Seções sem itens não aparecem. Itens sem seção caem em bloco "Outras utilidades" no fim.
+
+## Detalhes técnicos
+
+- Reuso do `@dnd-kit` já presente em `admin.viagens.$tripId.tsx` (Roteiro). Extrair helper mínimo local ou copiar o padrão do `DayEditor` para a lista de utilidades.
+- Toda a mutação de posição é otimista com rollback em erro (padrão já usado no Roteiro).
+- Cache: invalidar `["trip-utilities", tripId]` no admin e `["my-trip"]` do lado do cliente.
+- Segurança de download: manter bucket `trip-documents` privado; usar sempre URL assinada com `download:`.
 
 ## Arquivos afetados
-- **Migration**: adicionar `cover_image_url` em `itinerary_days`.
-- `src/hooks/use-my-trip.tsx`: nada (tipo já vem do `Database`).
-- `src/routes/minha-viagem.roteiro.tsx`: novo hero por dia.
-- `src/routes/admin.viagens.$tripId.tsx`: input de capa no `DayEditor` + botão "Exportar PDF" no header do Roteiro.
-- `src/lib/roteiro-pdf.ts` (novo): função `exportRoteiroPDF(tripId)` que lê `trips` + `itinerary_days` + `itinerary_activities` + `activity_partners` + `activity_routes` e monta o documento.
+- **Migration nova**: cria `trip_utility_sections` (com GRANT/RLS), adiciona `section_id` em `trip_utilities`.
+- `src/routes/minha-viagem.documentos.tsx`: corrigir download (assinada com `download:` + anchor click).
+- `src/routes/admin.viagens.$tripId.tsx`: mesmo fix nos downloads do admin; invalidar `my-trip` após upload/delete; `UtilitiesTab` ganha DnD, CRUD de seções e agrupamento; form de utilidade com `Select` de seção.
+- `src/routes/minha-viagem.utilidades.tsx`: render agrupado por seção.
+- `src/hooks/use-my-trip.tsx`: trazer `trip_utility_sections` no fetch (`MyTripData.utilitySections`).
+
+## Fora de escopo
+- Compartilhamento público de documento (link externo).
+- Reordenar utilidades no lado do cliente.
+- Sugestões automáticas de utilidades por destino.
