@@ -92,6 +92,7 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     notifications: notifications ?? [],
     routes: routes ?? [],
     utilities: utilities ?? [],
+    utilitySections: utilitySections ?? [],
   };
 }
 
