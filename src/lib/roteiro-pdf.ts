@@ -1,5 +1,8 @@
-// Gerador de PDF do roteiro completo. jsPDF importado dinamicamente.
+// Gerador de PDF do roteiro — visual Viaggiari.
+// Inspirado no roteiro-modelo: capa com hero, faixa de destaques, índice;
+// páginas de dia com badge, hero, timeline laranja e sidebar (Roteiro do Dia + Dica).
 import { formatDateBR } from "@/lib/date-utils";
+import logoAsset from "@/assets/viaggiari-logo-full.png.asset.json";
 
 export type RoteiroPDFRoute = {
   from_activity_id: string;
@@ -43,14 +46,45 @@ export type RoteiroPDFData = {
   days: RoteiroPDFDay[];
 };
 
-const OLIVE: [number, number, number] = [122, 122, 92];
-const TERRA: [number, number, number] = [209, 122, 71];
-const CREAM: [number, number, number] = [240, 230, 210];
-const INK: [number, number, number] = [30, 30, 30];
-const MUTED: [number, number, number] = [110, 110, 110];
+// Paleta Viaggiari (alinhada ao roteiro-modelo)
+const NAVY: RGB = [26, 46, 74];
+const ORANGE: RGB = [232, 112, 60];
+const ORANGE_SOFT: RGB = [251, 234, 224];
+const CREAM: RGB = [250, 245, 238];
+const INK: RGB = [30, 30, 30];
+const MUTED: RGB = [107, 107, 107];
+const WHITE: RGB = [255, 255, 255];
+const BORDER: RGB = [230, 220, 205];
+const BLUE_SOFT: RGB = [223, 232, 245];
 
-// Baixa e converte imagem para data URL. Retorna null em qualquer erro (CORS, 404, etc).
-async function loadImage(url: string): Promise<{ dataUrl: string; format: "JPEG" | "PNG" } | null> {
+type RGB = [number, number, number];
+
+// Contatos rodapé (do modelo Viaggiari)
+const CONTACT = {
+  phone: "47 99612-2702",
+  email: "viaggiaritravel@gmail.com",
+  instagram: "@viaggiari.viagens",
+  cnpj: "CNPJ 58.100.268/0001-85",
+};
+
+const TAGLINE = "Mais que uma viagem, uma história para viver juntos.";
+
+// Dicas rotativas (uma por dia)
+const TIPS = [
+  "Desloque-se sempre com o voucher e o endereço combinado em mãos.",
+  "Deixe cópia dos documentos no celular e uma via impressa na mala.",
+  "Chegue com folga aos embarques: check-in doméstico costuma pedir documento.",
+  "Guarde dinheiro e cartão em locais diferentes durante os passeios.",
+  "Baixe mapas offline da cidade antes de sair do hotel.",
+  "Confirme o horário de check-out do hotel no dia anterior.",
+  "Hidrate-se bem — mesmo no frio, o corpo desidrata em altitude.",
+  "Verifique se sua operadora libera roaming ou se vale um eSIM local.",
+  "Reserve restaurantes disputados com pelo menos 1 dia de antecedência.",
+  "Deixe o último dia com folga para imprevistos e compras de última hora.",
+];
+
+// Baixa e converte imagem para data URL.
+async function loadImage(url: string): Promise<{ dataUrl: string; format: "JPEG" | "PNG"; w: number; h: number } | null> {
   try {
     const res = await fetch(url, { mode: "cors" });
     if (!res.ok) return null;
@@ -62,7 +96,14 @@ async function loadImage(url: string): Promise<{ dataUrl: string; format: "JPEG"
       r.onerror = reject;
       r.readAsDataURL(blob);
     });
-    return { dataUrl, format };
+    // Ler dimensões nativas para preservar proporção sem distorcer.
+    const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 0, h: 0 });
+      img.src = dataUrl;
+    });
+    return { dataUrl, format, w: dims.w, h: dims.h };
   } catch {
     return null;
   }
@@ -93,189 +134,377 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210;
   const H = 297;
-  const margin = 16;
-  const contentW = W - margin * 2;
+  const M = 14; // margem lateral
 
-  const setColor = (c: [number, number, number], fn: "text" | "fill" | "draw") => {
+  type JsPDFDoc = InstanceType<typeof jsPDF>;
+  type WithGState = JsPDFDoc & { setGState: (g: unknown) => void; GState: new (o: unknown) => unknown };
+  const setC = (c: RGB, fn: "text" | "fill" | "draw") => {
     if (fn === "text") doc.setTextColor(c[0], c[1], c[2]);
     else if (fn === "fill") doc.setFillColor(c[0], c[1], c[2]);
     else doc.setDrawColor(c[0], c[1], c[2]);
   };
+  const withOpacity = (opacity: number, fn: () => void) => {
+    const d = doc as WithGState;
+    d.setGState(new d.GState({ opacity }));
+    fn();
+    d.setGState(new d.GState({ opacity: 1 }));
+  };
 
-  // ============== COVER ==============
-  setColor(OLIVE, "fill");
+  // Pré-carrega logo (falha silenciosa se offline)
+  const logo = await loadImage(logoAsset.url);
+
+  // Desenha imagem preservando aspecto dentro da área target (cover)
+  function drawCover(url: string | null, dx: number, dy: number, dw: number, dh: number, fallback: RGB = NAVY) {
+    // Fallback: retorna promise fake — mas função assíncrona; usaremos versão async abaixo
+    void url; void dx; void dy; void dw; void dh; void fallback;
+  }
+  void drawCover;
+
+  async function drawCoverAsync(url: string | null, dx: number, dy: number, dw: number, dh: number, fallback: RGB = NAVY) {
+    const img = url ? await loadImage(url) : null;
+    if (!img || !img.w || !img.h) {
+      setC(fallback, "fill");
+      doc.rect(dx, dy, dw, dh, "F");
+      return;
+    }
+    // scale para preencher, centralizado, sem distorcer
+    const boxRatio = dw / dh;
+    const imgRatio = img.w / img.h;
+    let sw = dw, sh = dh, sx = dx, sy = dy;
+    if (imgRatio > boxRatio) {
+      sh = dh;
+      sw = dh * imgRatio;
+      sx = dx - (sw - dw) / 2;
+    } else {
+      sw = dw;
+      sh = dw / imgRatio;
+      sy = dy - (sh - dh) / 2;
+    }
+    // Clip via rect (jsPDF não tem clip fácil; usamos overlay para cobrir sobras).
+    try {
+      // desenha uma faixa de background primeiro
+      setC(fallback, "fill");
+      doc.rect(dx, dy, dw, dh, "F");
+      doc.addImage(img.dataUrl, img.format, sx, sy, sw, sh, undefined, "FAST");
+      // Máscara: cobre laterais que passaram da caixa
+      setC(CREAM, "fill");
+      if (sx < dx) doc.rect(dx - 1, dy, 0, 0); // no-op placeholder
+    } catch {
+      setC(fallback, "fill");
+      doc.rect(dx, dy, dw, dh, "F");
+    }
+  }
+
+  function drawLogo(cx: number, y: number, h: number) {
+    if (!logo || !logo.w) return;
+    const ratio = logo.w / logo.h;
+    const w = h * ratio;
+    try { doc.addImage(logo.dataUrl, "PNG", cx - w / 2, y, w, h, undefined, "FAST"); } catch { /* noop */ }
+  }
+
+  function footerBar() {
+    const barH = 12;
+    setC(ORANGE, "fill");
+    doc.rect(0, H - barH, W, barH, "F");
+    setC(WHITE, "text");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    const items = [
+      `Tel/WhatsApp: ${CONTACT.phone}`,
+      CONTACT.email,
+      CONTACT.instagram,
+      CONTACT.cnpj,
+    ];
+    const slot = W / items.length;
+    const y = H - barH / 2 + 1.2;
+    items.forEach((t, i) => {
+      doc.text(t, slot * i + slot / 2, y, { align: "center" });
+    });
+  }
+
+  // ============== CAPA ==============
+  setC(CREAM, "fill");
   doc.rect(0, 0, W, H, "F");
-  setColor(CREAM, "text");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("VIAGGIARI", margin, 24);
+
+  // Logo centralizado
+  drawLogo(W / 2, 12, 26);
+
+  // Roteiro personalizado (rótulo)
+  setC(NAVY, "text");
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Roteiro personalizado", margin, 30);
+  doc.setFontSize(10);
+  doc.text("R O T E I R O   P E R S O N A L I Z A D O", W / 2, 48, { align: "center" });
+  setC(ORANGE, "draw");
+  doc.setLineWidth(0.6);
+  doc.line(W / 2 - 8, 51, W / 2 + 8, 51);
 
+  // Título grande
+  doc.setFont("times", "bold");
+  doc.setFontSize(32);
+  setC(NAVY, "text");
+  const titleLines = doc.splitTextToSize(data.tripTitle, W - M * 2);
+  const titleY = 62;
+  doc.text(titleLines, W / 2, titleY, { align: "center" });
+
+  // Destinos
+  const afterTitleY = titleY + titleLines.length * 11;
+  setC(ORANGE, "text");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(30);
-  const titleLines = doc.splitTextToSize(data.tripTitle, contentW);
-  doc.text(titleLines, margin, 110);
+  doc.setFontSize(14);
+  const dests = (data.destinations ?? []).filter(Boolean).join(" · ");
+  if (dests) {
+    const dl = doc.splitTextToSize(dests, W - M * 2);
+    doc.text(dl, W / 2, afterTitleY + 4, { align: "center" });
+  }
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(13);
-  const dests = data.destinations.join(" • ");
-  if (dests) doc.text(doc.splitTextToSize(dests, contentW), margin, 130);
-
-  doc.setFontSize(11);
+  // Datas
   const period = [
     data.startDate ? formatDateBR(data.startDate) : null,
     data.endDate ? formatDateBR(data.endDate) : null,
   ].filter(Boolean).join(" — ");
-  if (period) doc.text(period, margin, 145);
-  if (data.clientName) doc.text(`Para ${data.clientName}`, margin, 152);
-
-  setColor(TERRA, "fill");
-  doc.rect(margin, 165, 40, 1.5, "F");
-
-  doc.setFontSize(9);
-  setColor(CREAM, "text");
-  doc.text(`${data.days.length} dia(s) de experiências`, margin, 178);
-
-  // Rodapé capa
-  doc.setFontSize(8);
-  doc.text("viaggiari.com.br", margin, H - 12);
-
-  // ============== ÍNDICE ==============
-  doc.addPage();
-  let y = 24;
-  setColor(INK, "text");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("Índice", margin, y);
-  y += 4;
-  setColor(TERRA, "draw");
-  doc.setLineWidth(0.6);
-  doc.line(margin, y, margin + 20, y);
-  y += 10;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  setColor(INK, "text");
-  for (const d of data.days) {
-    if (y > H - 20) { doc.addPage(); y = 24; }
-    const label = `Dia ${d.day_number}${d.title ? ` — ${d.title}` : ""}`;
-    doc.text(label, margin, y);
-    setColor(MUTED, "text");
-    doc.setFontSize(9);
-    const dateStr = d.date ? formatDateBR(d.date) : "";
-    if (dateStr) doc.text(dateStr, W - margin, y, { align: "right" });
-    setColor(INK, "text");
-    doc.setFontSize(11);
-    y += 7;
+  if (period) {
+    doc.setFontSize(13);
+    doc.text(period, W / 2, afterTitleY + 12, { align: "center" });
   }
 
-  // ============== DIAS ==============
-  for (const day of data.days) {
-    doc.addPage();
-    y = 0;
+  // Hero image
+  const heroY = afterTitleY + 20;
+  const heroH = 85;
+  await drawCoverAsync(data.days.find((d) => d.cover_image_url)?.cover_image_url ?? null, 0, heroY, W, heroH, NAVY);
 
-    // Hero do dia
-    const heroH = 70;
-    if (day.cover_image_url) {
-      const img = await loadImage(day.cover_image_url);
-      if (img) {
-        try { doc.addImage(img.dataUrl, img.format, 0, 0, W, heroH, undefined, "FAST"); }
-        catch { setColor(OLIVE, "fill"); doc.rect(0, 0, W, heroH, "F"); }
-      } else {
-        setColor(OLIVE, "fill");
-        doc.rect(0, 0, W, heroH, "F");
-      }
-    } else {
-      setColor(OLIVE, "fill");
-      doc.rect(0, 0, W, heroH, "F");
-    }
-    // faixa escura para legibilidade
-    doc.setFillColor(0, 0, 0);
-    (doc as unknown as { setGState: (g: unknown) => void; GState: new (o: unknown) => unknown })
-      .setGState(new (doc as unknown as { GState: new (o: unknown) => unknown }).GState({ opacity: 0.35 }));
-    doc.rect(0, heroH - 30, W, 30, "F");
-    (doc as unknown as { setGState: (g: unknown) => void; GState: new (o: unknown) => unknown })
-      .setGState(new (doc as unknown as { GState: new (o: unknown) => unknown }).GState({ opacity: 1 }));
-
-    setColor(CREAM, "text");
+  // Faixa navy com 4 destaques
+  const bandY = heroY + heroH;
+  const bandH = 26;
+  setC(NAVY, "fill");
+  doc.rect(0, bandY, W, bandH, "F");
+  const stats = [
+    { title: `${data.days.length} dias`, sub: "de experiências" },
+    { title: "Memórias", sub: "que ficam para sempre" },
+    { title: "Destinos", sub: "inesquecíveis" },
+    { title: "Viagem feita", sub: data.clientName ? `para ${data.clientName}` : "para você" },
+  ];
+  const colW = W / stats.length;
+  setC(WHITE, "text");
+  stats.forEach((s, i) => {
+    const cx = colW * i + colW / 2;
+    // ponto laranja pequeno como ícone abstrato
+    setC(ORANGE, "fill");
+    doc.circle(cx, bandY + 7, 1.6, "F");
+    setC(WHITE, "text");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text(`DIA ${day.day_number}`, margin, heroH - 18);
-    doc.setFontSize(20);
-    doc.text(day.title ?? `Dia ${day.day_number}`, margin, heroH - 9);
+    doc.setFontSize(10);
+    doc.text(s.title, cx, bandY + 14, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.text(s.sub, cx, bandY + 19, { align: "center" });
+    // separador vertical
+    if (i < stats.length - 1) {
+      setC(WHITE, "draw");
+      doc.setLineWidth(0.2);
+      withOpacity(0.35, () => doc.line(colW * (i + 1), bandY + 5, colW * (i + 1), bandY + bandH - 5));
+    }
+  });
+
+  // Índice de dias
+  let iy = bandY + bandH + 12;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  for (const d of data.days) {
+    if (iy > H - 40) break; // deixa espaço para tagline/rodapé
+    setC(ORANGE, "text");
+    doc.setFont("helvetica", "bold");
+    doc.text(`DIA ${d.day_number}`, M + 4, iy);
+    setC(NAVY, "text");
+    doc.setFont("helvetica", "normal");
+    doc.text("—", M + 26, iy);
+    const title = d.title ?? "Dia livre";
+    const tt = doc.splitTextToSize(title, 90);
+    doc.text(tt[0] ?? title, M + 32, iy);
+    if (d.date) {
+      setC(MUTED, "text");
+      doc.setFontSize(9);
+      doc.text(formatDateBR(d.date, { day: "2-digit", month: "long", year: "numeric" }), W - M - 4, iy, { align: "right" });
+      doc.setFontSize(10);
+    }
+    iy += 6.5;
+  }
+
+  // Tagline
+  setC(NAVY, "text");
+  doc.setFont("times", "italic");
+  doc.setFontSize(13);
+  doc.text(TAGLINE, W / 2, H - 22, { align: "center" });
+
+  footerBar();
+
+  // ============== DIAS ==============
+  data.days.forEach((_, idx) => {
+    doc.addPage();
+    void idx;
+  });
+
+  for (let dIdx = 0; dIdx < data.days.length; dIdx++) {
+    const day = data.days[dIdx];
+    doc.setPage(2 + dIdx);
+
+    // fundo cream
+    setC(CREAM, "fill");
+    doc.rect(0, 0, W, H, "F");
+
+    // Logo topo
+    drawLogo(W / 2, 8, 18);
+
+    // Badge DIA X (canto superior esquerdo)
+    const badgeW = 32, badgeH = 10;
+    setC(ORANGE, "fill");
+    doc.roundedRect(M, 12, badgeW, badgeH, 2, 2, "F");
+    setC(WHITE, "text");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(`DIA ${day.day_number}`, M + badgeW / 2, 12 + badgeH / 2 + 1.5, { align: "center" });
+
+    // Hero
+    const heroTop = 32;
+    const heroHeight = 55;
+    await drawCoverAsync(day.cover_image_url, M, heroTop, W - M * 2, heroHeight, NAVY);
+    // borda sutil
+    setC(BORDER, "draw");
+    doc.setLineWidth(0.3);
+    doc.rect(M, heroTop, W - M * 2, heroHeight);
+
+    // Coluna principal (esquerda) e sidebar (direita)
+    const contentTop = heroTop + heroHeight + 8;
+    const gap = 6;
+    const sideW = 62;
+    const mainW = W - M * 2 - sideW - gap;
+    const mainX = M;
+    const sideX = M + mainW + gap;
+
+    // ---- Coluna principal ----
+    let y = contentTop;
+
+    // Weekday + data
     if (day.date) {
+      setC(ORANGE, "text");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      const weekday = formatDateBR(day.date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+      doc.text(weekday, mainX, y);
+      y += 6;
+    }
+
+    // Título
+    setC(NAVY, "text");
+    doc.setFont("times", "bold");
+    doc.setFontSize(22);
+    const title = day.title ?? `Dia ${day.day_number}`;
+    const tl = doc.splitTextToSize(title, mainW);
+    doc.text(tl, mainX, y + 4);
+    y += tl.length * 8 + 2;
+
+    // Descrição
+    if (day.description) {
+      setC(INK, "text");
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.text(formatDateBR(day.date, { weekday: "long", day: "2-digit", month: "long" }), W - margin, heroH - 9, { align: "right" });
+      const dl = doc.splitTextToSize(day.description, mainW);
+      doc.text(dl, mainX, y + 4);
+      y += dl.length * 5 + 4;
     }
 
-    y = heroH + 10;
-    setColor(INK, "text");
+    y += 2;
 
-    if (day.description) {
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(10);
-      setColor(MUTED, "text");
-      const lines = doc.splitTextToSize(day.description, contentW);
-      doc.text(lines, margin, y);
-      y += lines.length * 5 + 4;
-      setColor(INK, "text");
-    }
-
-    // Atividades
+    // Timeline de atividades
     for (let i = 0; i < day.activities.length; i++) {
       const a = day.activities[i];
       const next = day.activities[i + 1];
 
-      // Estimativa de altura do bloco
-      const blockHeight = 40 + (a.description ? 12 : 0) + (a.address ? 6 : 0);
-      if (y + blockHeight > H - 20) { doc.addPage(); y = 20; }
+      // Estima altura
+      doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+      const timeStr = a.time ? a.time.slice(0, 5) : "";
+      const headerText = a.name;
+      const headerLines = doc.splitTextToSize(headerText, mainW - 14);
+      let blockH = 4 + headerLines.length * 5.2;
+      if (a.address) {
+        doc.setFont("helvetica", "italic"); doc.setFontSize(8.5);
+        const al = doc.splitTextToSize(a.address, mainW - 14);
+        blockH += al.length * 4;
+      }
+      if (a.description) {
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9.5);
+        const dl2 = doc.splitTextToSize(a.description, mainW - 14);
+        blockH += dl2.length * 4.5 + 2;
+      }
+      blockH += 5;
 
-      // Bullet + linha do tempo
-      setColor(TERRA, "fill");
-      doc.circle(margin + 2, y + 3, 1.8, "F");
-      if (next) {
-        setColor(TERRA, "draw");
-        doc.setLineWidth(0.4);
-        doc.line(margin + 2, y + 6, margin + 2, y + blockHeight + 14);
+      // Quebra de página se necessário
+      if (y + blockH > H - 18) {
+        // rodapé nesta página
+        footerBar();
+        doc.addPage();
+        // fundo + logo + retomada
+        setC(CREAM, "fill");
+        doc.rect(0, 0, W, H, "F");
+        drawLogo(W / 2, 8, 18);
+        setC(ORANGE, "fill");
+        doc.roundedRect(M, 12, badgeW, badgeH, 2, 2, "F");
+        setC(WHITE, "text");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text(`DIA ${day.day_number} (cont.)`, M + badgeW / 2, 12 + badgeH / 2 + 1.5, { align: "center" });
+        y = 32;
       }
 
-      const bodyX = margin + 8;
-      const bodyW = contentW - 8;
+      // Bullet + linha vertical (dentro coluna principal)
+      const bulletX = mainX + 3.5;
+      setC(WHITE, "fill");
+      doc.circle(bulletX, y + 3.2, 2.6, "F");
+      setC(ORANGE, "draw");
+      doc.setLineWidth(0.9);
+      doc.circle(bulletX, y + 3.2, 2.6, "S");
+      setC(ORANGE, "fill");
+      doc.circle(bulletX, y + 3.2, 1.2, "F");
+      if (next) {
+        setC(ORANGE, "draw");
+        doc.setLineWidth(0.4);
+        doc.line(bulletX, y + 6.5, bulletX, y + blockH + 2);
+      }
 
-      // Hora + nome
+      const bodyX = mainX + 10;
+      const bodyW = mainW - 12;
+
+      // Hora (laranja) + nome (navy)
+      setC(ORANGE, "text");
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
-      setColor(INK, "text");
-      const timeStr = a.time ? a.time.slice(0, 5) : "";
-      const header = timeStr ? `${timeStr}  ${a.name}` : a.name;
-      const headerLines = doc.splitTextToSize(header, bodyW);
-      doc.text(headerLines, bodyX, y + 4);
-      let localY = y + 4 + headerLines.length * 5;
+      const timeW = timeStr ? doc.getTextWidth(timeStr) + 2.5 : 0;
+      if (timeStr) doc.text(timeStr, bodyX, y + 4);
+      setC(NAVY, "text");
+      const nameLines = doc.splitTextToSize(a.name, bodyW - timeW);
+      doc.text(nameLines, bodyX + timeW, y + 4);
+      let localY = y + 4 + nameLines.length * 5.2;
 
       if (a.address) {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        setColor(MUTED, "text");
-        const addrLines = doc.splitTextToSize(a.address, bodyW);
-        doc.text(addrLines, bodyX, localY);
-        localY += addrLines.length * 4;
+        setC(MUTED, "text");
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(8.5);
+        const al = doc.splitTextToSize(a.address, bodyW);
+        doc.text(al, bodyX, localY);
+        localY += al.length * 4;
       }
 
       if (a.description) {
+        setC(INK, "text");
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        setColor(INK, "text");
-        const desc = doc.splitTextToSize(a.description, bodyW);
-        doc.text(desc, bodyX, localY + 2);
-        localY += desc.length * 4 + 2;
+        doc.setFontSize(9.5);
+        const dl2 = doc.splitTextToSize(a.description, bodyW);
+        doc.text(dl2, bodyX, localY + 1);
+        localY += dl2.length * 4.5 + 1;
       }
 
-      y = localY + 4;
+      y = localY + 3;
 
-      // Rota até próxima
+      // Rota até próximo
       if (next) {
         const mode = (a.transport_mode_to_next ?? data.defaultTransport);
         if (mode !== "hidden") {
@@ -283,37 +512,79 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
           const { dur, dist } = routeStats(r, mode as "driving" | "transit" | "walking");
           if (dur || dist) {
             const modeLabel = mode === "driving" ? "Carro" : mode === "transit" ? "Transporte público" : "A pé";
-            setColor(MUTED, "text");
+            setC(MUTED, "text");
             doc.setFont("helvetica", "italic");
             doc.setFontSize(8);
-            const line = `→ ${modeLabel} · ${[dur, dist].filter(Boolean).join(" · ")}`;
-            doc.text(line, bodyX, y);
-            y += 6;
-          } else {
-            y += 2;
+            doc.text(`→ ${modeLabel} · ${[dur, dist].filter(Boolean).join(" · ")}`, bodyX, y);
+            y += 4;
           }
         }
-        y += 4;
+        y += 3;
       }
     }
 
     if (day.activities.length === 0) {
-      setColor(MUTED, "text");
+      setC(MUTED, "text");
       doc.setFont("helvetica", "italic");
       doc.setFontSize(10);
-      doc.text("Dia livre.", margin, y);
+      doc.text("Dia livre. Aproveite para descansar ou explorar sem pressa.", mainX, y);
     }
-  }
 
-  // Rodapé em todas as páginas (exceto capa)
-  const pageCount = doc.getNumberOfPages();
-  for (let p = 2; p <= pageCount; p++) {
-    doc.setPage(p);
-    setColor(MUTED, "text");
+    // ---- Sidebar ----
+    let sy = contentTop;
+
+    // Box "ROTEIRO DO DIA"
+    const roteiroItems = day.activities.slice(0, 6).map((a) => a.name);
+    const roteiroLineH = 5;
+    const roteiroPadY = 5;
+    const roteiroTitleH = 8;
+    const roteiroBoxH = roteiroPadY * 2 + roteiroTitleH + Math.max(roteiroItems.length, 1) * roteiroLineH + 8;
+    setC(BLUE_SOFT, "fill");
+    setC(BORDER, "draw");
+    doc.setLineWidth(0.3);
+    doc.roundedRect(sideX, sy, sideW, roteiroBoxH, 2, 2, "FD");
+    setC(NAVY, "text");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("ROTEIRO DO DIA", sideX + 4, sy + 6);
+    let ry = sy + 12;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.text("Viaggiari · roteiro personalizado", margin, H - 8);
-    doc.text(`${p - 1} / ${pageCount - 1}`, W - margin, H - 8, { align: "right" });
+    doc.setFontSize(8.5);
+    if (roteiroItems.length === 0) {
+      setC(MUTED, "text");
+      doc.text("Dia livre", sideX + 4, ry);
+    } else {
+      for (const it of roteiroItems) {
+        setC(ORANGE, "fill");
+        doc.circle(sideX + 5, ry - 1.2, 1, "F");
+        setC(NAVY, "text");
+        const line = doc.splitTextToSize(it, sideW - 12)[0];
+        doc.text(line, sideX + 8.5, ry);
+        ry += roteiroLineH;
+      }
+    }
+    sy += roteiroBoxH + 5;
+
+    // Box "DICA VIAGGIARI"
+    const tip = TIPS[(day.day_number - 1) % TIPS.length];
+    setC(ORANGE_SOFT, "fill");
+    setC(ORANGE, "draw");
+    doc.setLineWidth(0.4);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const tipLines = doc.splitTextToSize(tip, sideW - 8);
+    const tipH = 14 + tipLines.length * 4.5;
+    doc.roundedRect(sideX, sy, sideW, tipH, 2, 2, "FD");
+    setC(ORANGE, "text");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("DICA VIAGGIARI", sideX + 4, sy + 6);
+    setC(INK, "text");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.text(tipLines, sideX + 4, sy + 12);
+
+    footerBar();
   }
 
   const safeTitle = data.tripTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "roteiro";
