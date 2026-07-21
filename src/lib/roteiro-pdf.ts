@@ -360,25 +360,16 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     // Logo topo
     drawLogo(W / 2, 8, 18);
 
-    // Badge DIA X (canto superior esquerdo)
-    const badgeW = 32, badgeH = 10;
-    setC(ORANGE, "fill");
-    doc.roundedRect(M, 12, badgeW, badgeH, 2, 2, "F");
-    setC(WHITE, "text");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(`DIA ${day.day_number}`, M + badgeW / 2, 12 + badgeH / 2 + 1.5, { align: "center" });
-
-    // Hero
-    const heroTop = 32;
-    const heroHeight = 55;
-    await drawCoverAsync(day.cover_image_url, M, heroTop, W - M * 2, heroHeight, NAVY);
-    // borda sutil
+    // Hero (mais compacto, sem nenhum texto sobreposto)
+    const heroTop = 30;
+    const heroHeight = 46;
+    const heroPad = M;
+    await drawCoverAsync(day.cover_image_url, heroPad, heroTop, W - heroPad * 2, heroHeight, NAVY);
     setC(BORDER, "draw");
     doc.setLineWidth(0.3);
-    doc.rect(M, heroTop, W - M * 2, heroHeight);
+    doc.rect(heroPad, heroTop, W - heroPad * 2, heroHeight);
 
-    // Coluna principal (esquerda) e sidebar (direita)
+    // Coluna principal (esquerda) e sidebar (direita) — TODO o texto vai abaixo da imagem
     const contentTop = heroTop + heroHeight + 8;
     const gap = 6;
     const sideW = 62;
@@ -389,24 +380,32 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     // ---- Coluna principal ----
     let y = contentTop;
 
-    // Weekday + data
+    // Badge DIA X + weekday na mesma linha (abaixo da imagem)
+    const badgeW = 30, badgeH = 9;
+    setC(ORANGE, "fill");
+    doc.roundedRect(mainX, y, badgeW, badgeH, 1.8, 1.8, "F");
+    setC(WHITE, "text");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(`DIA ${day.day_number}`, mainX + badgeW / 2, y + badgeH / 2 + 1.4, { align: "center" });
+
     if (day.date) {
-      setC(ORANGE, "text");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      setC(MUTED, "text");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
       const weekday = formatDateBR(day.date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-      doc.text(weekday, mainX, y);
-      y += 6;
+      doc.text(weekday, mainX + badgeW + 4, y + badgeH / 2 + 1.4);
     }
+    y += badgeH + 5;
 
     // Título
     setC(NAVY, "text");
     doc.setFont("times", "bold");
-    doc.setFontSize(22);
+    doc.setFontSize(20);
     const title = day.title ?? `Dia ${day.day_number}`;
     const tl = doc.splitTextToSize(title, mainW);
-    doc.text(tl, mainX, y + 4);
-    y += tl.length * 8 + 2;
+    doc.text(tl, mainX, y + 2);
+    y += tl.length * 7.5 + 2;
 
     // Descrição
     if (day.description) {
@@ -414,7 +413,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       const dl = doc.splitTextToSize(day.description, mainW);
-      doc.text(dl, mainX, y + 4);
+      doc.text(dl, mainX, y + 3);
       y += dl.length * 5 + 4;
     }
 
