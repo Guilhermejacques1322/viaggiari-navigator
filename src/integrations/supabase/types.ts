@@ -1141,6 +1141,7 @@ export type Database = {
           maps_url: string | null
           name: string
           position: number
+          section_id: string | null
           trip_id: string
           updated_at: string
         }
@@ -1152,6 +1153,7 @@ export type Database = {
           maps_url?: string | null
           name: string
           position?: number
+          section_id?: string | null
           trip_id: string
           updated_at?: string
         }
@@ -1163,12 +1165,55 @@ export type Database = {
           maps_url?: string | null
           name?: string
           position?: number
+          section_id?: string | null
           trip_id?: string
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "trip_utilities_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "trip_utility_sections"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "trip_utilities_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_utility_sections: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          title: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          title: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          title?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_utility_sections_trip_id_fkey"
             columns: ["trip_id"]
             isOneToOne: false
             referencedRelation: "trips"

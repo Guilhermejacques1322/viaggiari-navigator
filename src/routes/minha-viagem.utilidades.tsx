@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink, Wrench } from "lucide-react";
-import { useMyTrip } from "@/hooks/use-my-trip";
+import { useMyTrip, type TripUtility, type TripUtilitySection } from "@/hooks/use-my-trip";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -21,6 +21,30 @@ function mapsHref(u: { maps_url: string | null; address: string | null; name: st
   return `https://www.google.com/maps/search/?api=1&query=${q}`;
 }
 
+function UtilityItem({ u }: { u: TripUtility }) {
+  return (
+    <li>
+      <Card className="p-4 flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+            {u.kind}
+          </span>
+          <p className="font-medium text-sm mt-1.5">{u.name}</p>
+          {u.address && <p className="text-xs text-muted-foreground mt-0.5">{u.address}</p>}
+        </div>
+        <a
+          href={mapsHref(u)}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs text-primary inline-flex items-center gap-1 shrink-0 whitespace-nowrap"
+        >
+          <ExternalLink className="size-3" /> Maps
+        </a>
+      </Card>
+    </li>
+  );
+}
+
 function UtilidadesPage() {
   const { data, loading } = useMyTrip();
 
@@ -28,6 +52,16 @@ function UtilidadesPage() {
   if (!data?.trip) return <p className="text-muted-foreground">Nenhuma viagem disponível.</p>;
 
   const items = data.utilities ?? [];
+  const sections = data.utilitySections ?? [];
+
+  const bySection = (id: string | null) =>
+    items.filter((u) => (u.section_id ?? null) === id);
+
+  const groups: { section: TripUtilitySection | null; items: TripUtility[] }[] = [
+    ...sections.map((s) => ({ section: s, items: bySection(s.id) })),
+  ];
+  const unassigned = bySection(null);
+  if (unassigned.length > 0) groups.push({ section: null, items: unassigned });
 
   return (
     <div className="space-y-6">
@@ -45,31 +79,20 @@ function UtilidadesPage() {
           <p>Nenhuma utilidade cadastrada para esta viagem ainda.</p>
         </Card>
       ) : (
-        <ul className="space-y-2">
-          {items.map((u) => (
-            <li key={u.id}>
-              <Card className="p-4 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
-                    {u.kind}
-                  </span>
-                  <p className="font-medium text-sm mt-1.5">{u.name}</p>
-                  {u.address && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{u.address}</p>
-                  )}
-                </div>
-                <a
-                  href={mapsHref(u)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-primary inline-flex items-center gap-1 shrink-0 whitespace-nowrap"
-                >
-                  <ExternalLink className="size-3" /> Maps
-                </a>
-              </Card>
-            </li>
+        <div className="space-y-6">
+          {groups.map((g) => (
+            g.items.length === 0 ? null : (
+              <section key={g.section?.id ?? "none"} className="space-y-2">
+                <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  {g.section ? g.section.title : "Outros"}
+                </h2>
+                <ul className="space-y-2">
+                  {g.items.map((u) => <UtilityItem key={u.id} u={u} />)}
+                </ul>
+              </section>
+            )
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
