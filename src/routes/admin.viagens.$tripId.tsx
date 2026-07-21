@@ -1313,6 +1313,21 @@ function DocsTab({ tripId }: { tripId: string }) {
     toast.success("Documento enviado");
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
     qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+    qc.invalidateQueries({ queryKey: ["my-trip"] });
+  }
+
+  async function downloadDoc(doc: Document) {
+    const { data, error } = await supabase.storage
+      .from("trip-documents")
+      .createSignedUrl(doc.storage_path, 300, { download: doc.name });
+    if (error || !data) return toast.error("Não foi possível baixar");
+    const a = document.createElement("a");
+    a.href = data.signedUrl;
+    a.download = doc.name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   async function remove(doc: Document) {
@@ -1323,6 +1338,7 @@ function DocsTab({ tripId }: { tripId: string }) {
     toast.success("Documento excluído");
     qc.invalidateQueries({ queryKey: ["trip-docs", tripId] });
     qc.invalidateQueries({ queryKey: ["trip-days", tripId] });
+    qc.invalidateQueries({ queryKey: ["my-trip"] });
   }
 
   const general = (data?.docs ?? []).filter((d) => !d.activity_id);
