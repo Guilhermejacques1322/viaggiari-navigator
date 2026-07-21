@@ -267,14 +267,22 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     doc.text(period, W / 2, afterTitleY + 12, { align: "center" });
   }
 
-  // Hero image
-  const heroY = afterTitleY + 20;
-  const heroH = 85;
-  await drawCoverAsync(data.days.find((d) => d.cover_image_url)?.cover_image_url ?? null, 0, heroY, W, heroH, NAVY);
+  // Hero image (reduzido, com margem lateral, para não competir com o título)
+  const heroSideM = M + 6;
+  const heroW = W - heroSideM * 2;
+  const heroH = 68;
+  const heroY = afterTitleY + 22;
+  await drawCoverAsync(
+    data.days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
+    heroSideM, heroY, heroW, heroH, NAVY,
+  );
+  setC(BORDER, "draw");
+  doc.setLineWidth(0.3);
+  doc.rect(heroSideM, heroY, heroW, heroH);
 
   // Faixa navy com 4 destaques
-  const bandY = heroY + heroH;
-  const bandH = 26;
+  const bandY = heroY + heroH + 8;
+  const bandH = 24;
   setC(NAVY, "fill");
   doc.rect(0, bandY, W, bandH, "F");
   const stats = [
@@ -287,17 +295,15 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   setC(WHITE, "text");
   stats.forEach((s, i) => {
     const cx = colW * i + colW / 2;
-    // ponto laranja pequeno como ícone abstrato
     setC(ORANGE, "fill");
-    doc.circle(cx, bandY + 7, 1.6, "F");
+    doc.circle(cx, bandY + 6, 1.4, "F");
     setC(WHITE, "text");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text(s.title, cx, bandY + 14, { align: "center" });
+    doc.setFontSize(9.5);
+    doc.text(s.title, cx, bandY + 13, { align: "center" });
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.text(s.sub, cx, bandY + 19, { align: "center" });
-    // separador vertical
+    doc.setFontSize(8);
+    doc.text(s.sub, cx, bandY + 18, { align: "center" });
     if (i < stats.length - 1) {
       setC(WHITE, "draw");
       doc.setLineWidth(0.2);
@@ -354,25 +360,16 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     // Logo topo
     drawLogo(W / 2, 8, 18);
 
-    // Badge DIA X (canto superior esquerdo)
-    const badgeW = 32, badgeH = 10;
-    setC(ORANGE, "fill");
-    doc.roundedRect(M, 12, badgeW, badgeH, 2, 2, "F");
-    setC(WHITE, "text");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(`DIA ${day.day_number}`, M + badgeW / 2, 12 + badgeH / 2 + 1.5, { align: "center" });
-
-    // Hero
-    const heroTop = 32;
-    const heroHeight = 55;
-    await drawCoverAsync(day.cover_image_url, M, heroTop, W - M * 2, heroHeight, NAVY);
-    // borda sutil
+    // Hero (mais compacto, sem nenhum texto sobreposto)
+    const heroTop = 30;
+    const heroHeight = 46;
+    const heroPad = M;
+    await drawCoverAsync(day.cover_image_url, heroPad, heroTop, W - heroPad * 2, heroHeight, NAVY);
     setC(BORDER, "draw");
     doc.setLineWidth(0.3);
-    doc.rect(M, heroTop, W - M * 2, heroHeight);
+    doc.rect(heroPad, heroTop, W - heroPad * 2, heroHeight);
 
-    // Coluna principal (esquerda) e sidebar (direita)
+    // Coluna principal (esquerda) e sidebar (direita) — TODO o texto vai abaixo da imagem
     const contentTop = heroTop + heroHeight + 8;
     const gap = 6;
     const sideW = 62;
@@ -383,24 +380,32 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     // ---- Coluna principal ----
     let y = contentTop;
 
-    // Weekday + data
+    // Badge DIA X + weekday na mesma linha (abaixo da imagem)
+    const badgeW = 30, badgeH = 9;
+    setC(ORANGE, "fill");
+    doc.roundedRect(mainX, y, badgeW, badgeH, 1.8, 1.8, "F");
+    setC(WHITE, "text");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(`DIA ${day.day_number}`, mainX + badgeW / 2, y + badgeH / 2 + 1.4, { align: "center" });
+
     if (day.date) {
-      setC(ORANGE, "text");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      setC(MUTED, "text");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
       const weekday = formatDateBR(day.date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-      doc.text(weekday, mainX, y);
-      y += 6;
+      doc.text(weekday, mainX + badgeW + 4, y + badgeH / 2 + 1.4);
     }
+    y += badgeH + 5;
 
     // Título
     setC(NAVY, "text");
     doc.setFont("times", "bold");
-    doc.setFontSize(22);
+    doc.setFontSize(20);
     const title = day.title ?? `Dia ${day.day_number}`;
     const tl = doc.splitTextToSize(title, mainW);
-    doc.text(tl, mainX, y + 4);
-    y += tl.length * 8 + 2;
+    doc.text(tl, mainX, y + 2);
+    y += tl.length * 7.5 + 2;
 
     // Descrição
     if (day.description) {
@@ -408,7 +413,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       const dl = doc.splitTextToSize(day.description, mainW);
-      doc.text(dl, mainX, y + 4);
+      doc.text(dl, mainX, y + 3);
       y += dl.length * 5 + 4;
     }
 
@@ -447,11 +452,12 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
         doc.rect(0, 0, W, H, "F");
         drawLogo(W / 2, 8, 18);
         setC(ORANGE, "fill");
-        doc.roundedRect(M, 12, badgeW, badgeH, 2, 2, "F");
+        const cbW = 40, cbH = 9;
+        doc.roundedRect(M, 14, cbW, cbH, 1.8, 1.8, "F");
         setC(WHITE, "text");
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.text(`DIA ${day.day_number} (cont.)`, M + badgeW / 2, 12 + badgeH / 2 + 1.5, { align: "center" });
+        doc.setFontSize(10);
+        doc.text(`DIA ${day.day_number} (cont.)`, M + cbW / 2, 14 + cbH / 2 + 1.4, { align: "center" });
         y = 32;
       }
 
