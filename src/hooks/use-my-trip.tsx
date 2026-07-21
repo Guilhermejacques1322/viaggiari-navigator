@@ -33,7 +33,7 @@ async function fetchMyTrip(userId: string): Promise<MyTripData> {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!contact) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [], utilities: [] };
+  if (!contact) return { trip: null, days: [], documents: [], payments: [], notifications: [], routes: [], utilities: [], utilitySections: [] };
 
   const { data: trip } = await supabase
     .from("trips")
