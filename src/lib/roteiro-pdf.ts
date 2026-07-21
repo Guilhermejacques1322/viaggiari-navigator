@@ -267,14 +267,22 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     doc.text(period, W / 2, afterTitleY + 12, { align: "center" });
   }
 
-  // Hero image
-  const heroY = afterTitleY + 20;
-  const heroH = 85;
-  await drawCoverAsync(data.days.find((d) => d.cover_image_url)?.cover_image_url ?? null, 0, heroY, W, heroH, NAVY);
+  // Hero image (reduzido, com margem lateral, para não competir com o título)
+  const heroSideM = M + 6;
+  const heroW = W - heroSideM * 2;
+  const heroH = 68;
+  const heroY = afterTitleY + 22;
+  await drawCoverAsync(
+    data.days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
+    heroSideM, heroY, heroW, heroH, NAVY,
+  );
+  setC(BORDER, "draw");
+  doc.setLineWidth(0.3);
+  doc.rect(heroSideM, heroY, heroW, heroH);
 
   // Faixa navy com 4 destaques
-  const bandY = heroY + heroH;
-  const bandH = 26;
+  const bandY = heroY + heroH + 8;
+  const bandH = 24;
   setC(NAVY, "fill");
   doc.rect(0, bandY, W, bandH, "F");
   const stats = [
@@ -287,17 +295,15 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   setC(WHITE, "text");
   stats.forEach((s, i) => {
     const cx = colW * i + colW / 2;
-    // ponto laranja pequeno como ícone abstrato
     setC(ORANGE, "fill");
-    doc.circle(cx, bandY + 7, 1.6, "F");
+    doc.circle(cx, bandY + 6, 1.4, "F");
     setC(WHITE, "text");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text(s.title, cx, bandY + 14, { align: "center" });
+    doc.setFontSize(9.5);
+    doc.text(s.title, cx, bandY + 13, { align: "center" });
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.text(s.sub, cx, bandY + 19, { align: "center" });
-    // separador vertical
+    doc.setFontSize(8);
+    doc.text(s.sub, cx, bandY + 18, { align: "center" });
     if (i < stats.length - 1) {
       setC(WHITE, "draw");
       doc.setLineWidth(0.2);
