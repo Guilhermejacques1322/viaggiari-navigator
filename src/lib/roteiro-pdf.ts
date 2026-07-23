@@ -537,59 +537,35 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
       doc.text("Dia livre. Aproveite para descansar ou explorar sem pressa.", mainX, y);
     }
 
-    // ---- Sidebar ----
-    let sy = contentTop;
-
-    // Box "ROTEIRO DO DIA"
-    const roteiroItems = day.activities.slice(0, 6).map((a) => a.name);
-    const roteiroLineH = 5;
-    const roteiroPadY = 5;
-    const roteiroTitleH = 8;
-    const roteiroBoxH = roteiroPadY * 2 + roteiroTitleH + Math.max(roteiroItems.length, 1) * roteiroLineH + 8;
-    setC(BLUE_SOFT, "fill");
-    setC(BORDER, "draw");
-    doc.setLineWidth(0.3);
-    doc.roundedRect(sideX, sy, sideW, roteiroBoxH, 2, 2, "FD");
-    setC(NAVY, "text");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text("ROTEIRO DO DIA", sideX + 4, sy + 6);
-    let ry = sy + 12;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    if (roteiroItems.length === 0) {
-      setC(MUTED, "text");
-      doc.text("Dia livre", sideX + 4, ry);
-    } else {
-      for (const it of roteiroItems) {
-        setC(ORANGE, "fill");
-        doc.circle(sideX + 5, ry - 1.2, 1, "F");
-        setC(NAVY, "text");
-        const line = doc.splitTextToSize(it, sideW - 12)[0];
-        doc.text(line, sideX + 8.5, ry);
-        ry += roteiroLineH;
-      }
-    }
-    sy += roteiroBoxH + 5;
-
-    // Box "DICA VIAGGIARI"
+    // ---- Dica Viaggiari (largura total, ao fim do dia) ----
     const tip = TIPS[(day.day_number - 1) % TIPS.length];
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const tipLines = doc.splitTextToSize(tip, mainW - 8);
+    const tipH = 14 + tipLines.length * 4.5;
+    if (y + tipH > H - 18) {
+      footerBar();
+      doc.addPage();
+      setC(CREAM, "fill");
+      doc.rect(0, 0, W, H, "F");
+      drawLogo(W / 2, 8, 18);
+      y = 30;
+    } else {
+      y += 4;
+    }
     setC(ORANGE_SOFT, "fill");
     setC(ORANGE, "draw");
     doc.setLineWidth(0.4);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const tipLines = doc.splitTextToSize(tip, sideW - 8);
-    const tipH = 14 + tipLines.length * 4.5;
-    doc.roundedRect(sideX, sy, sideW, tipH, 2, 2, "FD");
+    doc.roundedRect(mainX, y, mainW, tipH, 2, 2, "FD");
     setC(ORANGE, "text");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.text("DICA VIAGGIARI", sideX + 4, sy + 6);
+    doc.text("DICA VIAGGIARI", mainX + 4, y + 6);
     setC(INK, "text");
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
-    doc.text(tipLines, sideX + 4, sy + 12);
+    doc.text(tipLines, mainX + 4, y + 12);
+
 
     footerBar();
   }
