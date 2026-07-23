@@ -270,8 +270,8 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   // Hero image (reduzido, com margem lateral, para não competir com o título)
   const heroSideM = M + 6;
   const heroW = W - heroSideM * 2;
-  const heroH = 68;
-  const heroY = afterTitleY + 22;
+  const heroH = 60;
+  const heroY = afterTitleY + 24;
   await drawCoverAsync(
     data.days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
     heroSideM, heroY, heroW, heroH, NAVY,
@@ -279,6 +279,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   setC(BORDER, "draw");
   doc.setLineWidth(0.3);
   doc.rect(heroSideM, heroY, heroW, heroH);
+
 
   // Faixa navy com 4 destaques
   const bandY = heroY + heroH + 8;
