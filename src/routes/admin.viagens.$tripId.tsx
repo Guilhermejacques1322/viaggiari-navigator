@@ -610,7 +610,55 @@ function ExportRoteiroButton({ tripId, days, defaultTransport }: { tripId: strin
   );
 }
 
+function DayCoverUpload({ tripId, dayId, value, onChange }: { tripId: string; dayId: string; value: string; onChange: (url: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const upload = async (file: File) => {
+    if (!file.type.startsWith("image/")) return toast.error("Selecione uma imagem.");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Máximo 5 MB.");
+    setBusy(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${tripId}/${dayId}-${Date.now()}.${ext}`;
+      const up = await supabase.storage.from("trip-covers").upload(path, file, { upsert: true, contentType: file.type });
+      if (up.error) throw up.error;
+      // Signed URL de longa duração (10 anos)
+      const signed = await supabase.storage.from("trip-covers").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (signed.error) throw signed.error;
+      onChange(signed.data.signedUrl);
+      toast.success("Imagem enviada");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Input
+          type="file"
+          accept="image/*"
+          disabled={busy}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }}
+        />
+        {value && (
+          <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => onChange("")}>
+            Remover
+          </Button>
+        )}
+      </div>
+      {value && (
+        <div className="aspect-[21/9] rounded-md overflow-hidden bg-muted border">
+          <img src={value} alt="Prévia da capa" className="w-full h-full object-cover" />
+        </div>
+      )}
+      {busy && <p className="text-xs text-muted-foreground">Enviando…</p>}
+    </div>
+  );
+}
+
 const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean }) {
+
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: day.title ?? "", date: day.date ?? "", description: day.description ?? "", cover_image_url: day.cover_image_url ?? "" });
