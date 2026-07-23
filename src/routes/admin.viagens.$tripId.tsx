@@ -701,26 +701,20 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
             <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
           <div>
-            <Label>Imagem de capa (URL)</Label>
-            <Input
-              type="url"
-              placeholder="https://…"
+            <Label>Imagem de capa</Label>
+            <DayCoverUpload
+              tripId={tripId}
+              dayId={day.id}
               value={form.cover_image_url}
-              onChange={(e) => setForm({ ...form, cover_image_url: e.target.value })}
+              onChange={(url) => setForm({ ...form, cover_image_url: url })}
             />
           </div>
           <div className="md:col-span-2"><Label>Descrição do dia</Label>
             <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
-          {form.cover_image_url && (
-            <div className="md:col-span-2">
-              <div className="aspect-[21/9] rounded-md overflow-hidden bg-muted border">
-                <img src={form.cover_image_url} alt="Prévia da capa" className="w-full h-full object-cover" />
-              </div>
-            </div>
-          )}
         </div>
       )}
+
 
 
       <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
