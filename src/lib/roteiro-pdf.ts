@@ -370,15 +370,12 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     doc.setLineWidth(0.3);
     doc.rect(heroPad, heroTop, W - heroPad * 2, heroHeight);
 
-    // Coluna principal (esquerda) e sidebar (direita) — TODO o texto vai abaixo da imagem
+    // Conteúdo abaixo da imagem (sem sidebar — coluna única para melhor leitura)
     const contentTop = heroTop + heroHeight + 8;
-    const gap = 6;
-    const sideW = 62;
-    const mainW = W - M * 2 - sideW - gap;
+    const mainW = W - M * 2;
     const mainX = M;
-    const sideX = M + mainW + gap;
 
-    // ---- Coluna principal ----
+    // ---- Conteúdo ----
     let y = contentTop;
 
     // Badge DIA X + weekday na mesma linha (abaixo da imagem)
@@ -395,18 +392,21 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9.5);
       const weekday = formatDateBR(day.date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-      doc.text(weekday, mainX + badgeW + 4, y + badgeH / 2 + 1.4);
+      const weekdayTrunc = doc.splitTextToSize(weekday, mainW - badgeW - 6)[0] ?? weekday;
+      doc.text(weekdayTrunc, mainX + badgeW + 4, y + badgeH / 2 + 1.4);
     }
     y += badgeH + 5;
 
-    // Título
+    // Título — remove prefixo redundante "Dia N - ", "DIA N:", etc.
     setC(NAVY, "text");
     doc.setFont("times", "bold");
     doc.setFontSize(20);
-    const title = day.title ?? `Dia ${day.day_number}`;
-    const tl = doc.splitTextToSize(title, mainW);
+    const rawTitle = day.title ?? `Dia ${day.day_number}`;
+    const cleanTitle = rawTitle.replace(/^\s*dia\s*\d+\s*[-–—:.]?\s*/i, "").trim() || `Dia ${day.day_number}`;
+    const tl = doc.splitTextToSize(cleanTitle, mainW);
     doc.text(tl, mainX, y + 2);
     y += tl.length * 7.5 + 2;
+
 
     // Descrição
     if (day.description) {
