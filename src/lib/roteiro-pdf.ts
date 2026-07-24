@@ -2,7 +2,7 @@
 // Inspirado no roteiro-modelo: capa com hero, faixa de destaques, índice;
 // páginas de dia com badge, hero, timeline laranja e sidebar (Roteiro do Dia + Dica).
 import { formatDateBR } from "@/lib/date-utils";
-import logoAsset from "@/assets/viaggiari-logo-full-v2.jpeg.asset.json";
+import logoAsset from "@/assets/viaggiari-logo-transparent.png.asset.json";
 
 export type RoteiroPDFRoute = {
   from_activity_id: string;
