@@ -129,6 +129,15 @@ function routeStats(r: RoteiroPDFRoute | undefined, mode: "driving" | "transit" 
   return { dur: fmtDuration(d), dist: fmtDistance(dist) };
 }
 
+function cleanDayTitle(title: string | null | undefined, dayNumber: number): string {
+  const raw = (title ?? "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(new RegExp(`^\\s*dia\\s*0?${dayNumber}\\s*[-–—:.]?\\s*`, "i"), "")
+    .replace(/^\s*dia\s*\d+\s*[-–—:.]?\s*/i, "")
+    .trim();
+}
+
 export async function generateRoteiroPDF(data: RoteiroPDFData) {
   const { default: jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -153,12 +162,38 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   // Pré-carrega logo (falha silenciosa se offline)
   const logo = await loadImage(logoAsset.url);
 
-  // Desenha imagem preservando aspecto dentro da área target (cover)
-  function drawCover(url: string | null, dx: number, dy: number, dw: number, dh: number, fallback: RGB = NAVY) {
-    // Fallback: retorna promise fake — mas função assíncrona; usaremos versão async abaixo
-    void url; void dx; void dy; void dw; void dh; void fallback;
+  async function cropImageToCover(img: { dataUrl: string; format: "JPEG" | "PNG"; w: number; h: number }, targetRatio: number) {
+    if (typeof document === "undefined") return { dataUrl: img.dataUrl, format: img.format };
+
+    const source = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = reject;
+      element.src = img.dataUrl;
+    });
+
+    const sourceRatio = img.w / img.h;
+    let sx = 0;
+    let sy = 0;
+    let sw = img.w;
+    let sh = img.h;
+
+    if (sourceRatio > targetRatio) {
+      sw = img.h * targetRatio;
+      sx = (img.w - sw) / 2;
+    } else {
+      sh = img.w / targetRatio;
+      sy = (img.h - sh) / 2;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1600;
+    canvas.height = Math.max(1, Math.round(canvas.width / targetRatio));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return { dataUrl: img.dataUrl, format: img.format };
+    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.88), format: "JPEG" as const };
   }
-  void drawCover;
 
   async function drawCoverAsync(url: string | null, dx: number, dy: number, dw: number, dh: number, fallback: RGB = NAVY) {
     const img = url ? await loadImage(url) : null;
@@ -167,28 +202,11 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
       doc.rect(dx, dy, dw, dh, "F");
       return;
     }
-    // scale para preencher, centralizado, sem distorcer
-    const boxRatio = dw / dh;
-    const imgRatio = img.w / img.h;
-    let sw = dw, sh = dh, sx = dx, sy = dy;
-    if (imgRatio > boxRatio) {
-      sh = dh;
-      sw = dh * imgRatio;
-      sx = dx - (sw - dw) / 2;
-    } else {
-      sw = dw;
-      sh = dw / imgRatio;
-      sy = dy - (sh - dh) / 2;
-    }
-    // Clip via rect (jsPDF não tem clip fácil; usamos overlay para cobrir sobras).
     try {
-      // desenha uma faixa de background primeiro
       setC(fallback, "fill");
       doc.rect(dx, dy, dw, dh, "F");
-      doc.addImage(img.dataUrl, img.format, sx, sy, sw, sh, undefined, "FAST");
-      // Máscara: cobre laterais que passaram da caixa
-      setC(CREAM, "fill");
-      if (sx < dx) doc.rect(dx - 1, dy, 0, 0); // no-op placeholder
+      const cropped = await cropImageToCover(img, dw / dh);
+      doc.addImage(cropped.dataUrl, cropped.format, dx, dy, dw, dh, undefined, "FAST");
     } catch {
       setC(fallback, "fill");
       doc.rect(dx, dy, dw, dh, "F");
@@ -324,7 +342,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     setC(NAVY, "text");
     doc.setFont("helvetica", "normal");
     doc.text("—", M + 26, iy);
-    const title = d.title ?? "Dia livre";
+    const title = cleanDayTitle(d.title, d.day_number) || "Programação do dia";
     const tt = doc.splitTextToSize(title, 90);
     doc.text(tt[0] ?? title, M + 32, iy);
     if (d.date) {
@@ -397,15 +415,16 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     }
     y += badgeH + 5;
 
-    // Título — remove prefixo redundante "Dia N - ", "DIA N:", etc.
-    setC(NAVY, "text");
-    doc.setFont("times", "bold");
-    doc.setFontSize(20);
-    const rawTitle = day.title ?? `Dia ${day.day_number}`;
-    const cleanTitle = rawTitle.replace(/^\s*dia\s*\d+\s*[-–—:.]?\s*/i, "").trim() || `Dia ${day.day_number}`;
-    const tl = doc.splitTextToSize(cleanTitle, mainW);
-    doc.text(tl, mainX, y + 2);
-    y += tl.length * 7.5 + 2;
+    // Título — só aparece quando tem nome real; evita repetir "DIA X" duas vezes.
+    const title = cleanDayTitle(day.title, day.day_number);
+    if (title) {
+      setC(NAVY, "text");
+      doc.setFont("times", "bold");
+      doc.setFontSize(20);
+      const tl = doc.splitTextToSize(title, mainW);
+      doc.text(tl, mainX, y + 2);
+      y += tl.length * 7.5 + 2;
+    }
 
 
     // Descrição
