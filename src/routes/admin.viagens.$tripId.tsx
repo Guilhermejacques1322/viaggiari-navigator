@@ -624,6 +624,9 @@ function DayCoverUpload({ tripId, dayId, value, onChange }: { tripId: string; da
       // Signed URL de longa duração (10 anos)
       const signed = await supabase.storage.from("trip-covers").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
       if (signed.error) throw signed.error;
+      // Persiste imediatamente no banco para não depender do botão Salvar do dia
+      const upd = await supabase.from("itinerary_days").update({ cover_image_url: signed.data.signedUrl }).eq("id", dayId);
+      if (upd.error) throw upd.error;
       onChange(signed.data.signedUrl);
       toast.success("Imagem enviada");
     } catch (e) {
