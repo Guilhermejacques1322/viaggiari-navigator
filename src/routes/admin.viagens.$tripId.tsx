@@ -645,7 +645,10 @@ function DayCoverUpload({ tripId, dayId, value, onChange }: { tripId: string; da
           onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }}
         />
         {value && (
-          <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => onChange("")}>
+          <Button type="button" size="sm" variant="ghost" className="text-destructive" disabled={busy} onClick={async () => {
+            await supabase.from("itinerary_days").update({ cover_image_url: null }).eq("id", dayId);
+            onChange("");
+          }}>
             Remover
           </Button>
         )}
