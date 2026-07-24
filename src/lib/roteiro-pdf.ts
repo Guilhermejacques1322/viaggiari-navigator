@@ -2,7 +2,7 @@
 // Inspirado no roteiro-modelo: capa com hero, faixa de destaques, índice;
 // páginas de dia com badge, hero, timeline laranja e sidebar (Roteiro do Dia + Dica).
 import { formatDateBR } from "@/lib/date-utils";
-import logoAsset from "@/assets/viaggiari-logo-full.png.asset.json";
+import logoAsset from "@/assets/viaggiari-logo-full-v2.jpeg.asset.json";
 
 export type RoteiroPDFRoute = {
   from_activity_id: string;
@@ -217,7 +217,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     if (!logo || !logo.w) return;
     const ratio = logo.w / logo.h;
     const w = h * ratio;
-    try { doc.addImage(logo.dataUrl, "PNG", cx - w / 2, y, w, h, undefined, "FAST"); } catch { /* noop */ }
+    try { doc.addImage(logo.dataUrl, logo.format, cx - w / 2, y, w, h, undefined, "FAST"); } catch { /* noop */ }
   }
 
   function footerBar() {
@@ -245,7 +245,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   doc.rect(0, 0, W, H, "F");
 
   // Logo centralizado
-  drawLogo(W / 2, 12, 26);
+  drawLogo(W / 2, 10, 32);
 
   // Roteiro personalizado (rótulo)
   setC(NAVY, "text");
@@ -373,7 +373,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     doc.rect(0, 0, W, H, "F");
 
     // Logo topo
-    drawLogo(W / 2, 8, 18);
+    drawLogo(W / 2, 6, 20);
 
     // Hero (mais compacto, sem nenhum texto sobreposto)
     const heroTop = 30;
@@ -466,7 +466,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
         // fundo + logo + retomada
         setC(CREAM, "fill");
         doc.rect(0, 0, W, H, "F");
-        drawLogo(W / 2, 8, 18);
+        drawLogo(W / 2, 6, 20);
         setC(ORANGE, "fill");
         const cbW = 40, cbH = 9;
         doc.roundedRect(M, 14, cbW, cbH, 1.8, 1.8, "F");
@@ -563,7 +563,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
       doc.addPage();
       setC(CREAM, "fill");
       doc.rect(0, 0, W, H, "F");
-      drawLogo(W / 2, 8, 18);
+      drawLogo(W / 2, 6, 20);
       y = 30;
     } else {
       y += 4;
