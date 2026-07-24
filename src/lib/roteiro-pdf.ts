@@ -363,14 +363,10 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   footerBar();
 
   // ============== DIAS ==============
-  data.days.forEach((_, idx) => {
-    doc.addPage();
-    void idx;
-  });
-
   for (let dIdx = 0; dIdx < data.days.length; dIdx++) {
     const day = data.days[dIdx];
-    doc.setPage(2 + dIdx);
+    doc.addPage();
+
 
     // fundo cream
     setC(CREAM, "fill");
