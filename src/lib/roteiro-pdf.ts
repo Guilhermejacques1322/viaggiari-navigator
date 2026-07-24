@@ -373,7 +373,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     doc.rect(0, 0, W, H, "F");
 
     // Logo topo
-    drawLogo(W / 2, 8, 18);
+    drawLogo(W / 2, 6, 20);
 
     // Hero (mais compacto, sem nenhum texto sobreposto)
     const heroTop = 30;
@@ -466,7 +466,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
         // fundo + logo + retomada
         setC(CREAM, "fill");
         doc.rect(0, 0, W, H, "F");
-        drawLogo(W / 2, 8, 18);
+        drawLogo(W / 2, 6, 20);
         setC(ORANGE, "fill");
         const cbW = 40, cbH = 9;
         doc.roundedRect(M, 14, cbW, cbH, 1.8, 1.8, "F");
@@ -563,7 +563,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
       doc.addPage();
       setC(CREAM, "fill");
       doc.rect(0, 0, W, H, "F");
-      drawLogo(W / 2, 8, 18);
+      drawLogo(W / 2, 6, 20);
       y = 30;
     } else {
       y += 4;
