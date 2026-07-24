@@ -624,6 +624,9 @@ function DayCoverUpload({ tripId, dayId, value, onChange }: { tripId: string; da
       // Signed URL de longa duração (10 anos)
       const signed = await supabase.storage.from("trip-covers").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
       if (signed.error) throw signed.error;
+      // Persiste imediatamente no banco para não depender do botão Salvar do dia
+      const upd = await supabase.from("itinerary_days").update({ cover_image_url: signed.data.signedUrl }).eq("id", dayId);
+      if (upd.error) throw upd.error;
       onChange(signed.data.signedUrl);
       toast.success("Imagem enviada");
     } catch (e) {
@@ -642,7 +645,10 @@ function DayCoverUpload({ tripId, dayId, value, onChange }: { tripId: string; da
           onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }}
         />
         {value && (
-          <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => onChange("")}>
+          <Button type="button" size="sm" variant="ghost" className="text-destructive" disabled={busy} onClick={async () => {
+            await supabase.from("itinerary_days").update({ cover_image_url: null }).eq("id", dayId);
+            onChange("");
+          }}>
             Remover
           </Button>
         )}
@@ -754,7 +760,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
               tripId={tripId}
               dayId={day.id}
               value={form.cover_image_url}
-              onChange={(url) => setForm({ ...form, cover_image_url: url })}
+              onChange={(url) => { setForm({ ...form, cover_image_url: url }); onChanged(); }}
             />
           </div>
           <div className="md:col-span-2"><Label>Descrição do dia</Label>
