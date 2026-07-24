@@ -757,7 +757,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
               tripId={tripId}
               dayId={day.id}
               value={form.cover_image_url}
-              onChange={(url) => setForm({ ...form, cover_image_url: url })}
+              onChange={(url) => { setForm({ ...form, cover_image_url: url }); onChanged(); }}
             />
           </div>
           <div className="md:col-span-2"><Label>Descrição do dia</Label>
