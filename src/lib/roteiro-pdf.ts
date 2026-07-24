@@ -217,7 +217,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
     if (!logo || !logo.w) return;
     const ratio = logo.w / logo.h;
     const w = h * ratio;
-    try { doc.addImage(logo.dataUrl, "PNG", cx - w / 2, y, w, h, undefined, "FAST"); } catch { /* noop */ }
+    try { doc.addImage(logo.dataUrl, logo.format, cx - w / 2, y, w, h, undefined, "FAST"); } catch { /* noop */ }
   }
 
   function footerBar() {
