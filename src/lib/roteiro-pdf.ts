@@ -245,7 +245,7 @@ export async function generateRoteiroPDF(data: RoteiroPDFData) {
   doc.rect(0, 0, W, H, "F");
 
   // Logo centralizado
-  drawLogo(W / 2, 12, 26);
+  drawLogo(W / 2, 10, 32);
 
   // Roteiro personalizado (rótulo)
   setC(NAVY, "text");
