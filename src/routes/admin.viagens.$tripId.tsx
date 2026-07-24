@@ -317,7 +317,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
   const addDay = async () => {
     const nextNum = (days?.length ?? 0) + 1;
     const { error } = await supabase.from("itinerary_days").insert({
-      trip_id: tripId, day_number: nextNum, title: `Dia ${nextNum}`,
+      trip_id: tripId, day_number: nextNum, title: null,
     });
     if (error) return toast.error(error.message);
     invalidate();
