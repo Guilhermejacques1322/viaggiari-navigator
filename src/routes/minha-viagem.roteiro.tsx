@@ -17,6 +17,15 @@ import { RouteConnector } from "@/components/route-connector";
 import { computeDayRoutes } from "@/lib/routes.functions";
 import { cn } from "@/lib/utils";
 
+function cleanDayTitle(title: string | null | undefined, dayNumber: number) {
+  const raw = (title ?? "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(new RegExp(`^\\s*dia\\s*0?${dayNumber}\\s*[-–—:.]?\\s*`, "i"), "")
+    .replace(/^\s*dia\s*\d+\s*[-–—:.]?\s*/i, "")
+    .trim();
+}
+
 export const Route = createFileRoute("/minha-viagem/roteiro")({
   component: Roteiro,
 });
@@ -103,11 +112,12 @@ function Roteiro() {
           const expanded = openDay === day.id;
           const visible = day.activities.filter((a) => !a.in_preroteiro || a.client_response === "want");
           const cover = day.cover_image_url;
+          const title = cleanDayTitle(day.title, day.day_number);
           return (
             <Card key={day.id} className="overflow-hidden">
               <button
                 onClick={() => setOpenDay(expanded ? null : day.id)}
-                className="w-full text-left group relative block"
+                className="w-full text-left group block"
                 aria-expanded={expanded}
               >
                 <div className={cn(
@@ -117,7 +127,7 @@ function Roteiro() {
                   {cover ? (
                     <img
                       src={cover}
-                      alt={day.title ?? `Dia ${day.day_number}`}
+                      alt={title || `Dia ${day.day_number}`}
                       loading="lazy"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                       onError={(e) => {
@@ -128,29 +138,26 @@ function Roteiro() {
                       }}
                     />
                   ) : null}
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      display: cover ? "none" : "block",
-                      background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--sidebar-background)) 100%)",
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 flex items-end justify-between gap-3 text-white">
-                    <div className="min-w-0">
-                      <p className="brand-title text-[10px] md:text-xs opacity-85 mb-1">Dia {day.day_number}</p>
-                      <h2 className="font-display text-lg md:text-2xl font-light leading-tight truncate drop-shadow">
-                        {day.title ?? `Dia ${day.day_number}`}
+                  <div className={cn("absolute inset-0 bg-primary/15", cover && "hidden")} />
+                </div>
+                <div className="flex items-start justify-between gap-3 p-4 md:p-5 bg-card">
+                  <div className="min-w-0">
+                    <div className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground mb-2">
+                      DIA {day.day_number}
+                    </div>
+                    {title && (
+                      <h2 className="font-display text-lg md:text-2xl font-light leading-tight text-foreground">
+                        {title}
                       </h2>
-                      <p className="text-xs md:text-sm opacity-90 mt-1">
-                        {day.date && formatDate(day.date)}
-                        {day.date && visible.length > 0 && " • "}
-                        {visible.length > 0 && `${visible.length} atividades`}
-                      </p>
-                    </div>
-                    <div className="size-9 rounded-full bg-white/15 backdrop-blur-sm grid place-items-center shrink-0">
-                      <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
-                    </div>
+                    )}
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                      {day.date && formatDate(day.date)}
+                      {day.date && visible.length > 0 && " • "}
+                      {visible.length > 0 && `${visible.length} atividades`}
+                    </p>
+                  </div>
+                  <div className="size-9 rounded-full bg-primary/10 text-primary grid place-items-center shrink-0">
+                    <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
                   </div>
                 </div>
               </button>
