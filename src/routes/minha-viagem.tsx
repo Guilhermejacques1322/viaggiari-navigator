@@ -41,12 +41,13 @@ function ClientShell() {
           </div>
         </header>
 
-        <main className="flex-1 pb-24 md:pb-12 md:pl-64">
+        <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-12 md:pl-64">
           <DesktopSideNav />
-          <div className="max-w-3xl mx-auto px-5 py-6 md:px-10 md:py-10">
+          <div className="max-w-3xl mx-auto px-4 py-5 md:px-10 md:py-10">
             <Outlet />
           </div>
         </main>
+
 
         <MobileBottomNav />
       </div>
