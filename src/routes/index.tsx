@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail } from "lucide-react";
+import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail, Menu, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -59,20 +59,50 @@ function LandingPage() {
 }
 
 function Navbar() {
+  const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
-      <div className="section-padding flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center"><Logo size={36} withWordmark /></Link>
+      <div className="section-padding grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 h-14 md:h-16">
+        <Link to="/" className="flex min-w-0 items-center">
+          <Logo size={32} withWordmark />
+        </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm">
           <a href="#servicos" className="text-muted-foreground hover:text-foreground transition">Como funciona</a>
           <a href="#roteiros" className="text-muted-foreground hover:text-foreground transition">Roteiros</a>
           <a href="#contato" className="text-muted-foreground hover:text-foreground transition">Contato</a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2">
           <Link to="/login"><Button variant="ghost" size="sm">Entrar</Button></Link>
           <Link to="/interesse"><Button size="sm">Planejar minha viagem</Button></Link>
         </div>
+        <div className="flex md:hidden items-center gap-1.5">
+          <Link to="/login">
+            <Button variant="ghost" size="sm" className="h-9 px-3 text-sm">Entrar</Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9 shrink-0"
+            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+          </Button>
+        </div>
       </div>
+      {open && (
+        <div className="md:hidden border-t border-border/60 bg-background">
+          <nav className="section-padding py-3 flex flex-col text-sm">
+            <a href="#servicos" onClick={() => setOpen(false)} className="py-3 border-b border-border/50">Como funciona</a>
+            <a href="#roteiros" onClick={() => setOpen(false)} className="py-3 border-b border-border/50">Roteiros</a>
+            <a href="#contato" onClick={() => setOpen(false)} className="py-3 border-b border-border/50">Contato</a>
+            <Link to="/interesse" onClick={() => setOpen(false)} className="pt-4">
+              <Button className="w-full h-11">Planejar minha viagem</Button>
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
@@ -91,27 +121,32 @@ function Hero() {
           decoding="async"
           className="h-full w-full object-cover opacity-50"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/70 to-ink/90 md:bg-gradient-to-r md:from-ink md:via-ink/80 md:to-ink/20" />
       </div>
-      <div className="relative section-padding flex min-h-[88vh] items-center py-20">
+      <div className="relative section-padding flex min-h-[76svh] md:min-h-[88vh] items-center py-14 md:py-20">
         <div className="max-w-2xl">
-          <p className="brand-title text-xs text-primary-soft mb-6">Viaggiari · agência de viagens</p>
-          <h1 className="font-display text-4xl md:text-6xl font-light leading-[1.05] text-ink-foreground">
+          <p className="brand-title text-[10px] md:text-xs text-primary-soft mb-4 md:mb-6">Viaggiari · agência de viagens</p>
+          <h1 className="font-display text-[2rem] leading-[1.12] md:text-6xl font-light md:leading-[1.05] text-ink-foreground">
             Sua viagem dos sonhos, <span className="text-primary-soft">planejada com quem vive para viajar.</span>
           </h1>
-          <p className="mt-6 text-base md:text-lg text-ink-foreground/70 max-w-xl leading-relaxed">
+          <p className="mt-4 md:mt-6 text-sm md:text-lg text-ink-foreground/75 max-w-xl leading-relaxed">
             Assessoria personalizada, do voo ao último passeio. Nada de pacotes genéricos —
             cada roteiro é desenhado para o seu jeito de viajar.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-3">
-            <Link to="/interesse"><Button size="lg" className="font-display tracking-wide">Quero planejar minha viagem</Button></Link>
-            <a href="#roteiros"><Button size="lg" variant="outline" className="bg-transparent border-ink-foreground/30 text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground">Ver roteiros prontos</Button></a>
+          <div className="mt-7 md:mt-10 flex flex-col sm:flex-row gap-3">
+            <Link to="/interesse" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto h-12 font-display tracking-wide">Quero planejar minha viagem</Button>
+            </Link>
+            <a href="#roteiros" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto h-12 bg-transparent border border-ink-foreground/30 text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground" variant="outline">Ver roteiros prontos</Button>
+            </a>
           </div>
         </div>
       </div>
     </section>
   );
 }
+
 
 function HowItWorks() {
   const items = [
@@ -141,18 +176,18 @@ function HowItWorks() {
     },
   ];
   return (
-    <section id="servicos" className="section-padding py-24 md:py-32">
+    <section id="servicos" className="section-padding py-16 md:py-32">
       <div className="max-w-6xl mx-auto">
-        <div className="max-w-2xl mb-16">
+        <div className="max-w-2xl mb-10 md:mb-16">
           <p className="brand-title text-xs text-primary mb-3">Qual viajante é você?</p>
-          <h2 className="font-display text-3xl md:text-4xl font-light">Cada pessoa viaja de um jeito. A gente se adapta ao seu.</h2>
+          <h2 className="font-display text-2xl md:text-4xl font-light">Cada pessoa viaja de um jeito. A gente se adapta ao seu.</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:items-center">
           {items.map((it) => (
             <article
               key={it.title}
               className={[
-                "bg-surface border rounded-xl p-8 flex flex-col",
+                "bg-surface border rounded-xl p-6 md:p-8 flex flex-col",
                 it.featured
                   ? "border-primary/40 shadow-lg md:scale-[1.04] md:py-10 order-first md:order-none"
                   : "border-border",
@@ -188,19 +223,19 @@ function HowItWorks() {
 
 function PreReadyItineraries() {
   return (
-    <section id="roteiros" className="section-padding py-24 md:py-32 bg-muted/40">
+    <section id="roteiros" className="section-padding py-16 md:py-32 bg-muted/40">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 md:mb-16 gap-4">
           <div className="max-w-xl">
             <p className="brand-title text-xs text-primary mb-3">Roteiros prontos</p>
-            <h2 className="font-display text-3xl md:text-4xl font-light">Destinos testados, planejados nos detalhes.</h2>
+            <h2 className="font-display text-2xl md:text-4xl font-light">Destinos testados, planejados nos detalhes.</h2>
           </div>
           <Button variant="ghost" className="self-start md:self-end">Ver todos →</Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {destinations.map((d) => (
             <article key={d.name} className="group bg-surface border border-border rounded-xl overflow-hidden flex flex-col">
-              <div className="relative aspect-[4/5] overflow-hidden">
+              <div className="relative aspect-[4/3] md:aspect-[4/5] overflow-hidden">
                 <img src={d.img} alt={d.name} width={1024} height={1024} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 {d.featured && (
                   <span className="absolute top-4 left-4 brand-title text-[10px] bg-primary text-primary-foreground px-3 py-1 rounded-full">Mais vendido</span>
@@ -233,13 +268,13 @@ function WhyViaggiari() {
     { icon: Sparkles, title: "Comissão zero", desc: "Passeios sem taxas extras pra você." },
   ];
   return (
-    <section className="section-padding py-24 md:py-32">
+    <section className="section-padding py-16 md:py-32">
       <div className="max-w-6xl mx-auto">
-        <div className="max-w-2xl mb-16">
+        <div className="max-w-2xl mb-10 md:mb-16">
           <p className="brand-title text-xs text-primary mb-3">Por que a Viaggiari</p>
-          <h2 className="font-display text-3xl md:text-4xl font-light">Tudo pensado pra você só aproveitar.</h2>
+          <h2 className="font-display text-2xl md:text-4xl font-light">Tudo pensado pra você só aproveitar.</h2>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-6">
           {items.map((it) => (
             <div key={it.title} className="flex flex-col">
               <it.icon className="w-6 h-6 text-primary mb-4" strokeWidth={1.5} />
@@ -255,13 +290,13 @@ function WhyViaggiari() {
 
 function LeadSection() {
   return (
-    <section id="contato" className="section-padding py-24 md:py-32 bg-ink text-ink-foreground">
+    <section id="contato" className="section-padding py-16 md:py-32 bg-ink text-ink-foreground">
       <div className="max-w-3xl mx-auto text-center">
         <p className="brand-title text-xs text-primary-soft mb-3">Vamos viajar?</p>
-        <h2 className="font-display text-3xl md:text-5xl font-light leading-tight">Conta pra gente o que você tem em mente.</h2>
+        <h2 className="font-display text-2xl md:text-5xl font-light leading-tight">Conta pra gente o que você tem em mente.</h2>
         <p className="mt-6 text-ink-foreground/70">Respondemos em até 24 horas, geralmente no mesmo dia.</p>
-        <div className="mt-10 inline-block">
-          <Link to="/interesse"><Button size="lg" className="font-display tracking-wide">Entrar em contato</Button></Link>
+        <div className="mt-8 md:mt-10 w-full sm:w-auto sm:inline-block">
+          <Link to="/interesse" className="block w-full"><Button size="lg" className="w-full sm:w-auto h-12 font-display tracking-wide">Entrar em contato</Button></Link>
         </div>
       </div>
     </section>

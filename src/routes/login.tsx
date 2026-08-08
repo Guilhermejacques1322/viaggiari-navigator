@@ -64,27 +64,29 @@ function LoginPage() {
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="section-padding py-6">
-        <Link to="/"><Logo size={36} withWordmark /></Link>
-      </header>
-      <main className="flex-1 flex items-center justify-center section-padding py-12">
+    <div className="min-h-[100svh] flex flex-col bg-background">
+      <main className="flex-1 flex items-center justify-center section-padding py-10">
         <div className="w-full max-w-sm">
-          <h1 className="font-display text-3xl font-light mb-2">Entrar</h1>
-          <p className="text-sm text-muted-foreground mb-8">Acesse sua área de viagem.</p>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" name="email" type="email" required autoComplete="email" />
-            </div>
-            <div>
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" name="password" type="password" required autoComplete="current-password" />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Entrando..." : "Entrar"}
-            </Button>
-          </form>
+          <Link to="/" className="flex justify-center mb-8">
+            <Logo size={64} withWordmark />
+          </Link>
+          <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-sm">
+            <h1 className="font-display text-2xl md:text-3xl font-light mb-1">Entrar</h1>
+            <p className="text-sm text-muted-foreground mb-6">Acesse sua área de viagem.</p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">E-mail</Label>
+                <Input id="email" name="email" type="email" required autoComplete="email" inputMode="email" className="h-12 text-base" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Senha</Label>
+                <Input id="password" name="password" type="password" required autoComplete="current-password" className="h-12 text-base" />
+              </div>
+              <Button type="submit" className="w-full h-12" disabled={submitting}>
+                {submitting ? "Entrando..." : "Entrar"}
+              </Button>
+            </form>
+          </div>
           <p className="text-sm text-muted-foreground mt-6 text-center">
             Ainda não é cliente? <Link to="/interesse" className="text-primary hover:underline">Solicite contato</Link>
           </p>
@@ -93,3 +95,4 @@ function LoginPage() {
     </div>
   );
 }
+

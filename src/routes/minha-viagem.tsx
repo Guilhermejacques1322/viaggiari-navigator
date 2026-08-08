@@ -41,12 +41,13 @@ function ClientShell() {
           </div>
         </header>
 
-        <main className="flex-1 pb-24 md:pb-12 md:pl-64">
+        <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-12 md:pl-64">
           <DesktopSideNav />
-          <div className="max-w-3xl mx-auto px-5 py-6 md:px-10 md:py-10">
+          <div className="max-w-3xl mx-auto px-4 py-5 md:px-10 md:py-10">
             <Outlet />
           </div>
         </main>
+
 
         <MobileBottomNav />
       </div>
@@ -68,7 +69,7 @@ const NAV: NavItem[] = [
 function MobileBottomNav() {
   const { pathname } = useLocation();
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
       <ul className="grid grid-cols-7">
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
@@ -78,12 +79,19 @@ function MobileBottomNav() {
               <Link
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium tracking-wide uppercase",
+                  "flex flex-col items-center gap-1 px-0.5 pt-2 pb-2 text-[9px] font-medium leading-tight tracking-tight uppercase text-center",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Icon className="size-5" />
-                {item.label}
+                <span
+                  className={cn(
+                    "grid place-items-center size-8 rounded-full transition-colors",
+                    active ? "bg-primary/10" : "bg-transparent",
+                  )}
+                >
+                  <Icon className="size-[18px]" />
+                </span>
+                <span className="w-full truncate">{item.label}</span>
               </Link>
             </li>
           );
@@ -92,6 +100,7 @@ function MobileBottomNav() {
     </nav>
   );
 }
+
 
 function DesktopSideNav() {
   const { pathname } = useLocation();
