@@ -176,18 +176,18 @@ function HowItWorks() {
     },
   ];
   return (
-    <section id="servicos" className="section-padding py-24 md:py-32">
+    <section id="servicos" className="section-padding py-16 md:py-32">
       <div className="max-w-6xl mx-auto">
-        <div className="max-w-2xl mb-16">
+        <div className="max-w-2xl mb-10 md:mb-16">
           <p className="brand-title text-xs text-primary mb-3">Qual viajante é você?</p>
-          <h2 className="font-display text-3xl md:text-4xl font-light">Cada pessoa viaja de um jeito. A gente se adapta ao seu.</h2>
+          <h2 className="font-display text-2xl md:text-4xl font-light">Cada pessoa viaja de um jeito. A gente se adapta ao seu.</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:items-center">
           {items.map((it) => (
             <article
               key={it.title}
               className={[
-                "bg-surface border rounded-xl p-8 flex flex-col",
+                "bg-surface border rounded-xl p-6 md:p-8 flex flex-col",
                 it.featured
                   ? "border-primary/40 shadow-lg md:scale-[1.04] md:py-10 order-first md:order-none"
                   : "border-border",
@@ -223,19 +223,19 @@ function HowItWorks() {
 
 function PreReadyItineraries() {
   return (
-    <section id="roteiros" className="section-padding py-24 md:py-32 bg-muted/40">
+    <section id="roteiros" className="section-padding py-16 md:py-32 bg-muted/40">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 md:mb-16 gap-4">
           <div className="max-w-xl">
             <p className="brand-title text-xs text-primary mb-3">Roteiros prontos</p>
-            <h2 className="font-display text-3xl md:text-4xl font-light">Destinos testados, planejados nos detalhes.</h2>
+            <h2 className="font-display text-2xl md:text-4xl font-light">Destinos testados, planejados nos detalhes.</h2>
           </div>
           <Button variant="ghost" className="self-start md:self-end">Ver todos →</Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {destinations.map((d) => (
             <article key={d.name} className="group bg-surface border border-border rounded-xl overflow-hidden flex flex-col">
-              <div className="relative aspect-[4/5] overflow-hidden">
+              <div className="relative aspect-[4/3] md:aspect-[4/5] overflow-hidden">
                 <img src={d.img} alt={d.name} width={1024} height={1024} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 {d.featured && (
                   <span className="absolute top-4 left-4 brand-title text-[10px] bg-primary text-primary-foreground px-3 py-1 rounded-full">Mais vendido</span>
@@ -268,13 +268,13 @@ function WhyViaggiari() {
     { icon: Sparkles, title: "Comissão zero", desc: "Passeios sem taxas extras pra você." },
   ];
   return (
-    <section className="section-padding py-24 md:py-32">
+    <section className="section-padding py-16 md:py-32">
       <div className="max-w-6xl mx-auto">
-        <div className="max-w-2xl mb-16">
+        <div className="max-w-2xl mb-10 md:mb-16">
           <p className="brand-title text-xs text-primary mb-3">Por que a Viaggiari</p>
-          <h2 className="font-display text-3xl md:text-4xl font-light">Tudo pensado pra você só aproveitar.</h2>
+          <h2 className="font-display text-2xl md:text-4xl font-light">Tudo pensado pra você só aproveitar.</h2>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-6">
           {items.map((it) => (
             <div key={it.title} className="flex flex-col">
               <it.icon className="w-6 h-6 text-primary mb-4" strokeWidth={1.5} />
@@ -290,13 +290,13 @@ function WhyViaggiari() {
 
 function LeadSection() {
   return (
-    <section id="contato" className="section-padding py-24 md:py-32 bg-ink text-ink-foreground">
+    <section id="contato" className="section-padding py-16 md:py-32 bg-ink text-ink-foreground">
       <div className="max-w-3xl mx-auto text-center">
         <p className="brand-title text-xs text-primary-soft mb-3">Vamos viajar?</p>
-        <h2 className="font-display text-3xl md:text-5xl font-light leading-tight">Conta pra gente o que você tem em mente.</h2>
+        <h2 className="font-display text-2xl md:text-5xl font-light leading-tight">Conta pra gente o que você tem em mente.</h2>
         <p className="mt-6 text-ink-foreground/70">Respondemos em até 24 horas, geralmente no mesmo dia.</p>
-        <div className="mt-10 inline-block">
-          <Link to="/interesse"><Button size="lg" className="font-display tracking-wide">Entrar em contato</Button></Link>
+        <div className="mt-8 md:mt-10 w-full sm:w-auto sm:inline-block">
+          <Link to="/interesse" className="block w-full"><Button size="lg" className="w-full sm:w-auto h-12 font-display tracking-wide">Entrar em contato</Button></Link>
         </div>
       </div>
     </section>
