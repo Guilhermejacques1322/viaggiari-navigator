@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail } from "lucide-react";
+import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail, Menu, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
