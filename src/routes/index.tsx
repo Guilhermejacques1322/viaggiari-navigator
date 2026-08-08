@@ -59,20 +59,50 @@ function LandingPage() {
 }
 
 function Navbar() {
+  const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
-      <div className="section-padding flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center"><Logo size={36} withWordmark /></Link>
+      <div className="section-padding grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 h-14 md:h-16">
+        <Link to="/" className="flex min-w-0 items-center">
+          <Logo size={32} withWordmark />
+        </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm">
           <a href="#servicos" className="text-muted-foreground hover:text-foreground transition">Como funciona</a>
           <a href="#roteiros" className="text-muted-foreground hover:text-foreground transition">Roteiros</a>
           <a href="#contato" className="text-muted-foreground hover:text-foreground transition">Contato</a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2">
           <Link to="/login"><Button variant="ghost" size="sm">Entrar</Button></Link>
           <Link to="/interesse"><Button size="sm">Planejar minha viagem</Button></Link>
         </div>
+        <div className="flex md:hidden items-center gap-1.5">
+          <Link to="/login">
+            <Button variant="ghost" size="sm" className="h-9 px-3 text-sm">Entrar</Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9 shrink-0"
+            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+          </Button>
+        </div>
       </div>
+      {open && (
+        <div className="md:hidden border-t border-border/60 bg-background">
+          <nav className="section-padding py-3 flex flex-col text-sm">
+            <a href="#servicos" onClick={() => setOpen(false)} className="py-3 border-b border-border/50">Como funciona</a>
+            <a href="#roteiros" onClick={() => setOpen(false)} className="py-3 border-b border-border/50">Roteiros</a>
+            <a href="#contato" onClick={() => setOpen(false)} className="py-3 border-b border-border/50">Contato</a>
+            <Link to="/interesse" onClick={() => setOpen(false)} className="pt-4">
+              <Button className="w-full h-11">Planejar minha viagem</Button>
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
@@ -91,27 +121,32 @@ function Hero() {
           decoding="async"
           className="h-full w-full object-cover opacity-50"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/70 to-ink/90 md:bg-gradient-to-r md:from-ink md:via-ink/80 md:to-ink/20" />
       </div>
-      <div className="relative section-padding flex min-h-[88vh] items-center py-20">
+      <div className="relative section-padding flex min-h-[76svh] md:min-h-[88vh] items-center py-14 md:py-20">
         <div className="max-w-2xl">
-          <p className="brand-title text-xs text-primary-soft mb-6">Viaggiari · agência de viagens</p>
-          <h1 className="font-display text-4xl md:text-6xl font-light leading-[1.05] text-ink-foreground">
+          <p className="brand-title text-[10px] md:text-xs text-primary-soft mb-4 md:mb-6">Viaggiari · agência de viagens</p>
+          <h1 className="font-display text-[2rem] leading-[1.12] md:text-6xl font-light md:leading-[1.05] text-ink-foreground">
             Sua viagem dos sonhos, <span className="text-primary-soft">planejada com quem vive para viajar.</span>
           </h1>
-          <p className="mt-6 text-base md:text-lg text-ink-foreground/70 max-w-xl leading-relaxed">
+          <p className="mt-4 md:mt-6 text-sm md:text-lg text-ink-foreground/75 max-w-xl leading-relaxed">
             Assessoria personalizada, do voo ao último passeio. Nada de pacotes genéricos —
             cada roteiro é desenhado para o seu jeito de viajar.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-3">
-            <Link to="/interesse"><Button size="lg" className="font-display tracking-wide">Quero planejar minha viagem</Button></Link>
-            <a href="#roteiros"><Button size="lg" variant="outline" className="bg-transparent border-ink-foreground/30 text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground">Ver roteiros prontos</Button></a>
+          <div className="mt-7 md:mt-10 flex flex-col sm:flex-row gap-3">
+            <Link to="/interesse" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto h-12 font-display tracking-wide">Quero planejar minha viagem</Button>
+            </Link>
+            <a href="#roteiros" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto h-12 bg-transparent border border-ink-foreground/30 text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground" variant="outline">Ver roteiros prontos</Button>
+            </a>
           </div>
         </div>
       </div>
     </section>
   );
 }
+
 
 function HowItWorks() {
   const items = [
