@@ -4,6 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* "desktop" = tela grande E ponteiro fino (mouse). Aparelhos de toque —
+ * inclusive quando o Android reporta largura de desktop — recebem sempre
+ * a interface mobile. */
+@custom-variant desktop (@media (min-width: 768px) and (pointer: fine));
+
 /* Viaggiari — Design System
  * Brand: terracotta orange (#D17A47) + olive (#7A7A5C) + cream (#F0E6D2).
  * Typography: Montserrat (display, +0.12em tracking) + DM Sans (body).
