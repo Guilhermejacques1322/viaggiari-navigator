@@ -42,7 +42,7 @@ function Documentos() {
     <div className="space-y-6">
       <div>
         <p className="brand-title text-xs text-primary mb-2">Documentos</p>
-        <h1 className="font-display text-2xl md:text-3xl font-light">Voos, hotéis e ingressos</h1>
+        <h1 className="font-display text-2xl desktop:text-3xl font-light">Voos, hotéis e ingressos</h1>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>

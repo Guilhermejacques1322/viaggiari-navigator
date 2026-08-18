@@ -32,7 +32,7 @@ function ClientShell() {
     <MyTripProvider>
       <div className="min-h-screen bg-background flex flex-col">
         <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-          <div className="flex items-center justify-between px-5 py-3 md:px-12">
+          <div className="flex items-center justify-between px-5 py-3 desktop:px-12">
             <Link to="/minha-viagem"><Logo size={28} withWordmark /></Link>
             <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
               <LogOut className="size-4" />
@@ -41,9 +41,9 @@ function ClientShell() {
           </div>
         </header>
 
-        <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-12 md:pl-64">
+        <main className="flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] desktop:pb-12 desktop:pl-64">
           <DesktopSideNav />
-          <div className="max-w-3xl mx-auto px-4 py-5 md:px-10 md:py-10">
+          <div className="max-w-3xl mx-auto px-4 py-5 desktop:px-10 desktop:py-10">
             <Outlet />
           </div>
         </main>
@@ -69,7 +69,7 @@ const NAV: NavItem[] = [
 function MobileBottomNav() {
   const { pathname } = useLocation();
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+    <nav className="desktop:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
       <ul className="grid grid-cols-7">
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
@@ -106,7 +106,7 @@ function DesktopSideNav() {
   const { pathname } = useLocation();
   const { data } = useMyTrip();
   return (
-    <aside className="hidden md:flex fixed left-0 top-[57px] bottom-0 w-64 border-r border-border bg-surface flex-col p-4">
+    <aside className="hidden desktop:flex fixed left-0 top-[57px] bottom-0 w-64 border-r border-border bg-surface flex-col p-4">
       {data?.trip && (
         <div className="mb-6 p-3 rounded-lg bg-primary/5 border border-primary/10">
           <p className="brand-title text-[10px] text-primary">Sua viagem</p>

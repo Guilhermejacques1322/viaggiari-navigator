@@ -97,7 +97,7 @@ function Roteiro() {
     <div className="space-y-6">
       <div>
         <p className="brand-title text-xs text-primary mb-2">Roteiro</p>
-        <h1 className="font-display text-2xl md:text-3xl font-light">Dia a dia</h1>
+        <h1 className="font-display text-2xl desktop:text-3xl font-light">Dia a dia</h1>
         <p className="text-sm text-muted-foreground mt-1">{data.trip.title}</p>
       </div>
 
@@ -122,7 +122,7 @@ function Roteiro() {
               >
                 <div className={cn(
                   "relative w-full overflow-hidden",
-                  "aspect-[16/9] md:aspect-[21/9]",
+                  "aspect-[16/9] desktop:aspect-[21/9]",
                 )}>
                   {cover ? (
                     <img
@@ -140,17 +140,17 @@ function Roteiro() {
                   ) : null}
                   <div className={cn("absolute inset-0 bg-primary/15", cover && "hidden")} />
                 </div>
-                <div className="flex items-start justify-between gap-3 p-4 md:p-5 bg-card">
+                <div className="flex items-start justify-between gap-3 p-4 desktop:p-5 bg-card">
                   <div className="min-w-0">
                     <div className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground mb-2">
                       DIA {day.day_number}
                     </div>
                     {title && (
-                      <h2 className="font-display text-lg md:text-2xl font-light leading-tight text-foreground">
+                      <h2 className="font-display text-lg desktop:text-2xl font-light leading-tight text-foreground">
                         {title}
                       </h2>
                     )}
-                    <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                    <p className="text-xs desktop:text-sm text-muted-foreground mt-1">
                       {day.date && formatDate(day.date)}
                       {day.date && visible.length > 0 && " • "}
                       {visible.length > 0 && `${visible.length} atividades`}

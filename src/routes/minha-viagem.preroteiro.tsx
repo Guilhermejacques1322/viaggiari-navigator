@@ -51,7 +51,7 @@ function PreRoteiro() {
     <div className="space-y-6">
       <div>
         <p className="brand-title text-xs text-primary mb-2">Pré-roteiro</p>
-        <h1 className="font-display text-2xl md:text-3xl font-light">Você decide</h1>
+        <h1 className="font-display text-2xl desktop:text-3xl font-light">Você decide</h1>
         <p className="text-sm text-muted-foreground mt-2">
           Separamos estas sugestões para sua viagem - Marque o que tem fit com você,
           isso vai nos ajudar a fechar o roteiro final.
