@@ -49,7 +49,7 @@ function ClientParceiros() {
     <div className="space-y-6">
       <div>
         <p className="brand-title text-xs text-primary mb-2">Parceiros</p>
-        <h1 className="font-display text-2xl md:text-3xl font-light">Indicações para sua viagem</h1>
+        <h1 className="font-display text-2xl desktop:text-3xl font-light">Indicações para sua viagem</h1>
         <p className="text-sm text-muted-foreground mt-2">
           Lojas e produtos selecionados para deixar sua viagem ainda melhor.
         </p>

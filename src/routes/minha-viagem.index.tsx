@@ -22,7 +22,7 @@ function Dashboard() {
     return (
       <div>
         <p className="brand-title text-xs text-primary mb-3">Minha viagem</p>
-        <h1 className="font-display text-3xl md:text-4xl font-light">Olá, {firstName}.</h1>
+        <h1 className="font-display text-3xl desktop:text-4xl font-light">Olá, {firstName}.</h1>
         <Card className="mt-8 p-10 text-center border-dashed">
           <Plane className="size-10 mx-auto text-primary/40 mb-4" />
           <p className="font-display text-lg">Nenhuma viagem liberada ainda</p>
@@ -47,7 +47,7 @@ function Dashboard() {
     <div className="space-y-6">
       <div>
         <p className="brand-title text-xs text-primary mb-2">Sua viagem</p>
-        <h1 className="font-display text-3xl md:text-4xl font-light">{trip.title}</h1>
+        <h1 className="font-display text-3xl desktop:text-4xl font-light">{trip.title}</h1>
         {trip.destinations && trip.destinations.length > 0 && (
           <p className="mt-2 text-sm text-muted-foreground flex items-center gap-1.5">
             <MapPin className="size-3.5" /> {trip.destinations.join(" • ")}
@@ -59,7 +59,7 @@ function Dashboard() {
         <Card className="p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
           <p className="brand-title text-xs text-primary">Contagem regressiva</p>
           <div className="flex items-baseline gap-3 mt-2">
-            <span className="font-display text-5xl md:text-6xl font-light text-primary">{daysToGo}</span>
+            <span className="font-display text-5xl desktop:text-6xl font-light text-primary">{daysToGo}</span>
             <span className="font-display text-sm text-muted-foreground">
               {daysToGo === 1 ? "dia para embarcar" : daysToGo === 0 ? "É hoje!" : "dias para embarcar"}
             </span>

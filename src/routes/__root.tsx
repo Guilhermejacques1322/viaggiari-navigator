@@ -58,7 +58,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Viaggiari" },
       { name: "description", content: "Agência de viagens. Roteiros, passagens, passeios e suporte durante toda a viagem." },
       { name: "author", content: "Viaggiari" },

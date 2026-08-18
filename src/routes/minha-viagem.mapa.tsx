@@ -17,7 +17,7 @@ function MapaPage() {
     <div className="space-y-6">
       <div>
         <p className="brand-title text-xs text-primary mb-2">Mapa</p>
-        <h1 className="font-display text-2xl md:text-3xl font-light">Onde você vai estar</h1>
+        <h1 className="font-display text-2xl desktop:text-3xl font-light">Onde você vai estar</h1>
         <p className="text-sm text-muted-foreground mt-1">Selecione um dia para ver os locais na ordem.</p>
       </div>
 
