@@ -5,6 +5,7 @@
   "start_url": "/minha-viagem",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#D17A47",
   "theme_color": "#7A7A5C",
   "orientation": "portrait",
