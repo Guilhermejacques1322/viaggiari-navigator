@@ -6,6 +6,7 @@ import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail, 
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { InstallAppButton } from "@/components/install-app-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,6 +73,7 @@ function Navbar() {
           <a href="#contato" className="text-muted-foreground hover:text-foreground transition">Contato</a>
         </nav>
         <div className="hidden md:flex items-center gap-2">
+          <InstallAppButton variant="outline" />
           <Link to="/login"><Button variant="ghost" size="sm">Entrar</Button></Link>
           <Link to="/interesse"><Button size="sm">Planejar minha viagem</Button></Link>
         </div>
@@ -100,6 +102,7 @@ function Navbar() {
             <Link to="/interesse" onClick={() => setOpen(false)} className="pt-4">
               <Button className="w-full h-11">Planejar minha viagem</Button>
             </Link>
+            <InstallAppButton className="pt-3 [&>button]:w-full [&>button]:h-11" size="lg" variant="outline" />
           </nav>
         </div>
       )}

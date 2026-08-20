@@ -6,6 +6,7 @@ import { MyTripProvider, useMyTrip } from "@/hooks/use-my-trip";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { InstallAppButton } from "@/components/install-app-button";
 
 export const Route = createFileRoute("/minha-viagem")({
   component: ClientShell,
@@ -34,10 +35,13 @@ function ClientShell() {
         <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
           <div className="flex items-center justify-between px-5 py-3 desktop:px-12">
             <Link to="/minha-viagem"><Logo size={28} withWordmark /></Link>
+            <div className="flex items-center gap-2">
+            <InstallAppButton variant="outline" />
             <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
               <LogOut className="size-4" />
               <span className="hidden sm:inline">Sair</span>
             </Button>
+            </div>
           </div>
         </header>
 
