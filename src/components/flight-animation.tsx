@@ -11,7 +11,7 @@ export function FlightAnimation() {
         <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 border-t border-dashed border-border" />
         {/* trilha percorrida */}
         <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 overflow-hidden">
-          <div className="h-px bg-primary/60 animate-[trail-grow_4.5s_ease-in-out_infinite]" />
+          <div className="flight-trail h-px bg-primary/60 animate-[trail-grow_4.5s_ease-in-out_infinite]" />
         </div>
 
         {/* pontos */}
@@ -23,8 +23,8 @@ export function FlightAnimation() {
         </span>
 
         {/* avião */}
-        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2">
-          <div className="animate-[fly-across_4.5s_ease-in-out_infinite] w-fit">
+        <div className="absolute inset-x-4 top-1/2 -mt-2.5 h-5">
+          <div className="flight-plane absolute top-0 animate-[fly-across_4.5s_ease-in-out_infinite]">
             <Plane className="size-5 text-primary rotate-45" />
           </div>
         </div>

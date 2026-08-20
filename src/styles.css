@@ -170,11 +170,11 @@
 }
 
 @keyframes fly-across {
-  0%   { transform: translateX(0) translateY(0); opacity: 0; }
+  0%   { left: 0; transform: translateY(0); opacity: 0; }
   8%   { opacity: 1; }
-  50%  { transform: translateX(calc(50% + 50cqw - 0px)) translateY(-6px); }
+  50%  { transform: translateY(-6px); }
   92%  { opacity: 1; }
-  100% { transform: translateX(calc(100cqw - 100%)) translateY(0); opacity: 0; }
+  100% { left: calc(100% - 1.25rem); transform: translateY(0); opacity: 0; }
 }
 
 @keyframes trail-grow {
@@ -183,13 +183,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-\[fly-across_4\.5s_ease-in-out_infinite\],
-  .animate-\[trail-grow_4\.5s_ease-in-out_infinite\] {
-    animation: none;
-  }
-  .animate-\[trail-grow_4\.5s_ease-in-out_infinite\] { width: 50%; }
-  .animate-\[fly-across_4\.5s_ease-in-out_infinite\] { transform: translateX(50%); }
+  .flight-plane, .flight-trail { animation: none !important; }
+  .flight-plane { left: 50%; }
+  .flight-trail { width: 50%; }
 }
+
 
 @layer components {
   .section-padding {

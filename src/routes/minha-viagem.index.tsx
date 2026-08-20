@@ -99,33 +99,8 @@ function Dashboard() {
       <PreTripChecklist tripId={trip.id} startDate={trip.start_date} status={trip.status} />
 
 
-      {days.length > 0 && (
-        <div>
-          <h2 className="font-display text-lg font-medium mb-3">Próximos dias</h2>
-          <div className="space-y-2">
-            {days.slice(0, 3).map((d) => (
-              <Link
-                key={d.id}
-                to="/minha-viagem/roteiro"
-                className="block p-4 rounded-lg bg-card border border-border hover:border-primary/40 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-primary/10 grid place-items-center text-primary font-display text-sm font-medium">
-                    {d.day_number}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{d.title ?? `Dia ${d.day_number}`}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {d.activities.length} {d.activities.length === 1 ? "atividade" : "atividades"}
-                      {d.date && ` • ${formatDate(d.date)}`}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      <FlightAnimation />
+
     </div>
   );
 }
