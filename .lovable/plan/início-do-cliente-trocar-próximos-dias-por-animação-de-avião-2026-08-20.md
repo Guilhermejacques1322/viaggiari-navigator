@@ -21,3 +21,7 @@ Na tela inicial de `/minha-viagem` (a primeira coisa que o viajante vê ao logar
 - Novo componente `src/components/flight-animation.tsx` (apresentacional, sem dados).
 - Keyframes adicionados em `src/styles.css` (`fly-across`, `trail-grow`), usando tokens semânticos existentes — sem cores hardcoded.
 - Os cards de estatística (Dias de roteiro, Documentos, etc.) e o checklist permanecem como estão; a navegação para o roteiro continua pela barra inferior/lateral.
+
+O avião precisa estar em loop, reiniciando para nunca perder ali a animação. 
+
+&nbsp;

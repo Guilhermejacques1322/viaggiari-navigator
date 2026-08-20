@@ -169,6 +169,26 @@
   }
 }
 
+@keyframes fly-across {
+  0%   { left: 0; transform: translateY(0); opacity: 0; }
+  8%   { opacity: 1; }
+  50%  { transform: translateY(-6px); }
+  92%  { opacity: 1; }
+  100% { left: calc(100% - 1.25rem); transform: translateY(0); opacity: 0; }
+}
+
+@keyframes trail-grow {
+  0%   { width: 0%; }
+  100% { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flight-plane, .flight-trail { animation: none !important; }
+  .flight-plane { left: 50%; }
+  .flight-trail { width: 50%; }
+}
+
+
 @layer components {
   .section-padding {
     padding-inline: 1.25rem;
@@ -180,3 +200,4 @@
     .section-padding { padding-inline: 6rem; }
   }
 }
+
