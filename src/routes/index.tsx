@@ -6,6 +6,7 @@ import { Plane, Compass, MapPin, Sparkles, ShieldCheck, Heart, Instagram, Mail, 
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { InstallAppButton } from "@/components/install-app-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";

@@ -6,6 +6,7 @@ import { MyTripProvider, useMyTrip } from "@/hooks/use-my-trip";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { InstallAppButton } from "@/components/install-app-button";
 
 export const Route = createFileRoute("/minha-viagem")({
   component: ClientShell,
