@@ -1,13 +1,52 @@
-// Viaggiari Travel — Push notifications service worker
-// Keep this minimal: only handles push + notification clicks.
-// We intentionally do NOT cache any HTML/assets to avoid stale content.
+// Viaggiari — service worker (push + navegação com rede primeiro)
+// Estratégia: NetworkFirst apenas para navegações. Nunca cache-first de HTML.
 
-self.addEventListener("install", (event) => {
+const SHELL_CACHE = "viaggiari-shell-v1";
+
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      const names = await caches.keys();
+      await Promise.allSettled(
+        names.filter((n) => n.startsWith("viaggiari-shell-") && n !== SHELL_CACHE).map((n) => caches.delete(n)),
+      );
+      await self.clients.claim();
+    })(),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.method !== "GET" || request.mode !== "navigate") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/~oauth") || url.pathname.startsWith("/api/")) return;
+
+  event.respondWith(
+    (async () => {
+      try {
+        const response = await fetch(request);
+        if (response && response.ok) {
+          const cache = await caches.open(SHELL_CACHE);
+          cache.put(request, response.clone());
+        }
+        return response;
+      } catch (e) {
+        const cache = await caches.open(SHELL_CACHE);
+        const cached = (await cache.match(request)) || (await cache.match("/"));
+        if (cached) return cached;
+        return new Response(
+          "<!doctype html><meta charset='utf-8'><title>Sem conexão</title><body style=\"font-family:system-ui;padding:2rem;text-align:center\"><h1>Sem conexão</h1><p>Verifique sua internet e tente novamente.</p></body>",
+          { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
+        );
+      }
+    })(),
+  );
 });
 
 self.addEventListener("push", (event) => {
