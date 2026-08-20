@@ -5,6 +5,8 @@ import { useMyTrip } from "@/hooks/use-my-trip";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PreTripChecklist } from "@/components/pre-trip-checklist";
+import { FlightAnimation } from "@/components/flight-animation";
+
 
 export const Route = createFileRoute("/minha-viagem/")({
   component: Dashboard,
