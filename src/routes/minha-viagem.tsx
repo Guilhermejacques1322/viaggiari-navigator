@@ -40,6 +40,7 @@ function ClientShell() {
               <LogOut className="size-4" />
               <span className="hidden sm:inline">Sair</span>
             </Button>
+            </div>
           </div>
         </header>
 
