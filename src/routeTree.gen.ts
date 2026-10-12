@@ -9,52 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as MinhaViagemRouteImport } from './routes/minha-viagem'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as InteresseRouteImport } from './routes/interesse'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as MinhaViagemIndexRouteImport } from './routes/minha-viagem.index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as InteresseRouteImport } from './routes/interesse'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MinhaViagemRouteImport } from './routes/minha-viagem'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as OrcamentoTokenRouteImport } from './routes/orcamento.$token'
-import { Route as MinhaViagemUtilidadesRouteImport } from './routes/minha-viagem.utilidades'
-import { Route as MinhaViagemRoteiroRouteImport } from './routes/minha-viagem.roteiro'
-import { Route as MinhaViagemPreroteiroRouteImport } from './routes/minha-viagem.preroteiro'
-import { Route as MinhaViagemParceirosRouteImport } from './routes/minha-viagem.parceiros'
-import { Route as MinhaViagemMapaRouteImport } from './routes/minha-viagem.mapa'
-import { Route as MinhaViagemDocumentosRouteImport } from './routes/minha-viagem.documentos'
-import { Route as AdminViagensRouteImport } from './routes/admin.viagens'
-import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
-import { Route as AdminOrcamentosRouteImport } from './routes/admin.orcamentos'
-import { Route as AdminNotificacoesRouteImport } from './routes/admin.notificacoes'
-import { Route as AdminMarketingRouteImport } from './routes/admin.marketing'
-import { Route as AdminLeadsRouteImport } from './routes/admin.leads'
-import { Route as AdminDestinosRouteImport } from './routes/admin.destinos'
 import { Route as AdminCrmRouteImport } from './routes/admin.crm'
-import { Route as AdminViagensTripIdRouteImport } from './routes/admin.viagens.$tripId'
+import { Route as AdminDestinosRouteImport } from './routes/admin.destinos'
+import { Route as AdminLeadsRouteImport } from './routes/admin.leads'
+import { Route as AdminMarketingRouteImport } from './routes/admin.marketing'
+import { Route as AdminNotificacoesRouteImport } from './routes/admin.notificacoes'
+import { Route as AdminOrcamentosRouteImport } from './routes/admin.orcamentos'
+import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
+import { Route as AdminViagensRouteImport } from './routes/admin.viagens'
+import { Route as MinhaViagemIndexRouteImport } from './routes/minha-viagem.index'
+import { Route as MinhaViagemDocumentosRouteImport } from './routes/minha-viagem.documentos'
+import { Route as MinhaViagemMapaRouteImport } from './routes/minha-viagem.mapa'
+import { Route as MinhaViagemParceirosRouteImport } from './routes/minha-viagem.parceiros'
+import { Route as MinhaViagemPreroteiroRouteImport } from './routes/minha-viagem.preroteiro'
+import { Route as MinhaViagemRoteiroRouteImport } from './routes/minha-viagem.roteiro'
+import { Route as MinhaViagemUtilidadesRouteImport } from './routes/minha-viagem.utilidades'
+import { Route as OrcamentoTokenRouteImport } from './routes/orcamento.$token'
 import { Route as AdminCrmContactIdRouteImport } from './routes/admin.crm.$contactId'
-import { Route as ApiPublicHooksSendPushRemindersRouteImport } from './routes/api/public/hooks/send-push-reminders'
+import { Route as AdminViagensTripIdRouteImport } from './routes/admin.viagens.$tripId'
 import { Route as ApiPublicHooksDispatchNotificationsRouteImport } from './routes/api/public/hooks/dispatch-notifications'
+import { Route as ApiPublicHooksSendPushRemindersRouteImport } from './routes/api/public/hooks/send-push-reminders'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MinhaViagemRoute = MinhaViagemRouteImport.update({
-  id: '/minha-viagem',
-  path: '/minha-viagem',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InteresseRoute = InteresseRouteImport.update({
-  id: '/interesse',
-  path: '/interesse',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -62,89 +47,29 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const InteresseRoute = InteresseRouteImport.update({
+  id: '/interesse',
+  path: '/interesse',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MinhaViagemIndexRoute = MinhaViagemIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => MinhaViagemRoute,
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MinhaViagemRoute = MinhaViagemRouteImport.update({
+  id: '/minha-viagem',
+  path: '/minha-viagem',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminRoute,
-} as any)
-const OrcamentoTokenRoute = OrcamentoTokenRouteImport.update({
-  id: '/orcamento/$token',
-  path: '/orcamento/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MinhaViagemUtilidadesRoute = MinhaViagemUtilidadesRouteImport.update({
-  id: '/utilidades',
-  path: '/utilidades',
-  getParentRoute: () => MinhaViagemRoute,
-} as any)
-const MinhaViagemRoteiroRoute = MinhaViagemRoteiroRouteImport.update({
-  id: '/roteiro',
-  path: '/roteiro',
-  getParentRoute: () => MinhaViagemRoute,
-} as any)
-const MinhaViagemPreroteiroRoute = MinhaViagemPreroteiroRouteImport.update({
-  id: '/preroteiro',
-  path: '/preroteiro',
-  getParentRoute: () => MinhaViagemRoute,
-} as any)
-const MinhaViagemParceirosRoute = MinhaViagemParceirosRouteImport.update({
-  id: '/parceiros',
-  path: '/parceiros',
-  getParentRoute: () => MinhaViagemRoute,
-} as any)
-const MinhaViagemMapaRoute = MinhaViagemMapaRouteImport.update({
-  id: '/mapa',
-  path: '/mapa',
-  getParentRoute: () => MinhaViagemRoute,
-} as any)
-const MinhaViagemDocumentosRoute = MinhaViagemDocumentosRouteImport.update({
-  id: '/documentos',
-  path: '/documentos',
-  getParentRoute: () => MinhaViagemRoute,
-} as any)
-const AdminViagensRoute = AdminViagensRouteImport.update({
-  id: '/viagens',
-  path: '/viagens',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminParceirosRoute = AdminParceirosRouteImport.update({
-  id: '/parceiros',
-  path: '/parceiros',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminOrcamentosRoute = AdminOrcamentosRouteImport.update({
-  id: '/orcamentos',
-  path: '/orcamentos',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminNotificacoesRoute = AdminNotificacoesRouteImport.update({
-  id: '/notificacoes',
-  path: '/notificacoes',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminMarketingRoute = AdminMarketingRouteImport.update({
-  id: '/marketing',
-  path: '/marketing',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminLeadsRoute = AdminLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminDestinosRoute = AdminDestinosRouteImport.update({
-  id: '/destinos',
-  path: '/destinos',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCrmRoute = AdminCrmRouteImport.update({
@@ -152,26 +77,101 @@ const AdminCrmRoute = AdminCrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminViagensTripIdRoute = AdminViagensTripIdRouteImport.update({
-  id: '/$tripId',
-  path: '/$tripId',
-  getParentRoute: () => AdminViagensRoute,
+const AdminDestinosRoute = AdminDestinosRouteImport.update({
+  id: '/destinos',
+  path: '/destinos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMarketingRoute = AdminMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNotificacoesRoute = AdminNotificacoesRouteImport.update({
+  id: '/notificacoes',
+  path: '/notificacoes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOrcamentosRoute = AdminOrcamentosRouteImport.update({
+  id: '/orcamentos',
+  path: '/orcamentos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminParceirosRoute = AdminParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminViagensRoute = AdminViagensRouteImport.update({
+  id: '/viagens',
+  path: '/viagens',
+  getParentRoute: () => AdminRoute,
+} as any)
+const MinhaViagemIndexRoute = MinhaViagemIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemDocumentosRoute = MinhaViagemDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemMapaRoute = MinhaViagemMapaRouteImport.update({
+  id: '/mapa',
+  path: '/mapa',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemParceirosRoute = MinhaViagemParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemPreroteiroRoute = MinhaViagemPreroteiroRouteImport.update({
+  id: '/preroteiro',
+  path: '/preroteiro',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemRoteiroRoute = MinhaViagemRoteiroRouteImport.update({
+  id: '/roteiro',
+  path: '/roteiro',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const MinhaViagemUtilidadesRoute = MinhaViagemUtilidadesRouteImport.update({
+  id: '/utilidades',
+  path: '/utilidades',
+  getParentRoute: () => MinhaViagemRoute,
+} as any)
+const OrcamentoTokenRoute = OrcamentoTokenRouteImport.update({
+  id: '/orcamento/$token',
+  path: '/orcamento/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminCrmContactIdRoute = AdminCrmContactIdRouteImport.update({
   id: '/$contactId',
   path: '/$contactId',
   getParentRoute: () => AdminCrmRoute,
 } as any)
-const ApiPublicHooksSendPushRemindersRoute =
-  ApiPublicHooksSendPushRemindersRouteImport.update({
-    id: '/api/public/hooks/send-push-reminders',
-    path: '/api/public/hooks/send-push-reminders',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const AdminViagensTripIdRoute = AdminViagensTripIdRouteImport.update({
+  id: '/$tripId',
+  path: '/$tripId',
+  getParentRoute: () => AdminViagensRoute,
+} as any)
 const ApiPublicHooksDispatchNotificationsRoute =
   ApiPublicHooksDispatchNotificationsRouteImport.update({
     id: '/api/public/hooks/dispatch-notifications',
     path: '/api/public/hooks/dispatch-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSendPushRemindersRoute =
+  ApiPublicHooksSendPushRemindersRouteImport.update({
+    id: '/api/public/hooks/send-push-reminders',
+    path: '/api/public/hooks/send-push-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -363,32 +363,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/minha-viagem': {
-      id: '/minha-viagem'
-      path: '/minha-viagem'
-      fullPath: '/minha-viagem'
-      preLoaderRoute: typeof MinhaViagemRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/interesse': {
-      id: '/interesse'
-      path: '/interesse'
-      fullPath: '/interesse'
-      preLoaderRoute: typeof InteresseRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -398,123 +377,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/interesse': {
+      id: '/interesse'
+      path: '/interesse'
+      fullPath: '/interesse'
+      preLoaderRoute: typeof InteresseRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/minha-viagem/': {
-      id: '/minha-viagem/'
-      path: '/'
-      fullPath: '/minha-viagem/'
-      preLoaderRoute: typeof MinhaViagemIndexRouteImport
-      parentRoute: typeof MinhaViagemRoute
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/minha-viagem': {
+      id: '/minha-viagem'
+      path: '/minha-viagem'
+      fullPath: '/minha-viagem'
+      preLoaderRoute: typeof MinhaViagemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/': {
       id: '/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/orcamento/$token': {
-      id: '/orcamento/$token'
-      path: '/orcamento/$token'
-      fullPath: '/orcamento/$token'
-      preLoaderRoute: typeof OrcamentoTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/minha-viagem/utilidades': {
-      id: '/minha-viagem/utilidades'
-      path: '/utilidades'
-      fullPath: '/minha-viagem/utilidades'
-      preLoaderRoute: typeof MinhaViagemUtilidadesRouteImport
-      parentRoute: typeof MinhaViagemRoute
-    }
-    '/minha-viagem/roteiro': {
-      id: '/minha-viagem/roteiro'
-      path: '/roteiro'
-      fullPath: '/minha-viagem/roteiro'
-      preLoaderRoute: typeof MinhaViagemRoteiroRouteImport
-      parentRoute: typeof MinhaViagemRoute
-    }
-    '/minha-viagem/preroteiro': {
-      id: '/minha-viagem/preroteiro'
-      path: '/preroteiro'
-      fullPath: '/minha-viagem/preroteiro'
-      preLoaderRoute: typeof MinhaViagemPreroteiroRouteImport
-      parentRoute: typeof MinhaViagemRoute
-    }
-    '/minha-viagem/parceiros': {
-      id: '/minha-viagem/parceiros'
-      path: '/parceiros'
-      fullPath: '/minha-viagem/parceiros'
-      preLoaderRoute: typeof MinhaViagemParceirosRouteImport
-      parentRoute: typeof MinhaViagemRoute
-    }
-    '/minha-viagem/mapa': {
-      id: '/minha-viagem/mapa'
-      path: '/mapa'
-      fullPath: '/minha-viagem/mapa'
-      preLoaderRoute: typeof MinhaViagemMapaRouteImport
-      parentRoute: typeof MinhaViagemRoute
-    }
-    '/minha-viagem/documentos': {
-      id: '/minha-viagem/documentos'
-      path: '/documentos'
-      fullPath: '/minha-viagem/documentos'
-      preLoaderRoute: typeof MinhaViagemDocumentosRouteImport
-      parentRoute: typeof MinhaViagemRoute
-    }
-    '/admin/viagens': {
-      id: '/admin/viagens'
-      path: '/viagens'
-      fullPath: '/admin/viagens'
-      preLoaderRoute: typeof AdminViagensRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/parceiros': {
-      id: '/admin/parceiros'
-      path: '/parceiros'
-      fullPath: '/admin/parceiros'
-      preLoaderRoute: typeof AdminParceirosRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/orcamentos': {
-      id: '/admin/orcamentos'
-      path: '/orcamentos'
-      fullPath: '/admin/orcamentos'
-      preLoaderRoute: typeof AdminOrcamentosRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/notificacoes': {
-      id: '/admin/notificacoes'
-      path: '/notificacoes'
-      fullPath: '/admin/notificacoes'
-      preLoaderRoute: typeof AdminNotificacoesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/marketing': {
-      id: '/admin/marketing'
-      path: '/marketing'
-      fullPath: '/admin/marketing'
-      preLoaderRoute: typeof AdminMarketingRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/leads': {
-      id: '/admin/leads'
-      path: '/leads'
-      fullPath: '/admin/leads'
-      preLoaderRoute: typeof AdminLeadsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/destinos': {
-      id: '/admin/destinos'
-      path: '/destinos'
-      fullPath: '/admin/destinos'
-      preLoaderRoute: typeof AdminDestinosRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/crm': {
@@ -524,12 +419,110 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCrmRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/viagens/$tripId': {
-      id: '/admin/viagens/$tripId'
-      path: '/$tripId'
-      fullPath: '/admin/viagens/$tripId'
-      preLoaderRoute: typeof AdminViagensTripIdRouteImport
-      parentRoute: typeof AdminViagensRoute
+    '/admin/destinos': {
+      id: '/admin/destinos'
+      path: '/destinos'
+      fullPath: '/admin/destinos'
+      preLoaderRoute: typeof AdminDestinosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/marketing': {
+      id: '/admin/marketing'
+      path: '/marketing'
+      fullPath: '/admin/marketing'
+      preLoaderRoute: typeof AdminMarketingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/notificacoes': {
+      id: '/admin/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/admin/notificacoes'
+      preLoaderRoute: typeof AdminNotificacoesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/orcamentos': {
+      id: '/admin/orcamentos'
+      path: '/orcamentos'
+      fullPath: '/admin/orcamentos'
+      preLoaderRoute: typeof AdminOrcamentosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/parceiros': {
+      id: '/admin/parceiros'
+      path: '/parceiros'
+      fullPath: '/admin/parceiros'
+      preLoaderRoute: typeof AdminParceirosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/viagens': {
+      id: '/admin/viagens'
+      path: '/viagens'
+      fullPath: '/admin/viagens'
+      preLoaderRoute: typeof AdminViagensRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/minha-viagem/': {
+      id: '/minha-viagem/'
+      path: '/'
+      fullPath: '/minha-viagem/'
+      preLoaderRoute: typeof MinhaViagemIndexRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/documentos': {
+      id: '/minha-viagem/documentos'
+      path: '/documentos'
+      fullPath: '/minha-viagem/documentos'
+      preLoaderRoute: typeof MinhaViagemDocumentosRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/mapa': {
+      id: '/minha-viagem/mapa'
+      path: '/mapa'
+      fullPath: '/minha-viagem/mapa'
+      preLoaderRoute: typeof MinhaViagemMapaRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/parceiros': {
+      id: '/minha-viagem/parceiros'
+      path: '/parceiros'
+      fullPath: '/minha-viagem/parceiros'
+      preLoaderRoute: typeof MinhaViagemParceirosRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/preroteiro': {
+      id: '/minha-viagem/preroteiro'
+      path: '/preroteiro'
+      fullPath: '/minha-viagem/preroteiro'
+      preLoaderRoute: typeof MinhaViagemPreroteiroRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/roteiro': {
+      id: '/minha-viagem/roteiro'
+      path: '/roteiro'
+      fullPath: '/minha-viagem/roteiro'
+      preLoaderRoute: typeof MinhaViagemRoteiroRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/minha-viagem/utilidades': {
+      id: '/minha-viagem/utilidades'
+      path: '/utilidades'
+      fullPath: '/minha-viagem/utilidades'
+      preLoaderRoute: typeof MinhaViagemUtilidadesRouteImport
+      parentRoute: typeof MinhaViagemRoute
+    }
+    '/orcamento/$token': {
+      id: '/orcamento/$token'
+      path: '/orcamento/$token'
+      fullPath: '/orcamento/$token'
+      preLoaderRoute: typeof OrcamentoTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/crm/$contactId': {
       id: '/admin/crm/$contactId'
@@ -538,18 +531,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCrmContactIdRouteImport
       parentRoute: typeof AdminCrmRoute
     }
-    '/api/public/hooks/send-push-reminders': {
-      id: '/api/public/hooks/send-push-reminders'
-      path: '/api/public/hooks/send-push-reminders'
-      fullPath: '/api/public/hooks/send-push-reminders'
-      preLoaderRoute: typeof ApiPublicHooksSendPushRemindersRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/viagens/$tripId': {
+      id: '/admin/viagens/$tripId'
+      path: '/$tripId'
+      fullPath: '/admin/viagens/$tripId'
+      preLoaderRoute: typeof AdminViagensTripIdRouteImport
+      parentRoute: typeof AdminViagensRoute
     }
     '/api/public/hooks/dispatch-notifications': {
       id: '/api/public/hooks/dispatch-notifications'
       path: '/api/public/hooks/dispatch-notifications'
       fullPath: '/api/public/hooks/dispatch-notifications'
       preLoaderRoute: typeof ApiPublicHooksDispatchNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/send-push-reminders': {
+      id: '/api/public/hooks/send-push-reminders'
+      path: '/api/public/hooks/send-push-reminders'
+      fullPath: '/api/public/hooks/send-push-reminders'
+      preLoaderRoute: typeof ApiPublicHooksSendPushRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
