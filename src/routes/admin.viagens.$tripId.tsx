@@ -329,6 +329,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const [activeAct, setActiveAct] = useState<Activity | null>(null);
+  const [activeDay, setActiveDay] = useState<DayWithActs | null>(null);
 
   function findContainer(id: string, current: DayWithActs[]) {
     if (id.startsWith("day:")) return id.slice(4);
@@ -350,17 +351,57 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
 
   function handleDragStart(e: DragStartEvent) {
     const id = String(e.active.id);
+    if (id.startsWith("dayrow:")) {
+      setActiveDay((days ?? []).find((d) => d.id === id.slice(7)) ?? null);
+      return;
+    }
     const a = (days ?? []).flatMap((d) => d.activities).find((x) => x.id === id);
     setActiveAct(a ?? null);
   }
 
+  async function reorderDays(activeId: string, overId: string) {
+    if (!days) return;
+    const fromIdx = days.findIndex((d) => d.id === activeId);
+    const toIdx = days.findIndex((d) => d.id === overId);
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+    // Slots (número + data) ficam na mesma sequência; o conteúdo do dia se move.
+    const slots = days.map((d) => ({ day_number: d.day_number, date: d.date }));
+    const prev = days;
+    const order = arrayMove(days, fromIdx, toIdx);
+    const next = order.map((d, i) => ({ ...d, day_number: slots[i].day_number, date: slots[i].date }));
+    qc.setQueryData(queryKey, next);
+    try {
+      const tmp = await Promise.all(next.map((d, i) =>
+        supabase.from("itinerary_days").update({ day_number: 1000 + i }).eq("id", d.id)));
+      const e1 = tmp.map((r) => r.error).find(Boolean);
+      if (e1) throw new Error(e1.message);
+      const fin = await Promise.all(next.map((d) =>
+        supabase.from("itinerary_days").update({ day_number: d.day_number, date: d.date }).eq("id", d.id)));
+      const e2 = fin.map((r) => r.error).find(Boolean);
+      if (e2) throw new Error(e2.message);
+      toast.success("Dias reorganizados");
+      invalidate();
+    } catch (err) {
+      qc.setQueryData(queryKey, prev);
+      toast.error("Não foi possível reordenar os dias: " + (err as Error).message);
+      invalidate();
+    }
+  }
+
   async function handleDragEnd(e: DragEndEvent) {
     setActiveAct(null);
+    setActiveDay(null);
     const { active, over } = e;
     if (!over || !days) return;
     const activeId = String(active.id);
     const overId = String(over.id);
     if (activeId === overId) return;
+    if (activeId.startsWith("dayrow:")) {
+      const target = overId.startsWith("dayrow:") ? overId.slice(7) : findContainer(overId, days);
+      if (target) await reorderDays(activeId.slice(7), target);
+      return;
+    }
+    if (overId.startsWith("dayrow:")) return;
 
     const fromDayId = findContainer(activeId, days);
     const toDayId = findContainer(overId, days);
