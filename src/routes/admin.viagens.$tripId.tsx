@@ -13,7 +13,7 @@ import {
   type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
 import {
-  SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates,
+  SortableContext, useSortable, arrayMove, verticalListSortingStrategy, sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
@@ -329,6 +329,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const [activeAct, setActiveAct] = useState<Activity | null>(null);
+  const [activeDay, setActiveDay] = useState<DayWithActs | null>(null);
 
   function findContainer(id: string, current: DayWithActs[]) {
     if (id.startsWith("day:")) return id.slice(4);
@@ -350,17 +351,57 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
 
   function handleDragStart(e: DragStartEvent) {
     const id = String(e.active.id);
+    if (id.startsWith("dayrow:")) {
+      setActiveDay((days ?? []).find((d) => d.id === id.slice(7)) ?? null);
+      return;
+    }
     const a = (days ?? []).flatMap((d) => d.activities).find((x) => x.id === id);
     setActiveAct(a ?? null);
   }
 
+  async function reorderDays(activeId: string, overId: string) {
+    if (!days) return;
+    const fromIdx = days.findIndex((d) => d.id === activeId);
+    const toIdx = days.findIndex((d) => d.id === overId);
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+    // Slots (número + data) ficam na mesma sequência; o conteúdo do dia se move.
+    const slots = days.map((d) => ({ day_number: d.day_number, date: d.date }));
+    const prev = days;
+    const order = arrayMove(days, fromIdx, toIdx);
+    const next = order.map((d, i) => ({ ...d, day_number: slots[i].day_number, date: slots[i].date }));
+    qc.setQueryData(queryKey, next);
+    try {
+      const tmp = await Promise.all(next.map((d, i) =>
+        supabase.from("itinerary_days").update({ day_number: 1000 + i }).eq("id", d.id)));
+      const e1 = tmp.map((r) => r.error).find(Boolean);
+      if (e1) throw new Error(e1.message);
+      const fin = await Promise.all(next.map((d) =>
+        supabase.from("itinerary_days").update({ day_number: d.day_number, date: d.date }).eq("id", d.id)));
+      const e2 = fin.map((r) => r.error).find(Boolean);
+      if (e2) throw new Error(e2.message);
+      toast.success("Dias reorganizados");
+      invalidate();
+    } catch (err) {
+      qc.setQueryData(queryKey, prev);
+      toast.error("Não foi possível reordenar os dias: " + (err as Error).message);
+      invalidate();
+    }
+  }
+
   async function handleDragEnd(e: DragEndEvent) {
     setActiveAct(null);
+    setActiveDay(null);
     const { active, over } = e;
     if (!over || !days) return;
     const activeId = String(active.id);
     const overId = String(over.id);
     if (activeId === overId) return;
+    if (activeId.startsWith("dayrow:")) {
+      const target = overId.startsWith("dayrow:") ? overId.slice(7) : findContainer(overId, days);
+      if (target) await reorderDays(activeId.slice(7), target);
+      return;
+    }
+    if (overId.startsWith("dayrow:")) return;
 
     const fromDayId = findContainer(activeId, days);
     const toDayId = findContainer(overId, days);
@@ -511,6 +552,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
+          <SortableContext items={days.map((d) => `dayrow:${d.id}`)} strategy={verticalListSortingStrategy}>
           <div className="space-y-3">
             {days.map((d) => (
               <DayEditor
@@ -522,10 +564,12 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                 onRecomputeRoutes={(opts) => recomputeRoutes(d.id, opts)}
                 pendingRoutes={countPendingPairs(d)}
                 isComputing={computingDayId === d.id}
+                collapsed={!!activeDay}
               />
             ))}
 
           </div>
+          </SortableContext>
           <DragOverlay>
             {activeAct ? (
               <div className="rounded-md border border-primary/40 bg-background shadow-lg p-3 text-sm max-w-md">
@@ -533,6 +577,11 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                   {activeAct.time && <span className="text-xs text-primary font-medium">{activeAct.time.slice(0, 5)}</span>}
                   <span className="font-medium truncate">{activeAct.name}</span>
                 </div>
+              </div>
+            ) : activeDay ? (
+              <div className="rounded-md border border-primary/40 bg-background shadow-lg p-3 text-sm max-w-md flex items-center gap-3">
+                <span className="size-8 rounded-full bg-primary/10 grid place-items-center text-primary font-medium">{activeDay.day_number}</span>
+                <span className="font-medium truncate">{activeDay.title ?? `Dia ${activeDay.day_number}`}</span>
               </div>
             ) : null}
           </DragOverlay>
@@ -663,7 +712,7 @@ function DayCoverUpload({ tripId, dayId, value, onChange }: { tripId: string; da
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing, collapsed = false }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean; collapsed?: boolean }) {
 
 
   const [editing, setEditing] = useState(false);
@@ -691,10 +740,22 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `day:${day.id}` });
   const activityIds = day.activities.map((a) => a.id);
+  const sortable = useSortable({ id: `dayrow:${day.id}` });
+  const dayStyle = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
 
   return (
-    <Card className="p-4">
+    <Card ref={sortable.setNodeRef} style={dayStyle} className={`p-4 ${sortable.isDragging ? "opacity-50 ring-2 ring-primary/40" : ""}`}>
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          {...sortable.attributes}
+          {...sortable.listeners}
+          className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-1"
+          title="Arraste para reordenar o dia"
+          aria-label="Arrastar dia"
+        >
+          <GripVertical className="size-5" />
+        </button>
         <div className="size-9 rounded-full bg-primary/10 grid place-items-center text-primary font-display font-medium text-sm shrink-0">
           {day.day_number}
         </div>
@@ -771,7 +832,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
 
 
 
-      <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
+      {!collapsed && <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
         <div
           ref={setDropRef}
           className={`mt-4 space-y-2 min-h-[48px] rounded-md transition-colors ${isOver ? "bg-primary/5 ring-2 ring-primary/30" : ""}`}
@@ -807,7 +868,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
           })}
           <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
         </div>
-      </SortableContext>
+      </SortableContext>}
     </Card>
   );
 });
