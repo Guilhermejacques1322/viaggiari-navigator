@@ -9,7 +9,7 @@ export const Route = createFileRoute("/minha-viagem/utilidades")({
   errorComponent: ({ error, reset }) => (
     <div className="p-6 text-center space-y-3">
       <p className="text-sm text-muted-foreground">Não foi possível carregar as utilidades.</p>
-      <p className="text-xs text-muted-foreground">{error.message}</p>
+      <p className="text-xs text-muted-foreground">{(error as Error).message}</p>
       <button onClick={reset} className="text-sm text-primary hover:underline">Tentar novamente</button>
     </div>
   ),
