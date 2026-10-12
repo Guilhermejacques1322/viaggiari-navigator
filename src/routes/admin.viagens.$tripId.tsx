@@ -663,7 +663,7 @@ function DayCoverUpload({ tripId, dayId, value, onChange }: { tripId: string; da
   );
 }
 
-const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean }) {
+const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTransport, onRecomputeRoutes, pendingRoutes, isComputing, collapsed = false }: { day: DayWithActs; tripId: string; onChanged: () => void; defaultTransport: TransportMode; onRecomputeRoutes: (opts?: { force?: boolean }) => void; pendingRoutes: number; isComputing: boolean; collapsed?: boolean }) {
 
 
   const [editing, setEditing] = useState(false);
@@ -783,7 +783,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
 
 
 
-      <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
+      {!collapsed && <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
         <div
           ref={setDropRef}
           className={`mt-4 space-y-2 min-h-[48px] rounded-md transition-colors ${isOver ? "bg-primary/5 ring-2 ring-primary/30" : ""}`}
@@ -819,7 +819,7 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
           })}
           <NewActivityDialog dayId={day.id} position={day.activities.length} onDone={onChanged} />
         </div>
-      </SortableContext>
+      </SortableContext>}
     </Card>
   );
 });
