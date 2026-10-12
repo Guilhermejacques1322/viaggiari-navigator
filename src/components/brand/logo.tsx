@@ -1,4 +1,4 @@
-import logoAsset from "@/assets/viaggiari-logo-full.png.asset.json";
+import logoAsset from "@/assets/viaggiari-logo-brand.png.asset.json";
 import monogramAsset from "@/assets/viaggiari-monogram.png.asset.json";
 import { cn } from "@/lib/utils";
 
