@@ -691,10 +691,22 @@ const DayEditor = memo(function DayEditor({ day, tripId, onChanged, defaultTrans
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `day:${day.id}` });
   const activityIds = day.activities.map((a) => a.id);
+  const sortable = useSortable({ id: `dayrow:${day.id}` });
+  const dayStyle = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
 
   return (
-    <Card className="p-4">
+    <Card ref={sortable.setNodeRef} style={dayStyle} className={`p-4 ${sortable.isDragging ? "opacity-50 ring-2 ring-primary/40" : ""}`}>
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          {...sortable.attributes}
+          {...sortable.listeners}
+          className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-1"
+          title="Arraste para reordenar o dia"
+          aria-label="Arrastar dia"
+        >
+          <GripVertical className="size-5" />
+        </button>
         <div className="size-9 rounded-full bg-primary/10 grid place-items-center text-primary font-display font-medium text-sm shrink-0">
           {day.day_number}
         </div>
