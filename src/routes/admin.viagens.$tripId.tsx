@@ -511,6 +511,7 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
+          <SortableContext items={days.map((d) => `dayrow:${d.id}`)} strategy={verticalListSortingStrategy}>
           <div className="space-y-3">
             {days.map((d) => (
               <DayEditor
@@ -522,10 +523,12 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                 onRecomputeRoutes={(opts) => recomputeRoutes(d.id, opts)}
                 pendingRoutes={countPendingPairs(d)}
                 isComputing={computingDayId === d.id}
+                collapsed={!!activeDay}
               />
             ))}
 
           </div>
+          </SortableContext>
           <DragOverlay>
             {activeAct ? (
               <div className="rounded-md border border-primary/40 bg-background shadow-lg p-3 text-sm max-w-md">
@@ -533,6 +536,11 @@ function RoteiroTab({ tripId, preroteiroMode, defaultTransport }: { tripId: stri
                   {activeAct.time && <span className="text-xs text-primary font-medium">{activeAct.time.slice(0, 5)}</span>}
                   <span className="font-medium truncate">{activeAct.name}</span>
                 </div>
+              </div>
+            ) : activeDay ? (
+              <div className="rounded-md border border-primary/40 bg-background shadow-lg p-3 text-sm max-w-md flex items-center gap-3">
+                <span className="size-8 rounded-full bg-primary/10 grid place-items-center text-primary font-medium">{activeDay.day_number}</span>
+                <span className="font-medium truncate">{activeDay.title ?? `Dia ${activeDay.day_number}`}</span>
               </div>
             ) : null}
           </DragOverlay>
